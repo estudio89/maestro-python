@@ -1,0 +1,473 @@
+<html>
+	<head>
+		<title>Sync Framework</title>
+
+		<style type="text/css">
+			body {
+				font-family: Arial;
+			}
+
+			#wrapper {
+				text-align: center;
+			}
+
+			.top-buttons {
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				gap: 20px;
+			}
+
+			.items-list {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				margin-top: 20px;
+			}
+
+			.item-id {
+				color: gray;
+				font-size: 15px;
+			}
+
+			.item-title {
+				font-size: 18px;
+			}
+
+			.item-buttons {
+				display: flex;
+				flex-direction: row;
+				justify-content: flex-end;
+				gap: 20px;
+			}
+
+			.list-item, .item-form {
+				border: 1px solid rgba(0,0,0,0.2);
+				padding: 10px 20px;
+				border-radius: 10px;
+				margin-bottom: 20px;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="app"></div>
+
+		<script
+		  src="https://code.jquery.com/jquery-3.6.0.slim.min.js"
+		  integrity="sha256-u7e5khyithlIdTpu22PHhENmPcRdFiHRjhAuHcs05RI="
+		  crossorigin="anonymous"></script>
+		<script type="text/javascript">
+
+			//: ListItem
+			function ListItem(item, onChanged, onDelete) {
+				var state = {
+					"editing": false
+				}
+
+				var $el = $("<div></div>");
+
+				function onMounted() {
+					setState();
+				}
+
+				function setState(callback) {
+					if (!!callback) {
+						callback();
+					}
+					build()
+				}
+
+				function build() {
+					$el.empty();
+
+					var $child;
+					if (state.editing) {
+						$child = buildEditing();
+					} else {
+						$child = buildNormal();
+					}
+					$el.append($child);
+				}
+
+				function buildEditing() {
+					var $el = $("" +
+					"<div class='item-form'>"	+
+						"<input type='text'>" +
+						"<button>OK</button>" +
+						"<button>Cancel</button>" +
+					"</div>");
+
+					var $input = $el.find("input");
+					$input.val(item.text);
+					$el.find("button:first-of-type").on("click", function() {
+						var value = $input.val();
+
+						if (!value) {
+							return;
+						}
+
+						fetch("/api" + window.location.pathname + item.id + "/", {
+							"method": "PUT",
+							"body": JSON.stringify({
+								"id": item.id,
+								"text": value,
+								"done": item.done,
+								"date_created": item.date_created
+							})
+						}).then(response => {
+							item.text = value;
+							setState(() => {
+								state.editing = false;
+							})
+							onChanged();
+						});
+					});
+
+					$el.find("button:last-of-type").on("click", function() {
+						setState(() => {
+							state.editing = false;
+						});
+					});
+
+					return $el;
+				}
+
+				function buildNormal() {
+					var $el = $("" +
+					"<div class='list-item'>"	+
+						"<p class='item-title'>" + item.text + "</p>" +
+						"<p class='item-id'>" + item.id + "</p>" +
+						"<div class='item-buttons'>" +
+							"<button>Edit</button>" +
+							"<button>Delete</button>" +
+						"</div>" +
+					"</div>");
+
+					$el.find("button:first-of-type").on("click", function() {
+						setState(() => {
+							state.editing = true;
+						});
+					})
+
+					$el.find("button:last-of-type").on("click", function() {
+						fetch("/api" + window.location.pathname + item.id + "/", {
+							"method": "DELETE",
+							"body": JSON.stringify({
+								"id": item.id,
+								"text": item.text,
+								"done": item.done,
+								"date_created": item.date_created
+							})
+						}).then(response => {
+							onDelete();
+						});
+					})
+
+					return $el;
+				}
+
+				onMounted();
+
+				return $el;
+			}
+
+			//: AddButtonComponent
+			function AddButtonComponent(onConfirm) {
+
+				var $el = $("<div></div>");
+
+				var state = {
+					"show_form": false,
+				}
+
+				function onMounted() {
+					setState();
+				}
+
+				function setState(callback) {
+					if (!!callback) {
+						callback();
+					}
+					build()
+				}
+
+				function build() {
+					$el.empty();
+
+					var $child;
+					if (state.show_form) {
+						$child = buildForm();
+					} else {
+						$child = buildButton();
+					}
+					$el.append($child);
+				}
+
+				function buildForm() {
+					var $form = $("" +
+						"<div class='add-form'>" +
+							"<input id='input-title' type='text' placeholder='Title'>" +
+							"<button id='btn-confirm'>OK</button>" +
+							"<button id='btn-cancel'>Cancel</button>" +
+						"</div>"
+					);
+
+					$form.find("#btn-confirm").on("click", function() {
+						var inputTitle = $form.find("#input-title");
+						var value = inputTitle.val();
+						if (!value) {
+							return;
+						}
+
+						onConfirm(value);
+						setState(() => {
+							state.show_form = false;
+						});
+					});
+
+					$form.find("#btn-cancel").on("click", function() {
+						setState(() => {
+							state.show_form = false;
+						});
+					});
+
+					return $form;
+				}
+
+				function buildButton() {
+					var $button = $("<button>Add item</button>");
+					$button.on("click", function() {
+						setState(() => {
+							state.show_form = true;
+						});
+					});
+					return $button;
+				}
+
+				onMounted();
+
+				return $el;
+			}
+
+			//: App
+			function App() {
+				var state = {
+					"loading": false,
+					"auto_sync": false,
+					"items": []
+				}
+				var $app;
+
+				function onMounted() {
+				 	$app = $("#app");
+				 	fetchData();
+				 	startLongPolling();
+				}
+
+				function setState(callback) {
+					if (!!callback) {
+						callback();
+					}
+					build()
+				}
+
+				function build() {
+					$app.empty();
+
+					if (state.loading) {
+						$app.append("<p style='text-align: center;'>Loading...</p>");
+					} else {
+						var $el = buildContent();
+						$app.append($el);
+					}
+				}
+
+				function buildContent() {
+					var $el = $("" +
+						"<div id='wrapper'>" +
+							"<h1>" + window.location.pathname.replaceAll("/", "") + "</h1>" +
+							"<div class='top-buttons'></div>" +
+							"<p>Items:</p>" +
+						"</div>"
+					);
+					var $buttonAdd = buildAddButton();
+					var $buttonSync = buildSyncButton();
+					var $autoSyncCheckbox = buildAutoSyncCheckbox();
+					var $list = buildList();
+					var $topButtons = $el.find(".top-buttons");
+					$topButtons.append($buttonAdd);
+					if (!state.auto_sync) {
+						$topButtons.append($buttonSync);
+					}
+					$topButtons.append($autoSyncCheckbox);
+					$el.append($list);
+
+					return $el;
+				}
+
+				function buildAddButton() {
+					return AddButtonComponent((value) => {
+						addItem(value);
+					});
+				}
+
+				function buildAutoSyncCheckbox() {
+					var $el = $("<label><input type='checkbox'>AutoSync</label>");
+					var $checkbox = $el.find("input");
+					if (state.auto_sync) {
+						$checkbox.prop('checked', true);
+					}
+					$checkbox.on("change", function() {
+						console.log("AQUI");
+						if ($checkbox.prop('checked') === true) {
+							setState(() => {
+								state.auto_sync = true;
+							});
+							runSync().then((response) => {
+								fetchData();
+							});
+						} else {
+							setState(() => {
+								state.auto_sync = false;
+							});
+						}
+					});
+					return $el;
+				}
+
+				function buildSyncButton() {
+					var $el = $("<button>Sync</button>");
+					$el.on("click", function() {
+						runSync().then((response) => {
+							fetchData();
+						});
+					});
+					return $el;
+				}
+
+				function buildList() {
+					var $list = $("" +
+						"<div class='items-list'>" +
+						"</div>");
+					for (var i=0; i<state.items.length; i++) {
+						var item = state.items[i];
+						var $item = buildListItem(item);
+						$list.append($item);
+					}
+					return $list;
+				}
+
+				function buildListItem(item) {
+					return ListItem(item, () => {
+						setState();
+						if (state.auto_sync) {
+							runSync();
+						}
+					}, () => {
+						setState(() => {
+							var itemIdx;
+							for (var i=0; i<state.items.length; i++) {
+								var val = state.items[i];
+								if (val.id == item.id) {
+									itemIdx = i;
+								}
+							}
+							state.items.splice(itemIdx, 1);
+						});
+
+						if (state.auto_sync) {
+							runSync();
+						}
+					});
+				}
+
+				function compare(a, b) {
+				  if (new Date(a.date_created) < new Date(b.date_created)){
+				    return -1;
+				  }
+				  if (new Date(a.date_created) > new Date(b.date_created)){
+				    return 1;
+				  }
+				  return 0;
+				}
+
+				function fetchData() {
+					setState(() => {
+						state.loading = true;
+					});
+					return fetch("/api" + window.location.pathname)
+						.then(response => response.json())
+						.then((data) => {
+							setState(() => {
+								state.loading = false;
+								data.sort(compare);
+								state.items = data;
+							});
+						});
+				}
+
+				function startLongPolling() {
+					fetch("/api/polling" + window.location.pathname, {method: "POST"})
+					.then((response) => {
+						console.log("Received data", window.location.pathname);
+						if (state.auto_sync) {
+							fetchData().then((_) => {
+								startLongPolling();
+							});
+						} else {
+							startLongPolling();
+						}
+
+					});
+				}
+
+				function runSync() {
+					return fetch("/api/sync" + window.location.pathname, {
+						method: 'POST'
+					});
+				}
+
+				function uuidv4() {
+				  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+				    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+				    return v.toString(16);
+				  });
+				}
+
+				function addItem(text) {
+					setState(() => {
+						state.loading = true;
+					});
+					var item = {
+						id: uuidv4(),
+						text: text,
+						done: false,
+						date_created: new Date().toISOString().replace("Z", "+00:00")
+					};
+					fetch("/api" + window.location.pathname, {
+						method: "POST",
+						body: JSON.stringify(item)
+					})
+						.then((data) => {
+							setState(() => {
+								state.loading = false;
+								state.items.push(item);
+							});
+							if (state.auto_sync) {
+								runSync();
+							}
+						});
+				}
+
+				return {
+					onMounted: onMounted
+				};
+			}
+
+			var app = App();
+			$(document).ready(function() {
+				app.onMounted();
+			});
+		</script>
+	</body>
+</html>

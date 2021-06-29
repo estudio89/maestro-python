@@ -1,0 +1,15 @@
+*.sqlite3
+TODO.txt
+exception.html
+*.pyc
+*.log
+templates/index.html
+.coverage*
+htmlcov/
+media/
+.anaconda
+*.sublime-workspace
+dist/*
+*.egg-info
+serviceAccountKey.json
+*.sublime-project
