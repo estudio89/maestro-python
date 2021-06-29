@@ -17,9 +17,7 @@ from .api_serializer import FirestoreAPISerializer
 import os
 import firebase_admin
 from firebase_admin import credentials, firestore
-from typing import List
 import json
-import datetime as dt
 
 
 class FirestoreExampleSerializer(BaseItemSerializer):
