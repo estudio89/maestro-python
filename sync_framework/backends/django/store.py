@@ -20,6 +20,7 @@ from .converters import (
     VectorClockMetadataConverter,
 )
 from .serializer import DjangoItemSerializer
+from .contrib.signals import temporarily_disable_signals
 from typing import Optional, Any, Callable, List
 import uuid
 import operator
@@ -174,13 +175,39 @@ class DjangoDataStore(BaseDataStore):
         )
         conflict_log_record.save()
 
+    def commit_item_change(
+        self,
+        operation: "Operation",
+        item_id: "str",
+        item: "Any",
+        execute_operation: "bool" = True,
+    ) -> "ItemChange":
+        model = item._meta.model
+        if execute_operation:
+            with temporarily_disable_signals(model=model):
+                return super().commit_item_change(
+                    operation=operation,
+                    item_id=item_id,
+                    item=item,
+                    execute_operation=execute_operation,
+                )
+        else:
+            return super().commit_item_change(
+                operation=operation,
+                item_id=item_id,
+                item=item,
+                execute_operation=execute_operation,
+            )
+
     def execute_item_change(self, item_change: "ItemChange"):
         item = self.deserialize_item(serialized_item=item_change.serialized_item)
+        model = item._meta.model
 
-        if item_change.operation == Operation.DELETE:
-            item.delete()
-        else:
-            item.save()
+        with temporarily_disable_signals(model=model):
+            if item_change.operation == Operation.DELETE:
+                item.delete()
+            else:
+                item.save()
 
     def save_item_version(self, item_version: "ItemVersion"):
         item_version_record = self.item_version_metadata_converter.to_record(

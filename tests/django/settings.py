@@ -19,6 +19,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "sync_framework.backends.django.contrib.middleware.SyncQueueMiddleware",
 ]
 
 TEMPLATES = [
@@ -41,3 +42,5 @@ TEMPLATES = [
 # https://docs.djangoproject.com/en/3.1/ref/settings/#databases
 
 DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": "db.sqlite3",}}
+
+SYNC_FRAMEWORK = {"MODELS": ["my_app.item"]}

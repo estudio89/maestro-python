@@ -132,12 +132,10 @@ class FirestoreDataStore(BaseDataStore):
         return self.db.collection(collection_name)
 
     def _document_to_raw_instance(
-        self, document, identify_collection=False, ignore_read=False
+        self, document, ignore_read=False
     ):
         instance = document.to_dict()
         instance["id"] = document.id
-        if identify_collection:
-            instance["collection_name"] = document.reference.parent.id
 
         if not ignore_read:
             self._usage.register_read(

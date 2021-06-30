@@ -104,7 +104,11 @@ class BaseDataStore(ABC):
             return copy.deepcopy(item_change)
 
     def commit_item_change(
-        self, operation: "Operation", item_id: "str", item: "Any",
+        self,
+        operation: "Operation",
+        item_id: "str",
+        item: "Any",
+        execute_operation: "bool" = True,
     ) -> "ItemChange":
         """This method will never be called directly by the sync framework but by the application consuming the framework.
            It will perform the operation given as well as record all the metadata necessary for synchronization.
@@ -142,10 +146,11 @@ class BaseDataStore(ABC):
             date_created=now_utc,
         )
 
-        if operation != Operation.DELETE:
-            self.save_item(item=item)
-        else:
-            self.delete_item(item=item)
+        if execute_operation:
+            if operation != Operation.DELETE:
+                self.save_item(item=item)
+            else:
+                self.delete_item(item=item)
 
         self.save_item_change(item_change=item_change, is_creating=True)
         new_version = ItemVersion(
