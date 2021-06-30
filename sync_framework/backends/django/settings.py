@@ -16,6 +16,7 @@ DEFAULTS: "Dict[str, Any]" = {
         "VECTOR_CLOCK_METADATA_CONVERTER_CLASS": "sync_framework.backends.django.VectorClockMetadataConverter",
         "ITEM_SERIALIZER_CLASS": "sync_framework.backends.django.DjangoItemSerializer",
     },
+    "CHANGES_COMMITTED_CALLBACK": None
 }
 
 IMPORT_STRINGS = [
@@ -26,6 +27,7 @@ IMPORT_STRINGS = [
     "CONFLICT_LOG_METADATA_CONVERTER_CLASS",
     "VECTOR_CLOCK_METADATA_CONVERTER_CLASS",
     "ITEM_SERIALIZER_CLASS",
+    "CHANGES_COMMITTED_CALLBACK"
 ]
 
 

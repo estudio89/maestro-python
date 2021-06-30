@@ -29,6 +29,13 @@ def _commit_queued_operations():
             execute_operation=False,
         )
 
+    if _operations_queue.items:
+        if sync_framework_settings.CHANGES_COMMITTED_CALLBACK:
+            callback = sync_framework_settings.CHANGES_COMMITTED_CALLBACK
+            callback()
+
+        _operations_queue.items = []
+
 
 _operations_queue = threading.local()
 _operations_queue.items = []
