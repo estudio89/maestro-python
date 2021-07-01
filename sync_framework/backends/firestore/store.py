@@ -440,7 +440,7 @@ class FirestoreDataStore(BaseDataStore):
             metadata_objects.append(metadata_object)
         return metadata_objects
 
-    def find_item_changes(self, ids="List[str]", max_num="int") -> "List[ItemChange]":
+    def find_item_changes(self, ids: "List[str]") -> "List[ItemChange]":
         if not ids:
             return []
 

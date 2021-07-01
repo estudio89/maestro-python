@@ -1,8 +1,10 @@
 from django.db import models
 from sync_framework.backends.django.contrib.factory import create_django_data_store
-from sync_framework.backends.django import DjangoDataStore
 from sync_framework.core.metadata import Operation
-from typing import Type
+from typing import Type, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from sync_framework.backends.django import DjangoDataStore
 
 
 def commit_model_changes(model: "Type[models.Model]"):
