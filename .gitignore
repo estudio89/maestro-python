@@ -13,3 +13,7 @@ dist/*
 *.egg-info
 serviceAccountKey.json
 *.sublime-project
+coverage/
+node_modules/
+dev.test.ts
+extras/typescript/lib/
