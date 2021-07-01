@@ -46,28 +46,6 @@ class BaseMetadataConverter(ABC):
             (Any): Data store native object.
         """
 
-
-class DateCreatedMixin:
-
-    """Mixin used by metadata converters that store the date of creation of an object.
-    """
-
-    def get_date_created(self, metadata_object: "Any") -> "dt.datetime":
-        """Retrieves the date of creation already associated to the object of returns the current UTC date.
-
-        Args:
-            metadata_object (Any): Metadata object.
-
-        Returns:
-            dt.datetime: Date of creation
-        """
-        if metadata_object.date_created:
-            return metadata_object.date_created
-        else:
-            now_utc = get_now_utc()
-            return now_utc
-
-
 class SyncTimer:
 
     """Times the sync session to make sure it finishes before the timeout.

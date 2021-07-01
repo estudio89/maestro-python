@@ -1,9 +1,9 @@
-from sync_framework.core.utils import BaseMetadataConverter, DateCreatedMixin
+from sync_framework.core.utils import BaseMetadataConverter
 from typing import Any, Type
 import copy
 
 
-class NullConverter(BaseMetadataConverter, DateCreatedMixin):
+class NullConverter(BaseMetadataConverter):
     def __init__(self, metadata_class: "Type"):
         self.metadata_class = metadata_class
 

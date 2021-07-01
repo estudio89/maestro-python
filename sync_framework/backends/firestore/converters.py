@@ -1,4 +1,4 @@
-from sync_framework.core.utils import BaseMetadataConverter, DateCreatedMixin
+from sync_framework.core.utils import BaseMetadataConverter
 from sync_framework.core.metadata import (
     SyncSession,
     ItemVersion,
@@ -61,7 +61,7 @@ class SyncSessionMetadataConverter(FirestoreConverter):
         return sync_session_record
 
 
-class ItemVersionMetadataConverter(DateCreatedMixin, FirestoreConverter):
+class ItemVersionMetadataConverter(FirestoreConverter):
     def to_metadata(self, record: "ItemVersionRecord") -> "ItemVersion":
         item_changes = self.data_store.find_item_changes(
             ids=[record["current_item_change_id"]]
@@ -82,20 +82,17 @@ class ItemVersionMetadataConverter(DateCreatedMixin, FirestoreConverter):
             metadata_object=metadata_object.vector_clock
         )
         current_item_change = cast("ItemChange", metadata_object.current_item_change)
-        collection_name = get_collection_name(
-            current_item_change.serialized_item
-        )
-        date_created = self.get_date_created(metadata_object=metadata_object)
+        collection_name = get_collection_name(current_item_change.serialized_item)
         return ItemVersionRecord(
             id=str(metadata_object.item_id),
-            date_created=date_created,
+            date_created=metadata_object.date_created,
             current_item_change_id=str(current_item_change.id),
             vector_clock=vector_clock,
             collection_name=collection_name,
         )
 
 
-class ItemChangeMetadataConverter(DateCreatedMixin, BaseMetadataConverter):
+class ItemChangeMetadataConverter(BaseMetadataConverter):
     def to_metadata(self, record: "ItemChangeRecord") -> "ItemChange":
         vector_clock_converter = VectorClockMetadataConverter()
         vector_clock = vector_clock_converter.to_metadata(record=record["vector_clock"])
@@ -121,10 +118,9 @@ class ItemChangeMetadataConverter(DateCreatedMixin, BaseMetadataConverter):
             metadata_object=metadata_object.vector_clock
         )
         collection_name = get_collection_name(metadata_object.serialized_item)
-        date_created = self.get_date_created(metadata_object=metadata_object)
         return ItemChangeRecord(
             id=str(metadata_object.id),
-            date_created=date_created,
+            date_created=metadata_object.date_created,
             operation=metadata_object.operation.value,
             item_id=str(metadata_object.item_id),
             collection_name=collection_name,
@@ -146,7 +142,10 @@ class ConflictLogMetadataConverter(FirestoreConverter):
 
         if record.get("item_change_winner_id"):
             item_change_loser, item_change_winner = self.data_store.find_item_changes(
-                ids=[record["item_change_loser_id"], record["item_change_winner_id"]]
+                ids=[
+                    record["item_change_loser_id"],
+                    cast("str", record["item_change_winner_id"]),
+                ]
             )
         else:
             item_change_loser = self.data_store.find_item_changes(

@@ -1,6 +1,6 @@
 from django.apps import apps
 from sync_framework.core.utils import parse_datetime
-from sync_framework.core.utils import BaseMetadataConverter, DateCreatedMixin
+from sync_framework.core.utils import BaseMetadataConverter
 from sync_framework.core.metadata import (
     SyncSession,
     ItemVersion,
@@ -66,7 +66,7 @@ class SyncSessionMetadataConverter(BaseMetadataConverter):
         return sync_session_record
 
 
-class ItemVersionMetadataConverter(DateCreatedMixin, BaseMetadataConverter):
+class ItemVersionMetadataConverter(BaseMetadataConverter):
     def to_metadata(self, record: "ItemVersionRecord") -> "ItemVersion":
         item_change_converter = ItemChangeMetadataConverter()
         item_change = item_change_converter.to_metadata(
@@ -88,18 +88,17 @@ class ItemVersionMetadataConverter(DateCreatedMixin, BaseMetadataConverter):
         )
         current_item_change = cast("ItemChange", metadata_object.current_item_change)
         content_type = get_content_type(current_item_change.serialized_item)
-        date_created = self.get_date_created(metadata_object=metadata_object)
         ItemVersionRecord = apps.get_model("sync_framework", "ItemVersionRecord")
         return ItemVersionRecord(
             id=metadata_object.item_id,
             current_item_change_id=current_item_change.id,
             vector_clock=vector_clock,
             content_type=content_type,
-            date_created=date_created,
+            date_created=metadata_object.date_created,
         )
 
 
-class ItemChangeMetadataConverter(DateCreatedMixin, BaseMetadataConverter):
+class ItemChangeMetadataConverter(BaseMetadataConverter):
     def to_metadata(self, record: "ItemChangeRecord") -> "ItemChange":
         vector_clock_converter = VectorClockMetadataConverter()
         vector_clock = vector_clock_converter.to_metadata(record=record.vector_clock)
@@ -126,10 +125,9 @@ class ItemChangeMetadataConverter(DateCreatedMixin, BaseMetadataConverter):
             metadata_object=metadata_object.vector_clock
         )
         content_type = get_content_type(metadata_object.serialized_item)
-        date_created = self.get_date_created(metadata_object=metadata_object)
         return ItemChangeRecord(
             id=metadata_object.id,
-            date_created=date_created,
+            date_created=metadata_object.date_created,
             operation=metadata_object.operation.value,
             item_id=metadata_object.item_id,
             content_type=content_type,
