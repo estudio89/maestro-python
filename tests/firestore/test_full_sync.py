@@ -3,7 +3,7 @@ import tests.base_full_sync
 import tests.firestore.base
 from sync_framework.core.metadata import SyncSessionStatus
 from sync_framework.core.exceptions import ItemNotFoundException
-from sync_framework.backends.firestore.utils import calculate_firestore_usage
+from sync_framework.backends.firestore.contrib.usage import calculate_firestore_usage
 
 
 class FirestoreFullSyncTest(
