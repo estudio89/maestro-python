@@ -3,11 +3,7 @@
   "scripts": {
     "lint": "eslint --ext .js,.ts .",
     "build": "tsc",
-    "serve": "npm run build && firebase emulators:start --only functions",
-    "shell": "npm run build && firebase functions:shell",
     "start": "npm run shell",
-    "deploy": "firebase deploy --only functions",
-    "logs": "firebase functions:log",
     "test": "nyc ./node_modules/.bin/_mocha 'test/**/*.test.ts' && open coverage/index.html",
     "debugTest": "./node_modules/mocha/bin/mocha --inspect-brk 'test/**/*.test.ts'"
   },
