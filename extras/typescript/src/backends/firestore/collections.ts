@@ -46,4 +46,5 @@ export interface QueuedOperation {
   item_id: string;
   collection_name: string;
   operation: string;
+  data: any
 }

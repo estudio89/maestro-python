@@ -85,6 +85,9 @@ export abstract class BaseDataStore<T> {
     abstract async getItemVersion(
         itemId: string
     ): Promise<ItemVersion | undefined>;
-    abstract async saveItemChange(itemChange: ItemChange, isCreating: boolean): Promise<void>;
+    abstract async saveItemChange(
+        itemChange: ItemChange,
+        isCreating: boolean
+    ): Promise<void>;
     abstract async saveItemVersion(itemVersion: ItemVersion): Promise<void>;
 }

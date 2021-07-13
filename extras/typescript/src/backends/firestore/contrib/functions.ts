@@ -1,6 +1,6 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
-import { QueuedOperation, CollectionType, AppItem } from "../collections";
+import { QueuedOperation, CollectionType } from "../collections";
 import { typeToCollection } from "../utils";
 import { FirestoreDataStore } from "../store";
 import {
@@ -12,16 +12,15 @@ import { Operation } from "../../../core/metadata";
 
 export function setupCommitQueue(
     appItemSerializer: FirestoreAppItemSerializer,
-    onChangeCommited: () => {}
-): functions.CloudFunction<
-    functions.Change<functions.firestore.DocumentSnapshot>
-> {
+    onChangeCommited: () => void,
+    providerId: string = "firestore"
+): functions.CloudFunction<functions.firestore.QueryDocumentSnapshot> {
     const db = admin.firestore();
 
     const queueCollectionName = typeToCollection(CollectionType.COMMIT_QUEUE);
     const itemVersionMetadataConverter = new ItemVersionMetadataConverter();
     const dataStore = new FirestoreDataStore(
-        "provider1",
+        providerId,
         itemVersionMetadataConverter,
         new ItemChangeMetadataConverter(),
         appItemSerializer,
@@ -29,48 +28,53 @@ export function setupCommitQueue(
     );
     itemVersionMetadataConverter.dataStore = dataStore;
     const commitChange = functions.firestore
-        .document(queueCollectionName + "/{documentId}/")
-        .onWrite(async (snapshot, context) => {
-            const data: QueuedOperation =
-                snapshot.after.data() as QueuedOperation;
-            const doc = await db
-                .collection(data.collection_name)
-                .doc(data.item_id)
-                .get();
-            if (doc.exists) {
-                let item = dataStore.documentToRawInstance(doc) as AppItem;
-                item.collectionName = data.collection_name;
-                if (!item.collectionName) {
-                    throw Error(
-                        "A change was committed to the queue without a 'collection_name' field."
-                    );
-                }
+        .document(queueCollectionName + "/{documentId}")
+        .onCreate(async (snapshot, context) => {
+            const queuedOperation: QueuedOperation = snapshot.data() as QueuedOperation;
 
-                if (!item.id) {
-                    throw Error(
-                        "A change was committed to the queue without an 'item_id' field."
-                    );
-                }
-
-                if (!(<any>Object).values(Operation).includes(data.operation)) {
-                    throw Error(
-                        `A change was committed to the queue using an invalid operation: ${data.operation}`
-                    );
-                }
-
-                await dataStore.commitItemChange(
-                    data.operation as Operation,
-                    data.item_id,
-                    item
+            console.log(
+                "Processing commit operation",
+                queuedOperation.operation,
+                queuedOperation.item_id
+            );
+            let item = queuedOperation.data;
+            item.id = queuedOperation.item_id;
+            item.collectionName = queuedOperation.collection_name;
+            if (!item.collectionName) {
+                throw Error(
+                    "A change was committed to the queue without a 'collection_name' field."
                 );
-
-                await db
-                    .collection(queueCollectionName)
-                    .doc(context.params.documentId)
-                    .delete();
-
-                onChangeCommited();
             }
+
+            if (!item.id) {
+                throw Error(
+                    "A change was committed to the queue without an 'item_id' field."
+                );
+            }
+
+            if (
+                !(<any>Object)
+                    .values(Operation)
+                    .includes(queuedOperation.operation)
+            ) {
+                throw Error(
+                    `A change was committed to the queue using an invalid operation: ${queuedOperation.operation}`
+                );
+            }
+
+            await dataStore.commitItemChange(
+                queuedOperation.operation as Operation,
+                queuedOperation.item_id,
+                item
+            );
+
+            await db
+                .collection(queueCollectionName)
+                .doc(context.params.documentId)
+                .delete();
+            console.log("Change was committed");
+            await onChangeCommited();
+            return true;
         });
     return commitChange;
 }
