@@ -207,7 +207,19 @@ class DjangoDataStore(BaseDataStore):
             if item_change.operation == Operation.DELETE:
                 item.delete()
             else:
+                if item_change.operation == Operation.INSERT:
+                    item._state.adding = True
+                else:
+                    item._state.adding = False
+
                 item.save()
+                if item.m2m_data:
+
+                    for attr in item.m2m_data:
+                        values = item.m2m_data[attr]
+                        getattr(item, attr).set(values)
+
+                    item.save()
 
     def save_item_version(self, item_version: "ItemVersion"):
         item_version_record = self.item_version_metadata_converter.to_record(

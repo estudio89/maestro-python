@@ -27,6 +27,10 @@ class DjangoItemSerializer(BaseItemSerializer):
         raw_data["model"] = table_name_to_app_model(table_name=raw_data["model"])
         raw_data = [raw_data]
         serialized_data = json.dumps(raw_data)
-        result_list = list(serializers.deserialize("json", serialized_data))
+        result_list = list(
+            serializers.deserialize("json", serialized_data, ignorenonexistent=True)
+        )
         result = result_list[0]
-        return result.object
+        res_object = result.object
+        res_object.m2m_data = result.m2m_data
+        return res_object
