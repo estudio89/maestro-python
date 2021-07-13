@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from sync_framework.core.exceptions import SyncTimeoutException
 import time
 import datetime as dt
+import re
 
 
 class BaseSyncLock(ABC):
@@ -84,6 +85,9 @@ def get_now_utc() -> "dt.datetime":
     """
     return dt.datetime.now(tz=dt.timezone.utc)
 
+regex = r'^(-?(?:[1-9][0-9]*)?[0-9]{4})-(1[0-2]|0[1-9])-(3[01]|0[1-9]|[12][0-9])T(2[0-3]|[01][0-9]):([0-5][0-9]):([0-5][0-9])(\.[0-9]+)?(Z|[+-](?:2[0-3]|[01][0-9]):[0-5][0-9])?$'
+match_iso8601 = re.compile(regex).match
+
 def parse_datetime(value: "str") -> "dt.datetime":
     """Converts a string to a dt.datetime object.
 
@@ -93,4 +97,8 @@ def parse_datetime(value: "str") -> "dt.datetime":
     Returns:
         dt.datetime: The parsed dt.datetime
     """
+    if not match_iso8601(value):
+        raise ValueError("Not an ISO-8601 string")
+
     return dateutil.parser.isoparse(value)
+
