@@ -17,6 +17,9 @@ import copy
 from typing import Dict, Optional, List, Any, Callable
 import uuid
 import datetime as dt
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class FirestoreUsage:
@@ -36,10 +39,10 @@ class FirestoreUsage:
 
     debug_reads = False
     debug_writes = False
+    enabled = False
 
     def __init__(self):
-        self.reset()
-        self.enabled = False
+        self.reset(enable=False)
 
     def _log(self, message, collection_name, document_id):  # pragma: no cover
         import inspect
@@ -48,18 +51,23 @@ class FirestoreUsage:
         (filename, line_number, function_name, lines, index) = inspect.getframeinfo(
             previous_frame
         )
-        print(
-            message,
-            filename,
-            line_number,
-            function_name,
-            [v.strip() for v in lines],
-            collection_name,
-            document_id,
-        )
 
-    def reset(self):
-        self.enabled = True
+        log_message = " ".join(
+            [
+                message,
+                filename,
+                line_number,
+                function_name,
+                [v.strip() for v in lines],
+                collection_name,
+                document_id,
+            ]
+        )
+        logger.info(log_message)
+
+    def reset(self, enable=True):
+        if enable:
+            self.enabled = True
         self.num_writes = 0
         self.num_reads = 0
         self.num_deletes = 0
@@ -90,16 +98,19 @@ class FirestoreUsage:
         if self.enabled:
             self.num_deletes += 1
 
-    def show(self):  # pragma: no cover
-        from pprint import pprint
+    def show(self, should_print=False):
 
-        pprint(
-            {
-                "reads": self.num_reads,
-                "writes": self.num_writes,
-                "deletes": self.num_deletes,
-            }
-        )
+        usage = {
+            "reads": self.num_reads,
+            "writes": self.num_writes,
+            "deletes": self.num_deletes,
+        }
+        if should_print:  # pragma: no cover
+            from pprint import pprint
+
+            pprint(usage)
+        else:
+            logger.info("Firestore usage: %s", str(usage))
 
 
 class FirestoreCache:
@@ -131,9 +142,7 @@ class FirestoreDataStore(BaseDataStore):
         collection_name = type_to_collection(key=key)
         return self.db.collection(collection_name)
 
-    def _document_to_raw_instance(
-        self, document, ignore_read=False
-    ):
+    def _document_to_raw_instance(self, document, ignore_read=False):
         instance = document.to_dict()
         instance["id"] = document.id
 
