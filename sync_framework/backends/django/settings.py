@@ -9,6 +9,7 @@ DEFAULTS: "Dict[str, Any]" = {
     "DJANGO_PROVIDER": {
         "EVENTS_MANAGER_CLASS": "sync_framework.core.events.EventsManager",
         "PROVIDER_ID": "django",
+        "DJANGO_DATA_STORE_CLASS": "sync_framework.backends.django.DjangoDataStore",
         "SYNC_SESSION_METADATA_CONVERTER_CLASS": "sync_framework.backends.django.SyncSessionMetadataConverter",
         "ITEM_VERSION_METADATA_CONVERTER_CLASS": "sync_framework.backends.django.ItemVersionMetadataConverter",
         "ITEM_CHANGE_METADATA_CONVERTER_CLASS": "sync_framework.backends.django.ItemChangeMetadataConverter",
@@ -21,6 +22,7 @@ DEFAULTS: "Dict[str, Any]" = {
 
 IMPORT_STRINGS = [
     "EVENTS_MANAGER_CLASS",
+    "DJANGO_DATA_STORE_CLASS",
     "SYNC_SESSION_METADATA_CONVERTER_CLASS",
     "ITEM_VERSION_METADATA_CONVERTER_CLASS",
     "ITEM_CHANGE_METADATA_CONVERTER_CLASS",
@@ -85,7 +87,11 @@ class SyncFrameworkSettings:
         self.defaults = defaults
         self.import_strings = import_strings
         self._cached_attrs = set()
-        self._user_settings = getattr(user_settings, namespace, {})
+        if isinstance(user_settings, dict):
+            self._user_settings = user_settings.get(namespace, {})
+        else:
+            self._user_settings = getattr(user_settings, namespace, {})
+
         self._cached_attrs = set()
 
     def __getattr__(self, attr):
@@ -104,7 +110,7 @@ class SyncFrameworkSettings:
         if isinstance(val, dict):
             val = SyncFrameworkSettings(
                 defaults=copy.deepcopy(DEFAULTS[attr]),
-                user_settings=self._user_settings[attr] if attr in self._user_settings else {},
+                user_settings=self._user_settings if attr in self._user_settings else {},
                 namespace=attr
             )
 

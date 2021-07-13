@@ -4,7 +4,7 @@ from sync_framework.core.execution import ChangesExecutor, ConflictResolver
 
 
 def create_django_data_store():
-    return sync_framework.backends.django.DjangoDataStore(
+    return sync_framework_settings.DJANGO_PROVIDER.DJANGO_DATA_STORE_CLASS(
         local_provider_id=sync_framework_settings.DJANGO_PROVIDER.PROVIDER_ID,
         sync_session_metadata_converter=sync_framework_settings.DJANGO_PROVIDER.SYNC_SESSION_METADATA_CONVERTER_CLASS(),
         item_version_metadata_converter=sync_framework_settings.DJANGO_PROVIDER.ITEM_VERSION_METADATA_CONVERTER_CLASS(),
