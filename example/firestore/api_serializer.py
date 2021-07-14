@@ -1,4 +1,4 @@
-from sync_framework.core.utils import parse_datetime
+from maestro.core.utils import parse_datetime
 from example.api_serializer import APISerializer
 from typing import Any, Dict
 

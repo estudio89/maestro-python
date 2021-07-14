@@ -1,7 +1,7 @@
 import unittest
 import unittest.mock
-from sync_framework.core.exceptions import ItemNotFoundException
-from sync_framework.core.metadata import (
+from maestro.core.exceptions import ItemNotFoundException
+from maestro.core.metadata import (
     ItemChange,
     ItemChangeBatch,
     ItemVersion,
@@ -166,7 +166,7 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
         self.assertEqual(local_version, item_version2)
 
         with unittest.mock.patch(
-            "sync_framework.core.utils.get_now_utc",
+            "maestro.core.utils.get_now_utc",
             return_value=dt.datetime(
                 year=2021, month=6, day=25, hour=9, minute=37
             ).replace(tzinfo=dt.timezone.utc),

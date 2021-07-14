@@ -1,24 +1,24 @@
 from firebase_admin import firestore
 from typing import Any, cast
-from sync_framework.core.utils import BaseSyncLock
-from sync_framework.core.events import EventsManager
-from sync_framework.core.provider import BaseSyncProvider
-from sync_framework.core.store import BaseDataStore
-from sync_framework.core.execution import ChangesExecutor
-from sync_framework.backends.firestore.collections import CollectionType
-from sync_framework.backends.firestore.utils import type_to_collection
+from maestro.core.utils import BaseSyncLock
+from maestro.core.events import EventsManager
+from maestro.core.provider import BaseSyncProvider
+from maestro.core.store import BaseDataStore
+from maestro.core.execution import ChangesExecutor
+from maestro.backends.firestore.collections import CollectionType
+from maestro.backends.firestore.utils import type_to_collection
 import unittest
 import copy
 
-from sync_framework.core.metadata import (
+from maestro.core.metadata import (
     SyncSession,
     ItemVersion,
     ItemChange,
     ConflictLog,
     VectorClock,
 )
-from sync_framework.core.exceptions import ItemNotFoundException
-from sync_framework.backends.in_memory import (
+from maestro.core.exceptions import ItemNotFoundException
+from maestro.backends.in_memory import (
     InMemoryDataStore,
     InMemorySyncProvider,
     InMemorySyncLock,
@@ -26,7 +26,7 @@ from sync_framework.backends.in_memory import (
     JSONSerializer,
 )
 
-from sync_framework.backends.firestore import (
+from maestro.backends.firestore import (
     FirestoreDataStore,
     SyncSessionMetadataConverter,
     ItemVersionMetadataConverter,
@@ -236,7 +236,7 @@ class FirestoreBackendTestMixin(tests.base.BackendTestMixin):
                     "timestamp": vector_clock_item.timestamp,
                 }
             )
-        self.db.collection("sync_framework__item_changes").document(
+        self.db.collection("maestro__item_changes").document(
             str(item_change.id)
         ).set(
             {
@@ -255,7 +255,7 @@ class FirestoreBackendTestMixin(tests.base.BackendTestMixin):
             }
         )
 
-        self.db.collection("sync_framework__provider_ids").document(
+        self.db.collection("maestro__provider_ids").document(
             item_change.provider_id
         ).set({"timestamp": item_change.provider_timestamp})
 
@@ -270,7 +270,7 @@ class FirestoreBackendTestMixin(tests.base.BackendTestMixin):
             )
 
         current_item_change = cast("ItemChange", item_version.current_item_change)
-        self.db.collection("sync_framework__item_versions").document(
+        self.db.collection("maestro__item_versions").document(
             str(item_version.item_id)
         ).set(
             {
@@ -282,7 +282,7 @@ class FirestoreBackendTestMixin(tests.base.BackendTestMixin):
         )
 
     def _add_conflict_log(self, conflict_log: "ConflictLog"):  # pragma: no cover
-        self.db.collection("sync_framework__conflict_logs").document(
+        self.db.collection("maestro__conflict_logs").document(
             str(conflict_log.id)
         ).set(
             {

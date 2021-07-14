@@ -1,17 +1,17 @@
 import tests.base
-from sync_framework.core.store import BaseDataStore
-from sync_framework.core.utils import BaseSyncLock
-from sync_framework.core.events import EventsManager
-from sync_framework.core.provider import BaseSyncProvider
-from sync_framework.core.execution import ChangesExecutor
-from sync_framework.core.metadata import (
+from maestro.core.store import BaseDataStore
+from maestro.core.utils import BaseSyncLock
+from maestro.core.events import EventsManager
+from maestro.core.provider import BaseSyncProvider
+from maestro.core.execution import ChangesExecutor
+from maestro.core.metadata import (
     SyncSession,
     ItemChange,
     ItemVersion,
     ConflictLog,
     VectorClock,
 )
-from sync_framework.backends.in_memory import (
+from maestro.backends.in_memory import (
     InMemoryDataStore,
     InMemorySyncProvider,
     InMemorySyncLock,

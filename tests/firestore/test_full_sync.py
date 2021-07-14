@@ -1,9 +1,9 @@
 import unittest
 import tests.base_full_sync
 import tests.firestore.base
-from sync_framework.core.metadata import SyncSessionStatus
-from sync_framework.core.exceptions import ItemNotFoundException
-from sync_framework.backends.firestore.contrib.usage import calculate_firestore_usage
+from maestro.core.metadata import SyncSessionStatus
+from maestro.core.exceptions import ItemNotFoundException
+from maestro.backends.firestore.contrib.usage import calculate_firestore_usage
 
 
 class FirestoreFullSyncTest(

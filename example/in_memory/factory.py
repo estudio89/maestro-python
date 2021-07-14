@@ -1,14 +1,14 @@
-from sync_framework.core.metadata import (
+from maestro.core.metadata import (
     SyncSession,
     ItemVersion,
     ItemChange,
     ConflictLog,
     VectorClock,
 )
-from sync_framework.core.serializer import BaseItemSerializer
-from sync_framework.core.execution import ChangesExecutor, ConflictResolver
+from maestro.core.serializer import BaseItemSerializer
+from maestro.core.execution import ChangesExecutor, ConflictResolver
 from example.events import DebugEventsManager
-from sync_framework.backends.in_memory import (
+from maestro.backends.in_memory import (
     InMemoryDataStore,
     InMemorySyncProvider,
     NullConverter,

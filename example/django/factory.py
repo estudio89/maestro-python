@@ -1,6 +1,6 @@
-from sync_framework.core.execution import ChangesExecutor, ConflictResolver
+from maestro.core.execution import ChangesExecutor, ConflictResolver
 
-from sync_framework.backends.django import (
+from maestro.backends.django import (
     DjangoDataStore,
     DjangoSyncProvider,
     DjangoItemSerializer,
@@ -35,7 +35,7 @@ def create_provider(local_provider_id: "str"):
             'django.contrib.sessions',
             'django.contrib.messages',
             'django.contrib.staticfiles',
-            'sync_framework.backends.django',
+            'maestro.backends.django',
             'example.django'
         ],
 

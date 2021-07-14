@@ -1,10 +1,10 @@
 from typing import Any
-from sync_framework.core.utils import BaseSyncLock
-from sync_framework.core.events import EventsManager
-from sync_framework.core.provider import BaseSyncProvider
-from sync_framework.core.store import BaseDataStore
-from sync_framework.core.execution import ChangesExecutor
-from sync_framework.core.metadata import ItemChange, ItemVersion, ConflictLog
+from maestro.core.utils import BaseSyncLock
+from maestro.core.events import EventsManager
+from maestro.core.provider import BaseSyncProvider
+from maestro.core.store import BaseDataStore
+from maestro.core.execution import ChangesExecutor
+from maestro.core.metadata import ItemChange, ItemVersion, ConflictLog
 
 
 class BackendTestMixin:

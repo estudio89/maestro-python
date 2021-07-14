@@ -2,14 +2,14 @@ from django.test import TestCase, override_settings
 from django.apps import apps
 from django.urls import re_path
 from django.db import models
-from sync_framework.backends.django.contrib.factory import create_django_data_store
-from sync_framework.backends.django.contrib.model_dependencies import (
+from maestro.backends.django.contrib.factory import create_django_data_store
+from maestro.backends.django.contrib.model_dependencies import (
     get_model_dependencies,
 )
-from sync_framework.backends.django.contrib.signals import temporarily_disable_signals
-from sync_framework.backends.django.contrib.migrate import commit_model_changes
-from sync_framework.backends.django.contrib.middleware import _operations_queue
-from sync_framework.core.metadata import Operation
+from maestro.backends.django.contrib.signals import temporarily_disable_signals
+from maestro.backends.django.contrib.migrate import commit_model_changes
+from maestro.backends.django.contrib.middleware import _operations_queue
+from maestro.core.metadata import Operation
 import uuid
 from tests.django.views import update_item_view
 
@@ -46,7 +46,7 @@ class AppSettingsTest(TestCase):
 
     def test_middleware(self):
         Item = apps.get_model("my_app", "Item")
-        ItemChangeRecord = apps.get_model("sync_framework", "ItemChangeRecord")
+        ItemChangeRecord = apps.get_model("maestro", "ItemChangeRecord")
         item_id = uuid.UUID("533ce3b4-9ef6-42fe-b220-64c86aaad444")
         item = Item(id=item_id, name="item", version="1",)
 
@@ -66,7 +66,7 @@ class AppSettingsTest(TestCase):
 
     def test_migrate(self):
         Item = apps.get_model("my_app", "Item")
-        ItemChangeRecord = apps.get_model("sync_framework", "ItemChangeRecord")
+        ItemChangeRecord = apps.get_model("maestro", "ItemChangeRecord")
         with temporarily_disable_signals(Item):
             Item.objects.create(
                 id=uuid.UUID("533ce3b4-9ef6-42fe-b220-64c86aaad444"),

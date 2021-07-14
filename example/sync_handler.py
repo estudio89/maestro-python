@@ -1,11 +1,11 @@
-from sync_framework.core.serializer import (
+from maestro.core.serializer import (
     RawDataStoreJSONSerializer,
     MetadataSerializer,
 )
-from sync_framework.backends.in_memory import InMemorySyncLock
+from maestro.backends.in_memory import InMemorySyncLock
 
-from sync_framework.core.orchestrator import SyncOrchestrator
-from sync_framework.core.metadata import Operation
+from maestro.core.orchestrator import SyncOrchestrator
+from maestro.core.metadata import Operation
 import uuid
 import json
 

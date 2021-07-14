@@ -1,25 +1,25 @@
 from django.apps import apps
-from sync_framework.core.store import BaseDataStore
-from sync_framework.core.utils import BaseSyncLock
-from sync_framework.core.events import EventsManager
-from sync_framework.core.exceptions import ItemNotFoundException
-from sync_framework.core.execution import ChangesExecutor
-from sync_framework.core.metadata import (
+from maestro.core.store import BaseDataStore
+from maestro.core.utils import BaseSyncLock
+from maestro.core.events import EventsManager
+from maestro.core.exceptions import ItemNotFoundException
+from maestro.core.execution import ChangesExecutor
+from maestro.core.metadata import (
     SyncSession,
     ItemVersion,
     ItemChange,
     ConflictLog,
     VectorClock,
 )
-from sync_framework.core.provider import BaseSyncProvider
-from sync_framework.backends.in_memory import (
+from maestro.core.provider import BaseSyncProvider
+from maestro.backends.in_memory import (
     InMemoryDataStore,
     InMemorySyncProvider,
     NullConverter,
     JSONSerializer,
 )
 
-from sync_framework.backends.django import (
+from maestro.backends.django import (
     DjangoDataStore,
     SyncSessionMetadataConverter,
     ItemVersionMetadataConverter,
@@ -155,7 +155,7 @@ class DjangoBackendTestMixin(tests.base.BackendTestMixin):
         ContentType = apps.get_model("contenttypes", "ContentType")
         Item = apps.get_model("my_app", "Item")
         content_type = ContentType.objects.get_for_model(Item)
-        ItemChangeRecord = apps.get_model("sync_framework", "ItemChangeRecord")
+        ItemChangeRecord = apps.get_model("maestro", "ItemChangeRecord")
         return ItemChangeRecord.objects.create(
             id=item_change.id,
             date_created=item_change.date_created,
@@ -180,7 +180,7 @@ class DjangoBackendTestMixin(tests.base.BackendTestMixin):
         ContentType = apps.get_model("contenttypes", "ContentType")
         Item = apps.get_model("my_app", "Item")
         content_type = ContentType.objects.get_for_model(Item)
-        ItemVersionRecord = apps.get_model("sync_framework", "ItemVersionRecord")
+        ItemVersionRecord = apps.get_model("maestro", "ItemVersionRecord")
         current_item_change = cast("ItemChange", item_version.current_item_change)
         return ItemVersionRecord.objects.create(
             id=item_version.item_id,
@@ -192,7 +192,7 @@ class DjangoBackendTestMixin(tests.base.BackendTestMixin):
         self.data_store._db["item_versions"].append(item_version.__dict__)
 
     def _add_conflict_log(self, conflict_log: "ConflictLog"):
-        ConflictLogRecord = apps.get_model("sync_framework", "ConflictLogRecord")
+        ConflictLogRecord = apps.get_model("maestro", "ConflictLogRecord")
         return ConflictLogRecord.objects.create(
             id=conflict_log.id,
             created_at=conflict_log.created_at,

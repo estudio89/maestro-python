@@ -1,11 +1,11 @@
 import unittest
 import unittest.mock
 from typing import List
-from sync_framework.core.serializer import (
+from maestro.core.serializer import (
     MetadataSerializer,
     RawDataStoreJSONSerializer,
 )
-from sync_framework.core.metadata import (
+from maestro.core.metadata import (
     VectorClockItem,
     VectorClock,
     ConflictLog,

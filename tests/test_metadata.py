@@ -1,6 +1,6 @@
 import unittest
 from typing import List
-from sync_framework.core.metadata import (
+from maestro.core.metadata import (
     VectorClockItem,
     VectorClock,
     ItemChange,

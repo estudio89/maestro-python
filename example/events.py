@@ -1,5 +1,5 @@
-from sync_framework.core.events import EventsManager
-from sync_framework.core.metadata import ItemChange
+from maestro.core.events import EventsManager
+from maestro.core.metadata import ItemChange
 
 class DebugEventsManager(EventsManager):
     raise_exception = True

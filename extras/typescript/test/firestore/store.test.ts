@@ -20,7 +20,7 @@ class FirestoreDataStoreTest {
 
         const mockDB = {
             collection: (collectionName: string) => {
-                if (collectionName === "sync_framework__item_versions") {
+                if (collectionName === "maestro__item_versions") {
                     return {
                         doc: (documentId: string) => {
                             return {
@@ -39,7 +39,7 @@ class FirestoreDataStoreTest {
                         },
                     };
                 }
-                if (collectionName === "sync_framework__item_changes") {
+                if (collectionName === "maestro__item_changes") {
                     return {
                         doc: (documentId: string) => {
                             return {
@@ -52,7 +52,7 @@ class FirestoreDataStoreTest {
                         },
                     };
                 }
-                if (collectionName === "sync_framework__provider_ids") {
+                if (collectionName === "maestro__provider_ids") {
                     return {
                         doc: (documentId: string) => {
                             return {
@@ -153,7 +153,7 @@ class FirestoreDataStoreTest {
 
         const mockDB = {
             collection: (collectionName: string) => {
-                if (collectionName === "sync_framework__item_versions") {
+                if (collectionName === "maestro__item_versions") {
                     return {
                         doc: (documentId: string) => {
                             itemVersionDocIds.push(documentId);
@@ -192,7 +192,7 @@ class FirestoreDataStoreTest {
                         },
                     };
                 }
-                if (collectionName === "sync_framework__item_changes") {
+                if (collectionName === "maestro__item_changes") {
                     return {
                         doc: (documentId: string) => {
                             itemChangeDocIds.push(documentId);
@@ -206,7 +206,7 @@ class FirestoreDataStoreTest {
                         },
                     };
                 }
-                if (collectionName === "sync_framework__provider_ids") {
+                if (collectionName === "maestro__provider_ids") {
                     return {
                         doc: (documentId: string) => {
                             return {

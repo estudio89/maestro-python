@@ -1,7 +1,7 @@
-from sync_framework.core.serializer import BaseItemSerializer
-from sync_framework.core.execution import ChangesExecutor, ConflictResolver
+from maestro.core.serializer import BaseItemSerializer
+from maestro.core.execution import ChangesExecutor, ConflictResolver
 
-from sync_framework.backends.firestore import (
+from maestro.backends.firestore import (
     FirestoreDataStore,
     FirestoreSyncProvider,
     SyncSessionMetadataConverter,
@@ -10,7 +10,7 @@ from sync_framework.backends.firestore import (
     ConflictLogMetadataConverter,
     VectorClockMetadataConverter,
 )
-from sync_framework.core.utils import parse_datetime
+from maestro.core.utils import parse_datetime
 from example.events import DebugEventsManager
 from .collections import TodoRecord
 from .api_serializer import FirestoreAPISerializer

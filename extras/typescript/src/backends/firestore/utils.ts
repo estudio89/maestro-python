@@ -1,7 +1,7 @@
 import { CollectionType } from "./collections";
 
 export function typeToCollection(collectionType: CollectionType): string {
-    return "sync_framework__" + collectionType;
+    return "maestro__" + collectionType;
 }
 
 export function getCollectionName(serializedItem: string): string {

@@ -1,5 +1,5 @@
 from example.api_serializer import APISerializer
-from sync_framework.core.utils import parse_datetime
+from maestro.core.utils import parse_datetime
 import uuid
 from typing import Any, Dict
 from django.apps import apps

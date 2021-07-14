@@ -1,14 +1,14 @@
 import unittest
 import unittest.mock
-from sync_framework.core.orchestrator import SyncOrchestrator
-from sync_framework.core.utils import BaseSyncLock
-from sync_framework.core.events import EventsManager
-from sync_framework.core.provider import BaseSyncProvider
-from sync_framework.core.exceptions import ItemNotFoundException
-from sync_framework.core.store import BaseDataStore
-from sync_framework.core.execution import ChangesExecutor, ConflictResolver
+from maestro.core.orchestrator import SyncOrchestrator
+from maestro.core.utils import BaseSyncLock
+from maestro.core.events import EventsManager
+from maestro.core.provider import BaseSyncProvider
+from maestro.core.exceptions import ItemNotFoundException
+from maestro.core.store import BaseDataStore
+from maestro.core.execution import ChangesExecutor, ConflictResolver
 
-from sync_framework.core.metadata import (
+from maestro.core.metadata import (
     ConflictStatus,
     ConflictType,
     ItemChange,
