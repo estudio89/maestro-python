@@ -15,21 +15,23 @@ export function setupCommitQueue(
     onChangeCommited: () => void,
     providerId: string = "firestore"
 ): functions.CloudFunction<functions.firestore.QueryDocumentSnapshot> {
-    const db = admin.firestore();
 
     const queueCollectionName = typeToCollection(CollectionType.COMMIT_QUEUE);
-    const itemVersionMetadataConverter = new ItemVersionMetadataConverter();
-    const dataStore = new FirestoreDataStore(
-        providerId,
-        itemVersionMetadataConverter,
-        new ItemChangeMetadataConverter(),
-        appItemSerializer,
-        db
-    );
-    itemVersionMetadataConverter.dataStore = dataStore;
+
     const commitChange = functions.firestore
         .document(queueCollectionName + "/{documentId}")
         .onCreate(async (snapshot, context) => {
+            const db = admin.firestore();
+            const itemVersionMetadataConverter =
+                new ItemVersionMetadataConverter();
+            const dataStore = new FirestoreDataStore(
+                providerId,
+                itemVersionMetadataConverter,
+                new ItemChangeMetadataConverter(),
+                appItemSerializer,
+                db
+            );
+            itemVersionMetadataConverter.dataStore = dataStore;
             const queuedOperation: QueuedOperation = snapshot.data() as QueuedOperation;
 
             console.log(
