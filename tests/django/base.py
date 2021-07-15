@@ -58,7 +58,7 @@ class TestInMemoryDataStore(InMemoryDataStore):
 
     def serialize_item(self, item: "Item") -> "str":
         return (
-            '{"fields": {"name": "%s", "version": "%s"}, "pk": "%s", "table_name": "my_app_item"}'
+            '{"entity_name": "my_app_item", "fields": {"name": "%s", "version": "%s"}, "pk": "%s"}'
             % (item.name, item.version, str(item.id))
         )
 
@@ -86,7 +86,7 @@ class DjangoBackendTestMixin(tests.base.BackendTestMixin):
 
     def _serialize_item(self, id: "str", name: "str", version: "str"):
         return (
-            '{"fields": {"name": "%s", "version": "%s"}, "pk": "%s", "table_name": "my_app_item"}'
+            '{"entity_name": "my_app_item", "fields": {"name": "%s", "version": "%s"}, "pk": "%s"}'
             % (name, version, str(id))
         )
 

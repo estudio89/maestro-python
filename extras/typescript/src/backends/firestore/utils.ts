@@ -6,15 +6,15 @@ export function typeToCollection(collectionType: CollectionType): string {
 
 export function getCollectionName(serializedItem: string): string {
     const data = JSON.parse(serializedItem);
-    const tableName = data.table_name;
-    const collection = tableNameToCollection(tableName);
+    const entityName = data.entity_name;
+    const collection = entityNameToCollection(entityName);
     return collection;
 }
 
-export function collectionToTableName(collection: string) {
+export function collectionToEntityName(collection: string) {
     return collection;
 }
 
-export function tableNameToCollection(tableName: string) {
-  return tableName;
+export function entityNameToCollection(entityName: string) {
+  return entityName;
 }

@@ -30,7 +30,7 @@ class FirestoreExampleSerializer(BaseItemSerializer):
                 "text": item["text"],
             },
             "pk": item["id"],
-            "table_name": "todos_todo",
+            "entity_name": "todos_todo",
         }
 
         serialized = dict(sorted(serialized.items()))

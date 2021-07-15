@@ -3,8 +3,8 @@ from maestro.core.serializer import BaseItemSerializer
 import json
 from typing import Dict, Any
 from maestro.backends.firestore.utils import (
-    collection_to_table_name,
-    table_name_to_collection,
+    collection_to_entity_name,
+    entity_name_to_collection,
 )
 import datetime as dt
 
@@ -32,8 +32,8 @@ class FirestoreItemSerializer(BaseItemSerializer):
             )
             fields[key] = value
 
-        table_name = collection_to_table_name(collection=collection_name)
-        serialized_data = {"table_name": table_name, "pk": pk, "fields": fields}
+        entity_name = collection_to_entity_name(collection=collection_name)
+        serialized_data = {"entity_name": entity_name, "pk": pk, "fields": fields}
         serialized_data = dict(sorted(serialized_data.items()))
         serialized_item = json.dumps(serialized_data)
         return serialized_item
@@ -63,8 +63,8 @@ class FirestoreItemSerializer(BaseItemSerializer):
 
     def deserialize_item(self, serialized_item: "str") -> "Dict[str, Any]":
         raw_data = json.loads(serialized_item)
-        table_name = raw_data.pop("table_name")
-        collection_name = table_name_to_collection(table_name=table_name)
+        entity_name = raw_data.pop("entity_name")
+        collection_name = entity_name_to_collection(entity_name=entity_name)
         pk = raw_data.pop("pk")
         fields = raw_data.pop("fields")
         item = {"id": pk, "collection_name": collection_name}

@@ -2,18 +2,18 @@ from .collections import CollectionType
 import json
 
 
-def table_name_to_collection(table_name: "str") -> "str":
-    return table_name
+def entity_name_to_collection(entity_name: "str") -> "str":
+    return entity_name
 
 
-def collection_to_table_name(collection: "str") -> "str":
+def collection_to_entity_name(collection: "str") -> "str":
     return collection
 
 
 def get_collection_name(serialized_item: "str") -> "str":
     data = json.loads(serialized_item)
-    table_name = data["table_name"]
-    collection = table_name_to_collection(table_name)
+    entity_name = data["entity_name"]
+    collection = entity_name_to_collection(entity_name)
     return collection
 
 

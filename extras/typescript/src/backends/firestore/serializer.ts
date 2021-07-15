@@ -1,7 +1,7 @@
 import * as admin from "firebase-admin";
 import { BaseItemSerializer } from "../../core/serializer";
 import { AppItem } from "./collections";
-import { collectionToTableName } from "./utils";
+import { collectionToEntityName } from "./utils";
 
 /**
  * Serializes an item to the format expected by the Sync Framework
@@ -40,9 +40,9 @@ export class FirestoreAppItemSerializer implements BaseItemSerializer<AppItem> {
             const value = this.serializeField(collectionName, item, key);
             fields[key] = value;
         }
-        const tableName = collectionToTableName(collectionName);
+        const entityName = collectionToEntityName(collectionName);
         const serializedData = {
-            table_name: tableName,
+            entity_name: entityName,
             pk: pk,
             fields: fields,
         };

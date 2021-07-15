@@ -115,7 +115,7 @@ class FirestoreDataStoreTest {
         assert.equal(savedItemChanges[0].insert_provider_id, "provider1");
         assert.equal(
             savedItemChanges[0].serialized_item,
-            '{"table_name":"my_collection","pk":"7932bf9f-8e45-42da-8e91-43a55ad9dee4","fields":{"hello":"world"}}'
+            '{"entity_name":"my_collection","pk":"7932bf9f-8e45-42da-8e91-43a55ad9dee4","fields":{"hello":"world"}}'
         );
         assert.isFalse(savedItemChanges[0].should_ignore);
         assert.isTrue(savedItemChanges[0].is_applied);
@@ -241,7 +241,7 @@ class FirestoreDataStoreTest {
                                     insert_provider_id: "provider2",
                                     insert_provider_timestamp: creationDate,
                                     serialized_item:
-                                        '{"table_name":"my_collection","pk":"7932bf9f-8e45-42da-8e91-43a55ad9dee4","fields":{"hello":"world"}}',
+                                        '{"entity_name":"my_collection","pk":"7932bf9f-8e45-42da-8e91-43a55ad9dee4","fields":{"hello":"world"}}',
                                     should_ignore: false,
                                     is_applied: true,
                                     vector_clock: [
@@ -294,7 +294,7 @@ class FirestoreDataStoreTest {
         assert.equal(savedItemChanges[0].insert_provider_id, "provider2");
         assert.equal(
             savedItemChanges[0].serialized_item,
-            '{"table_name":"my_collection","pk":"7932bf9f-8e45-42da-8e91-43a55ad9dee4","fields":{"hello":"world"}}'
+            '{"entity_name":"my_collection","pk":"7932bf9f-8e45-42da-8e91-43a55ad9dee4","fields":{"hello":"world"}}'
         );
         assert.isFalse(savedItemChanges[0].should_ignore);
         assert.isTrue(savedItemChanges[0].is_applied);

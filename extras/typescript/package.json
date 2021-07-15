@@ -1,7 +1,7 @@
 {
-  "name": "sync-framework",
+  "name": "maestro",
   "version": "0.0.1",
-  "description": "Sync Framework library for the Firestore backend.",
+  "description": "Maestro library for the Firestore backend.",
   "scripts": {
     "lint": "eslint --ext .js,.ts .",
     "build": "tsc",
@@ -30,24 +30,24 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "dependencies": {
-    "@types/uuid": "^8.3.0",
-    "firebase-admin": "^9.8.0",
-    "firebase-functions": "^3.14.1",
-    "uuid": "^8.3.2"
+    "@types/uuid": "8.3.0",
+    "firebase-admin": "9.8.0",
+    "firebase-functions": "3.14.1",
+    "uuid": "8.3.2"
   },
   "devDependencies": {
-    "@testdeck/mocha": "^0.1.2",
-    "@types/chai": "^4.2.19",
-    "@typescript-eslint/eslint-plugin": "^3.9.1",
-    "@typescript-eslint/parser": "^3.8.0",
-    "chai": "^4.3.4",
-    "eslint": "^7.6.0",
-    "eslint-config-google": "^0.14.0",
-    "eslint-plugin-import": "^2.22.0",
-    "firebase-functions-test": "^0.2.0",
-    "mocha": "^9.0.1",
-    "nyc": "^15.1.0",
-    "ts-node": "^10.0.0",
-    "typescript": "^3.9.10"
+    "@testdeck/mocha": "0.1.2",
+    "@types/chai": "4.2.19",
+    "@typescript-eslint/eslint-plugin": "3.9.1",
+    "@typescript-eslint/parser": "3.8.0",
+    "chai": "4.3.4",
+    "eslint": "7.6.0",
+    "eslint-config-google": "0.14.0",
+    "eslint-plugin-import": "2.22.0",
+    "firebase-functions-test": "0.2.0",
+    "mocha": "9.0.1",
+    "nyc": "15.1.0",
+    "ts-node": "10.0.0",
+    "typescript": "3.9.10"
   }
 }

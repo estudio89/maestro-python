@@ -5,18 +5,18 @@ from django.core.cache import cache
 from maestro.core.utils import BaseSyncLock
 import json
 
-def app_model_to_table_name(app_model: "str") -> "str":
+def app_model_to_entity_name(app_model: "str") -> "str":
     return app_model.replace(".", "_")
 
-def table_name_to_app_model(table_name: "str") -> "str":
-    app_label, model = table_name.rsplit("_", maxsplit=1)
+def entity_name_to_app_model(entity_name: "str") -> "str":
+    app_label, model = entity_name.rsplit("_", maxsplit=1)
     return app_label + "." + model
 
 def get_content_type(serialized_item):
     from django.contrib.contenttypes.models import ContentType
     data = json.loads(serialized_item)
-    table_name = data["table_name"]
-    app_model = table_name_to_app_model(table_name)
+    entity_name = data["entity_name"]
+    app_model = entity_name_to_app_model(entity_name)
     app, model = app_model.split(".")
     content_type = ContentType.objects.get(app_label=app, model=model)
     return content_type

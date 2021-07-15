@@ -89,7 +89,7 @@ class TestInMemoryDataStore(InMemoryDataStore):
 
     def serialize_item(self, item):
         return (
-            '{"pk": "%s", "fields": {"name": "%s", "version": "%s"}, "table_name": "test_items"}'
+            '{"entity_name": "test_items", "pk": "%s", "fields": {"name": "%s", "version": "%s"}}'
             % (str(item["id"]), item["name"], item["version"])
         )
 
@@ -152,7 +152,7 @@ class FirestoreBackendTestMixin(tests.base.BackendTestMixin):
 
     def _serialize_item(self, id: "str", name: "str", version: "str") -> "str":
         return (
-            '{"fields": {"name": "%s", "version": "%s"}, "pk": "%s", "table_name": "test_items"}'
+            '{"entity_name": "test_items", "fields": {"name": "%s", "version": "%s"}, "pk": "%s"}'
             % (name, version, str(id))
         )
 
