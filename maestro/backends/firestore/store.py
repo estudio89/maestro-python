@@ -1,5 +1,6 @@
-from maestro.core.store import BaseDataStore
+from maestro.backends.base_nosql.store import NoSQLDataStore
 from maestro.core.exceptions import ItemNotFoundException
+from maestro.core.query import Query
 from maestro.core.metadata import (
     VectorClock,
     ItemVersion,
@@ -10,9 +11,9 @@ from maestro.core.metadata import (
     ConflictStatus,
     SyncSession,
 )
-from .collections import CollectionType, ItemChangeRecord, ConflictLogRecord
+from maestro.backends.base_nosql.collections import CollectionType, ItemChangeRecord, ConflictLogRecord
 from firebase_admin import firestore
-from .utils import get_collection_name, type_to_collection
+from maestro.backends.base_nosql.utils import get_collection_name, type_to_collection
 import copy
 from typing import Dict, Optional, List, Any, Callable
 import uuid
@@ -128,7 +129,7 @@ class FirestoreCache:
         return copy.deepcopy(value)
 
 
-class FirestoreDataStore(BaseDataStore):
+class FirestoreDataStore(NoSQLDataStore):
     """ Reference: https://googleapis.dev/python/firestore/latest/collection.html"""
 
     def __init__(self, *args, **kwargs):
@@ -193,7 +194,9 @@ class FirestoreDataStore(BaseDataStore):
 
         self._usage.register_write(collection_name=collection, document_id=pk)
 
-    def get_local_vector_clock(self) -> "VectorClock":
+    def get_local_vector_clock(self, query: "Optional[Query]" = None) -> "VectorClock":
+        if query is not None:
+            raise ValueError("This backend doesn't support queries!")
         vector_clock = VectorClock.create_empty(provider_ids=[self.local_provider_id])
         docs = self._get_collection_query(CollectionType.PROVIDER_IDS).get()
         if not docs:
@@ -251,8 +254,15 @@ class FirestoreDataStore(BaseDataStore):
         raise ItemNotFoundException(item_type="ItemChangeRecord", id=str(id))
 
     def select_changes(
-        self, vector_clock: "VectorClock", max_num: "int"
-    ) -> "ItemChangeBatch":  # pragma: no cover
+        self,
+        vector_clock: "VectorClock",
+        max_num: "int",
+        query: "Optional[Query]" = None,
+    ) -> "ItemChangeBatch":
+
+        if query is not None:
+            raise ValueError("This backend doesn't support queries!")
+
         item_change_records: "List[ItemChangeRecord]" = []
         provider_ids = self._get_provider_ids()
 
@@ -291,8 +301,15 @@ class FirestoreDataStore(BaseDataStore):
         return item_change_batch
 
     def select_deferred_changes(
-        self, vector_clock: "VectorClock", max_num: "int"
-    ) -> "ItemChangeBatch":  # pragma: no cover
+        self,
+        vector_clock: "VectorClock",
+        max_num: "int",
+        query: "Optional[Query]" = None,
+    ) -> "ItemChangeBatch":
+
+        if query is not None:
+            raise ValueError("This backend doesn't support queries!")
+
         docs = (
             self._get_collection_query(CollectionType.CONFLICT_LOGS)
             .where("status", "==", ConflictStatus.DEFERRED.value)

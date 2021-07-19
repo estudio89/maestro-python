@@ -18,12 +18,17 @@ def create_firestore_provider(
     max_changes_per_session=20,
     sync_session_metadata_converter=SyncSessionMetadataConverter(),
     item_version_metadata_converter=ItemVersionMetadataConverter(),
-    item_change_metadata_converter=ItemChangeMetadataConverter(),
+    item_change_metadata_converter=None,
     conflict_log_metadata_converter=ConflictLogMetadataConverter(),
     vector_clock_metadata_converter=VectorClockMetadataConverter(),
     item_serializer=FirestoreItemSerializer(),
     events_manager_class=EventsManager,
-): # pragma: no cover
+):  # pragma: no cover
+
+    if item_change_metadata_converter is None:
+        item_change_metadata_converter = ItemChangeMetadataConverter(
+            item_serializer=item_serializer
+        )
 
     db = firestore.client()
     data_store = FirestoreDataStore(

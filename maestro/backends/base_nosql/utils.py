@@ -1,4 +1,5 @@
 from .collections import CollectionType
+from typing import Union, Dict
 import json
 
 
@@ -10,8 +11,11 @@ def collection_to_entity_name(collection: "str") -> "str":
     return collection
 
 
-def get_collection_name(serialized_item: "str") -> "str":
-    data = json.loads(serialized_item)
+def get_collection_name(serialized_item: "Union[Dict, str]") -> "str":
+    if isinstance(serialized_item, str):
+        data = json.loads(serialized_item)
+    else:
+        data = serialized_item
     entity_name = data["entity_name"]
     collection = entity_name_to_collection(entity_name)
     return collection

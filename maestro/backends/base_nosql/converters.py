@@ -14,6 +14,7 @@ from maestro.core.metadata import (
 import datetime as dt
 import uuid
 from .utils import get_collection_name
+from .serializer import NoSQLItemSerializer
 from typing import List, TYPE_CHECKING, cast, Optional
 from .collections import (
     SyncSessionRecord,
@@ -24,14 +25,14 @@ from .collections import (
 )
 
 if TYPE_CHECKING:
-    from .store import FirestoreDataStore
+    from .store import NoSQLDataStore
 
 
-class FirestoreConverter(BaseMetadataConverter):
-    data_store: "FirestoreDataStore"
+class NoSQLConverter(BaseMetadataConverter):
+    data_store: "NoSQLDataStore"
 
 
-class SyncSessionMetadataConverter(FirestoreConverter):
+class SyncSessionMetadataConverter(NoSQLConverter):
     def to_metadata(self, record: "SyncSessionRecord") -> "SyncSession":
         item_changes = self.data_store.find_item_changes(ids=record["item_change_ids"])
 
@@ -61,7 +62,7 @@ class SyncSessionMetadataConverter(FirestoreConverter):
         return sync_session_record
 
 
-class ItemVersionMetadataConverter(FirestoreConverter):
+class ItemVersionMetadataConverter(NoSQLConverter):
     def to_metadata(self, record: "ItemVersionRecord") -> "ItemVersion":
         item_changes = self.data_store.find_item_changes(
             ids=[record["current_item_change_id"]]
@@ -93,9 +94,17 @@ class ItemVersionMetadataConverter(FirestoreConverter):
 
 
 class ItemChangeMetadataConverter(BaseMetadataConverter):
+    item_serializer: "NoSQLItemSerializer"
+
+    def __init__(self, item_serializer: "NoSQLItemSerializer"):
+        self.item_serializer = item_serializer
+
     def to_metadata(self, record: "ItemChangeRecord") -> "ItemChange":
         vector_clock_converter = VectorClockMetadataConverter()
         vector_clock = vector_clock_converter.to_metadata(record=record["vector_clock"])
+        serialized_item = self.item_serializer.serialize_item(
+            item=record["serialized_item"]
+        )
         metadata_object = ItemChange(
             id=uuid.UUID(record["id"]),
             date_created=record["date_created"],
@@ -105,7 +114,7 @@ class ItemChangeMetadataConverter(BaseMetadataConverter):
             provider_id=record["provider_id"],
             insert_provider_timestamp=record["insert_provider_timestamp"],
             insert_provider_id=record["insert_provider_id"],
-            serialized_item=record["serialized_item"],
+            serialized_item=serialized_item,
             should_ignore=record["should_ignore"],
             is_applied=record["is_applied"],
             vector_clock=vector_clock,
@@ -118,6 +127,9 @@ class ItemChangeMetadataConverter(BaseMetadataConverter):
             metadata_object=metadata_object.vector_clock
         )
         collection_name = get_collection_name(metadata_object.serialized_item)
+        deserialized_item = self.item_serializer.deserialize_item(
+            serialized_item=metadata_object.serialized_item
+        )
         return ItemChangeRecord(
             id=str(metadata_object.id),
             date_created=metadata_object.date_created,
@@ -128,14 +140,14 @@ class ItemChangeMetadataConverter(BaseMetadataConverter):
             provider_id=metadata_object.provider_id,
             insert_provider_timestamp=metadata_object.insert_provider_timestamp,
             insert_provider_id=metadata_object.insert_provider_id,
-            serialized_item=metadata_object.serialized_item,
+            serialized_item=deserialized_item,
             should_ignore=metadata_object.should_ignore,
             is_applied=metadata_object.is_applied,
             vector_clock=vector_clock,
         )
 
 
-class ConflictLogMetadataConverter(FirestoreConverter):
+class ConflictLogMetadataConverter(NoSQLConverter):
     def to_metadata(self, record: "ConflictLogRecord") -> "ConflictLog":
 
         item_change_winner: "Optional[ItemChange]"

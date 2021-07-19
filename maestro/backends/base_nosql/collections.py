@@ -1,4 +1,4 @@
-from typing import TypedDict, List, Optional
+from typing import TypedDict, Dict, List, Optional
 import datetime as dt
 import enum
 
@@ -23,7 +23,7 @@ class ItemChangeRecord(TypedDict):
     provider_id: "str"
     insert_provider_timestamp: "dt.datetime"
     insert_provider_id: "str"
-    serialized_item: "str"
+    serialized_item: "Dict"
     should_ignore: "bool"
     is_applied: "bool"
     vector_clock: "List[VectorClockItemRecord]"

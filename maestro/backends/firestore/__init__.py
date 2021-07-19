@@ -1,6 +1,6 @@
 from .store import FirestoreDataStore
 from .provider import FirestoreSyncProvider
-from .converters import (
+from maestro.backends.base_nosql.converters import (
     SyncSessionMetadataConverter,
     ItemVersionMetadataConverter,
     ItemChangeMetadataConverter,
