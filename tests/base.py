@@ -5,9 +5,14 @@ from maestro.core.provider import BaseSyncProvider
 from maestro.core.store import BaseDataStore
 from maestro.core.execution import ChangesExecutor
 from maestro.core.metadata import ItemChange, ItemVersion, ConflictLog
-
+import json
 
 class BackendTestMixin:
+
+    def to_dict(self, value: "Any"):
+        if isinstance(value, dict):
+            return value
+        return json.loads(value)
 
     def _create_data_store(
         self, local_provider_id: "str",

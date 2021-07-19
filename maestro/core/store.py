@@ -9,6 +9,7 @@ from .metadata import (
     Operation,
     SyncSession,
 )
+from .query import Query
 from .utils import BaseMetadataConverter, get_now_utc
 from .serializer import BaseItemSerializer
 from .exceptions import ItemNotFoundException
@@ -178,8 +179,14 @@ class BaseDataStore(ABC):
         return self.item_serializer.deserialize_item(serialized_item=serialized_item)
 
     @abstractmethod
-    def get_local_vector_clock(self) -> "VectorClock":  # pragma: no cover
+    def get_local_vector_clock(
+        self, query: "Optional[Query]" = None
+    ) -> "VectorClock":  # pragma: no cover
         """Returns the VectorClock calculated from the changes currently in the data store.
+
+        Args:
+            query (Optional[Query]): The query that must be performed to select the item's whose VectorClocks must be considered in the calculation,
+
         """
 
     @abstractmethod
@@ -202,7 +209,7 @@ class BaseDataStore(ABC):
 
     @abstractmethod
     def select_changes(
-        self, vector_clock: "VectorClock", max_num: "int"
+        self, vector_clock: "VectorClock", max_num: "int", query: "Optional[Query]" = None
     ) -> "ItemChangeBatch":  # pragma: no cover
         """Selects all changes commited after the VectorClock.
         The ItemChanges are returned in the same order as they were saved to the data store.
@@ -210,11 +217,12 @@ class BaseDataStore(ABC):
         Args:
             vector_clock (VectorClock): VectorClock that represents the state of the last sync pass.
             max_num (int): Maximum number of changes to be added to the ItemChangeBatch.
+            query(Optional[Query]): The query that must be performed to select the item's whose changes must be returned.
         """
 
     @abstractmethod
     def select_deferred_changes(
-        self, vector_clock: "VectorClock", max_num: "int"
+        self, vector_clock: "VectorClock", max_num: "int", query: "Optional[Query]" = None
     ) -> "ItemChangeBatch":  # pragma: no cover
         """Selects all the changes that were not applied in the last sync session due to an exception having occurred.
         The ItemChanges are returned in the same order as they were saved to the data store.
@@ -223,6 +231,7 @@ class BaseDataStore(ABC):
         Args:
             vector_clock (VectorClock): VectorClock that represents the state of the last sync pass.
             max_num (int): Maximum number of changes to be added to the ItemChangeBatch.
+            query(Optional[Query]): The query that must be performed to select the item's whose changes must be returned.
         """
 
     @abstractmethod

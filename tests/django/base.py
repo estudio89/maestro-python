@@ -189,7 +189,6 @@ class DjangoBackendTestMixin(tests.base.BackendTestMixin):
             content_type=content_type,
             date_created=item_version.date_created,
         )
-        self.data_store._db["item_versions"].append(item_version.__dict__)
 
     def _add_conflict_log(self, conflict_log: "ConflictLog"):
         ConflictLogRecord = apps.get_model("maestro", "ConflictLogRecord")

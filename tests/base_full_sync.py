@@ -18,7 +18,6 @@ from maestro.core.metadata import (
 from .base import BackendTestMixin
 import uuid
 import copy
-import json
 
 
 class DebugEventsManager(EventsManager):
@@ -156,8 +155,8 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         self.assertEqual(version.current_item_change, last_item_change)
 
         self.assertEqual(
-            json.loads(version.current_item_change.serialized_item),
-            json.loads(self._serialize_item(name="I1", version="5", id=self.item1_id)),
+            self.to_dict(version.current_item_change.serialized_item),
+            self.to_dict(self._serialize_item(name="I1", version="5", id=self.item1_id)),
         )
         self.assertEqual(len(self.data_store1.get_item_versions()), 1)
 
@@ -189,8 +188,8 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         self.assertEqual(version.current_item_change, last_item_change)
 
         self.assertEqual(
-            json.loads(version.current_item_change.serialized_item),
-            json.loads(self._serialize_item(name="I2", version="3", id=self.item2_id)),
+            self.to_dict(version.current_item_change.serialized_item),
+            self.to_dict(self._serialize_item(name="I2", version="3", id=self.item2_id)),
         )
         self.assertEqual(len(self.data_store1.get_item_versions()), 2)
 
@@ -222,8 +221,8 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         self.assertEqual(version.current_item_change, last_item_change)
 
         self.assertEqual(
-            json.loads(version.current_item_change.serialized_item),
-            json.loads(self._serialize_item(name="I3", version="4", id=self.item3_id)),
+            self.to_dict(version.current_item_change.serialized_item),
+            self.to_dict(self._serialize_item(name="I3", version="4", id=self.item3_id)),
         )
         self.assertEqual(len(self.data_store1.get_item_versions()), 3)
 
@@ -257,8 +256,8 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         self.assertEqual(version.current_item_change, last_item_change)
 
         self.assertEqual(
-            json.loads(version.current_item_change.serialized_item),
-            json.loads(
+            self.to_dict(version.current_item_change.serialized_item),
+            self.to_dict(
                 self._serialize_item(name="I104", version="2", id=self.item104_id)
             ),
         )
@@ -294,8 +293,8 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         self.assertEqual(version.current_item_change, last_item_change)
 
         self.assertEqual(
-            json.loads(version.current_item_change.serialized_item),
-            json.loads(
+            self.to_dict(version.current_item_change.serialized_item),
+            self.to_dict(
                 self._serialize_item(name="I105", version="4", id=self.item105_id)
             ),
         )
@@ -327,7 +326,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         self.assertEqual(len(initial_items), 2)
 
         self._full_sync_no_conflict_before_first_sync()
-        self.orchestrator._synchronize_providers(
+        self.orchestrator.synchronize_providers(
             source_provider_id="other_provider", target_provider_id="provider_in_test"
         )
         self._full_sync_no_conflict_after_first_sync()
@@ -427,7 +426,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         self.assertEqual(len(initial_items), 3)
 
         self._full_sync_no_conflict_before_second_sync()
-        self.orchestrator._synchronize_providers(
+        self.orchestrator.synchronize_providers(
             source_provider_id="provider_in_test", target_provider_id="other_provider"
         )
         self._full_sync_no_conflict_after_second_sync()
@@ -542,7 +541,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         # Sinchronization: other_provider (1) -> provider_in_test (2)
         # Expected results: the change from provider_in_test wins because it's the most recent
         num_changes = len(self.data_store2.get_item_changes())
-        self.orchestrator._synchronize_providers(
+        self.orchestrator.synchronize_providers(
             source_provider_id="other_provider", target_provider_id="provider_in_test"
         )
 
@@ -589,7 +588,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
 
         # Sinchronization: provider_in_test (2) -> other_provider (1)
         num_changes = len(self.data_store1.get_item_changes())
-        self.orchestrator._synchronize_providers(
+        self.orchestrator.synchronize_providers(
             source_provider_id="provider_in_test", target_provider_id="other_provider"
         )
 
@@ -661,7 +660,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         # Expected results: deletion by provider_in_test wins
         num_changes = len(self.data_store2.get_item_changes())
         num_items = len(self.data_store2.get_items())
-        self.orchestrator._synchronize_providers(
+        self.orchestrator.synchronize_providers(
             source_provider_id="other_provider", target_provider_id="provider_in_test"
         )
 
@@ -705,7 +704,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         # Sincronization: provider_in_test (2) -> other_provider (1)
         num_changes = len(self.data_store1.get_item_changes())
         num_items = len(self.data_store1.get_items())
-        self.orchestrator._synchronize_providers(
+        self.orchestrator.synchronize_providers(
             source_provider_id="provider_in_test", target_provider_id="other_provider"
         )
 
@@ -771,7 +770,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         # Expected results: deletion by provider_in_test wins because it's the most recent
         num_changes = len(self.data_store2.get_item_changes())
         num_items = len(self.data_store2.get_items())
-        self.orchestrator._synchronize_providers(
+        self.orchestrator.synchronize_providers(
             source_provider_id="other_provider", target_provider_id="provider_in_test"
         )
 
@@ -815,7 +814,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         # Sincronization: provider_in_test (2) -> other_provider (1)
         num_changes = len(self.data_store1.get_item_changes())
         num_items = len(self.data_store1.get_items())
-        self.orchestrator._synchronize_providers(
+        self.orchestrator.synchronize_providers(
             source_provider_id="provider_in_test", target_provider_id="other_provider"
         )
 
@@ -914,7 +913,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         num_items = len(self.data_store2.get_items())
         num_conflict_logs = len(self.data_store2.get_conflict_logs())
 
-        self.orchestrator._synchronize_providers(
+        self.orchestrator.synchronize_providers(
             source_provider_id="other_provider", target_provider_id="provider_in_test"
         )
         self.events_manager2.raise_exception = True
@@ -995,7 +994,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         num_items = len(self.data_store2.get_items())
         num_conflict_logs = len(self.data_store2.get_conflict_logs())
 
-        self.orchestrator._synchronize_providers(
+        self.orchestrator.synchronize_providers(
             source_provider_id="other_provider", target_provider_id="provider_in_test"
         )
         self.events_manager2.raise_exception = True
@@ -1058,7 +1057,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         num_items = len(self.data_store2.get_items())
         num_conflict_logs = len(self.data_store2.get_conflict_logs())
 
-        self.orchestrator._synchronize_providers(
+        self.orchestrator.synchronize_providers(
             source_provider_id="other_provider", target_provider_id="provider_in_test"
         )
 

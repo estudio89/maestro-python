@@ -7,4 +7,5 @@ import tests.django.base
 class DjangoStoreTest(
     tests.django.base.DjangoBackendTestMixin, tests.base_store.BaseStoreTest, TestCase
 ):
+    supports_queries = False
     pass

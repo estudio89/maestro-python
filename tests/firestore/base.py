@@ -5,8 +5,8 @@ from maestro.core.events import EventsManager
 from maestro.core.provider import BaseSyncProvider
 from maestro.core.store import BaseDataStore
 from maestro.core.execution import ChangesExecutor
-from maestro.backends.firestore.collections import CollectionType
-from maestro.backends.firestore.utils import type_to_collection
+from maestro.backends.base_nosql.collections import CollectionType
+from maestro.backends.base_nosql.utils import type_to_collection
 import unittest
 import copy
 
@@ -89,8 +89,8 @@ class TestInMemoryDataStore(InMemoryDataStore):
 
     def serialize_item(self, item):
         return (
-            '{"entity_name": "test_items", "pk": "%s", "fields": {"name": "%s", "version": "%s"}}'
-            % (str(item["id"]), item["name"], item["version"])
+            '{"entity_name": "test_items", "fields": {"name": "%s", "version": "%s"}, "pk": "%s"}'
+            % (item["name"], item["version"], str(item["id"]))
         )
 
 
@@ -179,9 +179,12 @@ class FirestoreBackendTestMixin(tests.base.BackendTestMixin):
                 item_serializer=JSONSerializer(),
             )
         else:
+            self.item_serializer = FirestoreItemSerializer()
             sync_session_metadata_converter = SyncSessionMetadataConverter()
             item_version_metadata_converter = ItemVersionMetadataConverter()
-            item_change_metadata_converter = ItemChangeMetadataConverter()
+            item_change_metadata_converter = ItemChangeMetadataConverter(
+                item_serializer=self.item_serializer
+            )
             conflict_log_metadata_converter = ConflictLogMetadataConverter()
             vector_clock_metadata_converter = VectorClockMetadataConverter()
 
@@ -192,7 +195,7 @@ class FirestoreBackendTestMixin(tests.base.BackendTestMixin):
                 item_change_metadata_converter=item_change_metadata_converter,
                 conflict_log_metadata_converter=conflict_log_metadata_converter,
                 vector_clock_metadata_converter=vector_clock_metadata_converter,
-                item_serializer=FirestoreItemSerializer(),
+                item_serializer=self.item_serializer,
                 db=self.db,
             )
 
@@ -236,9 +239,7 @@ class FirestoreBackendTestMixin(tests.base.BackendTestMixin):
                     "timestamp": vector_clock_item.timestamp,
                 }
             )
-        self.db.collection("maestro__item_changes").document(
-            str(item_change.id)
-        ).set(
+        self.db.collection("maestro__item_changes").document(str(item_change.id)).set(
             {
                 "date_created": item_change.date_created,
                 "operation": item_change.operation.value,
@@ -248,7 +249,9 @@ class FirestoreBackendTestMixin(tests.base.BackendTestMixin):
                 "provider_id": item_change.provider_id,
                 "insert_provider_timestamp": item_change.insert_provider_timestamp,
                 "insert_provider_id": item_change.insert_provider_id,
-                "serialized_item": item_change.serialized_item,
+                "serialized_item": self.item_serializer.deserialize_item(
+                    item_change.serialized_item
+                ),
                 "should_ignore": item_change.should_ignore,
                 "is_applied": item_change.is_applied,
                 "vector_clock": vector_clock,
@@ -282,9 +285,7 @@ class FirestoreBackendTestMixin(tests.base.BackendTestMixin):
         )
 
     def _add_conflict_log(self, conflict_log: "ConflictLog"):  # pragma: no cover
-        self.db.collection("maestro__conflict_logs").document(
-            str(conflict_log.id)
-        ).set(
+        self.db.collection("maestro__conflict_logs").document(str(conflict_log.id)).set(
             {
                 "created_at": conflict_log.created_at,
                 "resolved_at": conflict_log.resolved_at,

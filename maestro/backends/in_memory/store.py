@@ -1,4 +1,5 @@
 from maestro.core.store import BaseDataStore
+from maestro.core.query import Query
 from maestro.core.metadata import (
     VectorClock,
     ItemChange,
@@ -10,7 +11,8 @@ from maestro.core.metadata import (
     SyncSession,
 )
 from maestro.core.exceptions import ItemNotFoundException
-from typing import List, Callable, Any, Dict, Optional, cast
+from typing import List, Set, Callable, Any, Dict, Optional, cast
+import datetime as dt
 import uuid
 import copy
 
@@ -26,7 +28,7 @@ class InMemoryDataStore(BaseDataStore):
             "items": [],
         }
 
-    def get_local_vector_clock(self) -> "VectorClock":
+    def get_local_vector_clock(self, query: "Optional[Query]" = None) -> "VectorClock":
         vector_clock = VectorClock.create_empty(provider_ids=[self.local_provider_id])
         for item_change in self.get_item_changes():
             vector_clock.update_vector_clock_item(
@@ -55,7 +57,10 @@ class InMemoryDataStore(BaseDataStore):
         return item_change_batch
 
     def select_changes(
-        self, vector_clock: "VectorClock", max_num: "int"
+        self,
+        vector_clock: "VectorClock",
+        max_num: "int",
+        query: "Optional[Query]" = None,
     ) -> "ItemChangeBatch":
         selected_changes: "List[ItemChange]" = []
         for item_change in self.get_item_changes():
@@ -71,13 +76,18 @@ class InMemoryDataStore(BaseDataStore):
         )
 
     def select_deferred_changes(
-        self, vector_clock: "VectorClock", max_num: "int"
+        self,
+        vector_clock: "VectorClock",
+        max_num: "int",
+        query: "Optional[Query]" = None,
     ) -> "ItemChangeBatch":
+
         selected_changes: "List[ItemChange]" = []
 
         for conflict_log in self.get_conflict_logs():
             if conflict_log.status == ConflictStatus.DEFERRED:
                 item_change = conflict_log.item_change_loser
+
                 remote_timestamp = vector_clock.get_vector_clock_item(
                     provider_id=item_change.provider_id
                 ).timestamp

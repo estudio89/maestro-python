@@ -213,9 +213,22 @@ class Query:
         ordering (List[SortOrder]): The sort order that should be applied
     """
 
-    filter: "Optional[Filter]"
+    filter: "Filter"
     ordering: "List[SortOrder]"
+    entity_name: "str"
+    limit: "Optional[Any]"
+    offset: "Optional[Any]"
 
-    def __init__(self, filter: "Optional[Filter]", ordering: "List[SortOrder]"):
+    def __init__(
+        self,
+        entity_name: "str",
+        filter: "Filter",
+        ordering: "List[SortOrder]",
+        limit: "Optional[Any]",
+        offset: "Optional[Any]",
+    ):
+        self.entity_name = entity_name
         self.filter = filter
         self.ordering = ordering
+        self.limit = limit
+        self.offset = offset

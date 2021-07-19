@@ -7,4 +7,4 @@ class FirestoreStoreTest(
     tests.base_store.BaseStoreTest,
     tests.firestore.base.FirestoreTestCase,
 ):
-    pass
+    supports_queries = False

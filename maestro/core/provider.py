@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 from abc import ABC
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -6,6 +6,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from maestro.core.events import EventsManager
     from maestro.core.metadata import VectorClock, ItemChangeBatch
     from maestro.core.execution import ChangesExecutor
+    from maestro.core.query import Query
 
 
 class BaseSyncProvider(ABC):
@@ -47,15 +48,17 @@ class BaseSyncProvider(ABC):
         self.changes_executor = changes_executor
         self.max_num = max_num
 
-    def get_vector_clock(self) -> "VectorClock":
+    def get_vector_clock(self, query: "Optional[Query]" = None) -> "VectorClock":
         """Returns the current VectorClock for this provider.
 
         Returns:
             VectorClock: The current VectorClock for this provider.
         """
-        return self.data_store.get_local_vector_clock()
+        return self.data_store.get_local_vector_clock(query=query)
 
-    def download_changes(self, vector_clock: "VectorClock") -> "ItemChangeBatch":
+    def download_changes(
+        self, vector_clock: "VectorClock", query: "Optional[Query]" = None
+    ) -> "ItemChangeBatch":
         """Retrieves the changes that occurred in the data store linked to this provider after the timestamps defined by the given VectorClock.
 
         Args:
@@ -65,7 +68,7 @@ class BaseSyncProvider(ABC):
             ItemChangeBatch: The batch of changes that was selected.
         """
         item_change_batch = self.data_store.select_changes(
-            vector_clock=vector_clock, max_num=self.max_num
+            vector_clock=vector_clock, max_num=self.max_num, query=query
         )
         item_change_batch.reset_status()
         return item_change_batch
@@ -79,7 +82,9 @@ class BaseSyncProvider(ABC):
 
         self.changes_executor.run(item_changes=item_change_batch.item_changes)
 
-    def get_deferred_changes(self, vector_clock: "VectorClock") -> "ItemChangeBatch":
+    def get_deferred_changes(
+        self, vector_clock: "VectorClock", query: "Optional[Query]" = None
+    ) -> "ItemChangeBatch":
         """Retrieves the changes received previously but that weren't applied in the last session due to an exception having occurred.
 
         Args:
@@ -89,7 +94,7 @@ class BaseSyncProvider(ABC):
             ItemChangeBatch: The batch of changes that was selected.
         """
         return self.data_store.select_deferred_changes(
-            vector_clock=vector_clock, max_num=self.max_num
+            vector_clock=vector_clock, max_num=self.max_num, query=query
         )
 
     def __repr__(self):  # pragma: no cover
