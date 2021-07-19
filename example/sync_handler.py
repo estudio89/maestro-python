@@ -11,21 +11,33 @@ import json
 
 from typing import Dict
 
-from .in_memory import create_provider as create_in_memory_provider
-from .firestore import create_provider as create_firestore_provider
+# from .in_memory import create_provider as create_in_memory_provider
+# from .firestore import create_provider as create_firestore_provider
 from .django import create_provider as create_django_provider
+from .mongo import create_provider as create_mongo_provider
 
 
 class SyncHandler:
     def __init__(self):
 
+        # Provider 1
         self.firestore_providers = []
-        self.provider1, api_serializer = create_firestore_provider(
+        # self.provider1, api_serializer = create_firestore_provider(
+        #     local_provider_id="provider1",
+        # )
+        # self.firestore_providers.append(self.provider1)
+        # self.provider1.api_serializer = api_serializer
+        self.provider1, api_serializer = create_django_provider(
             local_provider_id="provider1",
         )
-        self.firestore_providers.append(self.provider1)
         self.provider1.api_serializer = api_serializer
-        self.provider2, api_serializer = create_django_provider(
+
+        # Provider 2
+        # self.provider2, api_serializer = create_django_provider(
+        #     local_provider_id="provider2",
+        # )
+        # self.provider2.api_serializer = api_serializer
+        self.provider2, api_serializer = create_mongo_provider(
             local_provider_id="provider2",
         )
         self.provider2.api_serializer = api_serializer

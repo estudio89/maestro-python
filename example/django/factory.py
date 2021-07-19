@@ -25,7 +25,11 @@ class DjangoExampleDataStore(DjangoDataStore):
 
 def create_provider(local_provider_id: "str"):
     # Django setup
-    os.remove("example/django/todos.sqlite3")
+    try:
+        os.remove("example/django/todos.sqlite3")
+    except:
+        pass
+
     from django.conf import settings
     settings.configure(
         INSTALLED_APPS = [

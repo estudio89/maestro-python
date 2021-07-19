@@ -21,7 +21,6 @@ from .converters import (
     VectorClockMetadataConverter,
 )
 from .serializer import DjangoItemSerializer
-from .contrib.signals import temporarily_disable_signals
 from typing import Optional, Any, Callable, List
 import uuid
 import operator
@@ -192,6 +191,8 @@ class DjangoDataStore(BaseDataStore):
         item: "Any",
         execute_operation: "bool" = True,
     ) -> "ItemChange":
+        from .contrib.signals import temporarily_disable_signals
+
         model = item._meta.model
         if execute_operation:
             with temporarily_disable_signals(model=model):
@@ -210,6 +211,8 @@ class DjangoDataStore(BaseDataStore):
             )
 
     def execute_item_change(self, item_change: "ItemChange"):
+        from .contrib.signals import temporarily_disable_signals
+
         item = self.deserialize_item(serialized_item=item_change.serialized_item)
         model = item._meta.model
 
