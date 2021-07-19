@@ -1,5 +1,5 @@
 from maestro.core.store import BaseDataStore
-from maestro.core.query import Query
+from maestro.core.query import Query, SortOrder
 from maestro.backends.in_memory.utils import query_filter_to_lambda
 from maestro.core.metadata import (
     VectorClock,
@@ -215,12 +215,12 @@ class InMemoryDataStore(BaseDataStore):
             sorted_changes = item_changes[:]
 
             # Sorting
-            for sort_order in reversed(query.ordering):
+            for sort_order in cast("List[SortOrder]", reversed(query.ordering)):
+                sort_func = lambda item_change: self.deserialize_item(
+                    item_change.serialized_item
+                )[sort_order.field_name]
                 sorted_changes.sort(
-                    lambda item_change: self.deserialize_item(
-                        item_change.serialized_item
-                    )[sort_order.field_name],
-                    reverse=sort_order.descending,
+                    key=sort_func, reverse=sort_order.descending,
                 )
 
             # Filtering
@@ -235,7 +235,10 @@ class InMemoryDataStore(BaseDataStore):
                         all_item_ids.add(item_change.item_id)
 
                     current_version = self.get_item_version(item_id=item_change.item_id)
-                    if current_version.current_item_change.id == item_change.id:
+                    if (
+                        cast("ItemChange", current_version.current_item_change).id
+                        == item_change.id
+                    ):
                         item_ids_in_current_query.append(item_change.item_id)
                 else:
                     # NEED SOME WAY TO CHECK WHETHER THE ITEM WAS PREVIOUSLY IN THE QUERY

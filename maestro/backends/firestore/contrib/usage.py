@@ -11,7 +11,7 @@ def calculate_firestore_usage(
     num_writes = 2 + num_updates_inserts_received * 5 + num_deletes_received * 4
     num_changes_received = num_updates_inserts_received + num_items_affected_received
     if num_changes_received > 0:
-        num_reads_receiving = 1 + num_changes_received
+        num_reads_receiving = 2 + num_changes_received
     else:
         num_reads_receiving = 0
 

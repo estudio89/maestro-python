@@ -11,7 +11,11 @@ from maestro.core.metadata import (
     ConflictStatus,
     SyncSession,
 )
-from maestro.backends.base_nosql.collections import CollectionType, ItemChangeRecord, ConflictLogRecord
+from maestro.backends.base_nosql.collections import (
+    CollectionType,
+    ItemChangeRecord,
+    ConflictLogRecord,
+)
 from firebase_admin import firestore
 from maestro.backends.base_nosql.utils import get_collection_name, type_to_collection
 import copy
@@ -162,12 +166,6 @@ class FirestoreDataStore(NoSQLDataStore):
             self.current_transaction.delete(doc_ref)
         self._usage.register_delete()
 
-    def _save_provider_id(self, provider_id: "str", timestamp: "dt.datetime"):
-        self._save(
-            instance={"timestamp": timestamp, "id": provider_id},
-            collection=type_to_collection(key=CollectionType.PROVIDER_IDS),
-        )
-
     def _get_provider_ids(self) -> "List[str]":
         collection_name = type_to_collection(key=CollectionType.PROVIDER_IDS)
         docs = self.db.collection(collection_name).get()
@@ -209,9 +207,7 @@ class FirestoreDataStore(NoSQLDataStore):
             )
         return vector_clock
 
-    def get_item_version(
-        self, item_id: "str"
-    ) -> "Optional[ItemVersion]":  # pragma: no cover
+    def get_item_version(self, item_id: "str") -> "Optional[ItemVersion]":
         collection_name = type_to_collection(key=CollectionType.ITEM_VERSIONS)
         instance = self._cache.get(collection_name=collection_name, document_id=item_id)
         if not instance:
@@ -317,12 +313,13 @@ class FirestoreDataStore(NoSQLDataStore):
             .limit(max_num)
             .get()
         )
+        collection_name = type_to_collection(key=CollectionType.CONFLICT_LOGS)
         if not docs:
+            self._usage.register_read(collection_name="", document_id=collection_name)
             return ItemChangeBatch(item_changes=[], is_last_batch=True)
 
         item_change_ids = []
         if not docs:
-            collection_name = type_to_collection(key=CollectionType.CONFLICT_LOGS)
             self._usage.register_read(collection_name="", document_id=collection_name)
 
         for doc in docs:
@@ -349,34 +346,7 @@ class FirestoreDataStore(NoSQLDataStore):
 
         return item_change_batch
 
-    def save_item_change(
-        self, item_change: "ItemChange", is_creating: "bool" = False
-    ) -> "ItemChange":  # pragma: no cover
-        item_change_record = self.item_change_metadata_converter.to_record(
-            metadata_object=item_change
-        )
-        self._save(
-            instance=item_change_record,
-            collection=type_to_collection(key=CollectionType.ITEM_CHANGES),
-        )
-        if is_creating:
-            self._save_provider_id(
-                provider_id=item_change_record["provider_id"],
-                timestamp=item_change_record["provider_timestamp"],
-            )
-        return item_change
-
-    def save_item(self, item: "Any"):
-        copied = copy.deepcopy(item)
-        self._save(instance=copied, collection=copied.pop("collection_name"))
-
-    def delete_item(self, item: "Any"):
-        copied = copy.deepcopy(item)
-        self._delete(instance=copied, collection=copied.pop("collection_name"))
-
-    def run_in_transaction(
-        self, item_change: "ItemChange", callback: "Callable"
-    ):  # pragma: no cover
+    def run_in_transaction(self, item_change: "ItemChange", callback: "Callable"):
         self.current_transaction = self.db.transaction()
         collection_name = get_collection_name(
             serialized_item=item_change.serialized_item
@@ -394,35 +364,9 @@ class FirestoreDataStore(NoSQLDataStore):
 
         in_transaction(self.current_transaction)
 
-    def save_conflict_log(self, conflict_log: "ConflictLog"):  # pragma: no cover
-        conflict_log_record = self.conflict_log_metadata_converter.to_record(
-            metadata_object=conflict_log
-        )
-        self._save(
-            instance=conflict_log_record,
-            collection=type_to_collection(key=CollectionType.CONFLICT_LOGS),
-        )
-
-    def execute_item_change(self, item_change: "ItemChange"):  # pragma: no cover
-        item = self.deserialize_item(serialized_item=item_change.serialized_item)
-
-        if item_change.operation == Operation.DELETE:
-            self.delete_item(item=item)
-        else:
-            self.save_item(item=item)
-
-    def save_item_version(self, item_version: "ItemVersion"):  # pragma: no cover
-        item_version_record = self.item_version_metadata_converter.to_record(
-            metadata_object=item_version
-        )
-        self._save(
-            instance=item_version_record,
-            collection=type_to_collection(key=CollectionType.ITEM_VERSIONS),
-        )
-
     def get_deferred_conflict_logs(
         self, item_change_loser: "ItemChange"
-    ) -> "List[ConflictLog]":  # pragma: no cover
+    ) -> "List[ConflictLog]":
         docs = (
             self._get_collection_query(key=CollectionType.CONFLICT_LOGS)
             .order_by("created_at")
@@ -439,15 +383,6 @@ class FirestoreDataStore(NoSQLDataStore):
             metadata_object = self.conflict_log_metadata_converter.to_metadata(record)
             metadata_objects.append(metadata_object)
         return metadata_objects
-
-    def save_sync_session(self, sync_session: "SyncSession"):  # pragma: no cover
-        sync_session_record = self.sync_session_metadata_converter.to_record(
-            metadata_object=sync_session
-        )
-        self._save(
-            instance=sync_session_record,
-            collection=type_to_collection(key=CollectionType.SYNC_SESSIONS),
-        )
 
     def get_item_changes(self) -> "List[ItemChange]":
         docs = (
@@ -466,7 +401,9 @@ class FirestoreDataStore(NoSQLDataStore):
             metadata_objects.append(metadata_object)
         return metadata_objects
 
-    def find_item_changes(self, ids: "List[str]") -> "List[ItemChange]":
+    def find_item_changes(
+        self, ids: "List[str]", sort: "bool" = True
+    ) -> "List[ItemChange]":
         if not ids:
             return []
 
@@ -483,7 +420,7 @@ class FirestoreDataStore(NoSQLDataStore):
         if ids_not_in_cache:
             refs = [
                 self._get_collection_query(key=CollectionType.ITEM_CHANGES).document(id)
-                for id in ids
+                for id in ids_not_in_cache
             ]
             docs = self.db.get_all(refs)
             if not docs:
@@ -556,6 +493,3 @@ class FirestoreDataStore(NoSQLDataStore):
             metadata_object = self.conflict_log_metadata_converter.to_metadata(record)
             metadata_objects.append(metadata_object)
         return metadata_objects
-
-    def _get_hashable_item(self, item: "Any"):
-        return tuple(item[attr] for attr in item)

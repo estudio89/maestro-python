@@ -1,7 +1,7 @@
 from maestro.core.utils import parse_datetime
 from maestro.core.serializer import BaseItemSerializer
 import json
-from typing import Dict, Any
+from typing import Dict, Any, List
 from maestro.backends.base_nosql.utils import (
     collection_to_entity_name,
     entity_name_to_collection,
@@ -10,6 +10,10 @@ import datetime as dt
 
 
 class NoSQLItemSerializer(BaseItemSerializer):
+
+    def get_skip_fields(self) -> "List[str]":
+        return ["id", "collection_name"]
+
     def serialize_field_value(
         self, collection_name: "str", item: "Dict[str, Any]", key="str"
     ) -> "Any":
@@ -24,7 +28,7 @@ class NoSQLItemSerializer(BaseItemSerializer):
 
         fields = {}
         for key in item:
-            if key in ["id", "collection_name"]:
+            if key in self.get_skip_fields():
                 continue
 
             value = self.serialize_field_value(
