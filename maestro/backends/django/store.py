@@ -1,5 +1,6 @@
 from django.db import models, transaction
 from maestro.core.store import BaseDataStore
+from maestro.core.query import Query
 from maestro.core.exceptions import ItemNotFoundException
 from maestro.core.metadata import (
     VectorClock,
@@ -35,7 +36,10 @@ class DjangoDataStore(BaseDataStore):
     vector_clock_metadata_converter: "VectorClockMetadataConverter"
     item_serializer: "DjangoItemSerializer"
 
-    def get_local_vector_clock(self) -> "VectorClock":
+    def get_local_vector_clock(self, query: "Optional[Query]" = None) -> "VectorClock":
+        if query is not None:
+            raise ValueError("This backend doesn't support queries!")
+
         vector_clock = VectorClock.create_empty(provider_ids=[self.local_provider_id])
         ItemChangeRecord = apps.get_model("maestro", "ItemChangeRecord")
         provider_ids = ItemChangeRecord.objects.values_list(
@@ -94,7 +98,10 @@ class DjangoDataStore(BaseDataStore):
         return item_change_batch
 
     def select_changes(
-        self, vector_clock: "VectorClock", max_num: "int"
+        self,
+        vector_clock: "VectorClock",
+        max_num: "int",
+        query: "Optional[Query]" = None,
     ) -> "ItemChangeBatch":
         ItemChangeRecord = apps.get_model("maestro", "ItemChangeRecord")
         provider_ids = ItemChangeRecord.objects.values_list(
@@ -124,7 +131,10 @@ class DjangoDataStore(BaseDataStore):
         return item_change_batch
 
     def select_deferred_changes(
-        self, vector_clock: "VectorClock", max_num: "int"
+        self,
+        vector_clock: "VectorClock",
+        max_num: "int",
+        query: "Optional[Query]" = None,
     ) -> "ItemChangeBatch":
         fkwargs = []
         for vector_clock_item in vector_clock:
