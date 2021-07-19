@@ -1,5 +1,6 @@
 from maestro.backends.base_nosql.utils import get_collection_name, type_to_collection
 from maestro.backends.base_nosql.store import NoSQLDataStore
+from maestro.backends.base_nosql.converters import TrackedQueryMetadataConverter
 from maestro.backends.mongo.converters import DateConverter
 from maestro.core.exceptions import ItemNotFoundException
 from maestro.core.query import Query
@@ -11,21 +12,28 @@ from maestro.core.metadata import (
     ConflictLog,
     ConflictStatus,
     SyncSession,
+    TrackedQuery,
 )
 from maestro.backends.base_nosql.collections import (
     CollectionType,
     ItemChangeRecord,
     ConflictLogRecord,
 )
-from typing import Dict, Optional, List, Callable
+from typing import Dict, Optional, List, Callable, cast
 import uuid
+import copy
 import pymongo
 
 
 class MongoDataStore(NoSQLDataStore):
+    tracked_query_metadata_converter: "TrackedQueryMetadataConverter"
+
     def __init__(self, *args, **kwargs):
         self.db = kwargs.pop("db")
         self.client = kwargs.pop("client")
+        self.tracked_query_metadata_converter = kwargs.pop(
+            "tracked_query_metadata_converter"
+        )
         super().__init__(*args, **kwargs)
         self.session = None
         self.date_converter = DateConverter()
@@ -50,6 +58,43 @@ class MongoDataStore(NoSQLDataStore):
         provider_ids = [doc["_id"] for doc in docs]
         return provider_ids
 
+    def _get_tracked_query(self, query: "Query") -> "Optional[TrackedQuery]":
+        doc = self._get_collection_query(CollectionType.TRACKED_QUERIES).find_one(
+            {"_id": query.get_id()}
+        )
+        if not doc:
+            return None
+
+        instance = self._document_to_raw_instance(document=doc)
+        tracked_query = self.tracked_query_metadata_converter.to_metadata(record=instance)
+        return tracked_query
+
+    def _update_query_vector_clock(
+        self, query: "Query", item_change_record: "ItemChangeRecord"
+    ):
+        tracked_query = self._get_tracked_query(query=query)
+
+        if tracked_query:
+            vector_clock = copy.deepcopy(tracked_query.vector_clock)
+        else:
+            vector_clock = VectorClock.create_empty(
+                provider_ids=self._get_provider_ids()
+            )
+            tracked_query = TrackedQuery(query=query, vector_clock=vector_clock)
+
+        vector_clock.update_vector_clock_item(
+            provider_id=item_change_record["provider_id"],
+            timestamp=self.date_converter.deserialize_date(
+                item_change_record["provider_timestamp"]
+            ),
+        )
+        updated_tracked_query = TrackedQuery(query=query, vector_clock=vector_clock)
+        instance = self.tracked_query_metadata_converter.to_record(
+            metadata_object=updated_tracked_query
+        )
+        collection_name = type_to_collection(key=CollectionType.TRACKED_QUERIES)
+        self._save(instance=cast("Dict", instance), collection=collection_name)
+
     def _save(self, instance: "Dict", collection: "str"):
         pk = instance.pop("id")
         self.db[collection].update_one(
@@ -61,7 +106,12 @@ class MongoDataStore(NoSQLDataStore):
 
     def get_local_vector_clock(self, query: "Optional[Query]" = None) -> "VectorClock":
         if query is not None:
-            raise ValueError("This backend doesn't support queries!")
+            tracked_query = self._get_tracked_query(query=query)
+            if tracked_query:
+                return tracked_query.vector_clock
+            else:
+                return VectorClock.create_empty(provider_ids=[self.local_provider_id])
+
         vector_clock = VectorClock.create_empty(provider_ids=[self.local_provider_id])
         docs = self._get_collection_query(CollectionType.PROVIDER_IDS).find()
         for doc in docs:
@@ -242,9 +292,7 @@ class MongoDataStore(NoSQLDataStore):
             metadata_objects.append(metadata_object)
         return metadata_objects
 
-    def find_item_changes(
-        self, ids: "List[str]"
-    ) -> "List[ItemChange]":
+    def find_item_changes(self, ids: "List[str]") -> "List[ItemChange]":
         if not ids:
             return []
 

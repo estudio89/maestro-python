@@ -1,32 +1,94 @@
 from maestro.core.store import BaseDataStore
+from maestro.core.query import Query
 from maestro.core.metadata import (
     ItemChange,
     ConflictLog,
     ItemVersion,
     Operation,
     SyncSession,
+    VectorClock,
 )
-from maestro.backends.base_nosql.collections import CollectionType
-from maestro.backends.base_nosql.utils import type_to_collection
-from typing import List, Dict, Any
+from maestro.backends.base_nosql.collections import CollectionType, ItemChangeRecord
+from maestro.backends.base_nosql.utils import type_to_collection, query_filter_to_lambda
+from maestro.core.utils import cast_away_optional
+from typing import List, Dict, Any, Optional
 from abc import abstractmethod
 import copy
-import datetime as dt
 
 
 class NoSQLDataStore(BaseDataStore):
-    def _save_provider_id(self, provider_id: "str", timestamp: "dt.datetime"):
-        """
-        Creates or updates the timestamp linked to a specified provider.
-
-        Args:
-            provider_id (str): Provider identifier
-            timestamp (dt.datetime): Provider timestamp
-        """
+    def _update_provider_global_vector_clock(
+        self, item_change_record: "ItemChangeRecord"
+    ):
         self._save(
-            instance={"timestamp": timestamp, "id": provider_id},
+            instance={
+                "timestamp": item_change_record["provider_timestamp"],
+                "id": item_change_record["provider_id"],
+            },
             collection=type_to_collection(key=CollectionType.PROVIDER_IDS),
         )
+
+    def _update_query_vector_clock(
+        self, query: "Query", item_change_record: "ItemChangeRecord"
+    ):
+        """Updates the vector clock for the given query.
+
+        Args:
+            query (Query): The query
+            item_change_record (ItemChangeRecord): The record that caused the update
+        """
+        raise NotImplementedError("This backend doesn't support queries!")
+
+    def _check_tracked_query_vector_clocks(self, item_change_record: "Any"):
+        item = item_change_record["serialized_item"]
+        local_version = self.get_item_version(item_id=item_change_record["item_id"])
+        old_item: "Optional[Dict]"
+        if local_version:
+            old_item = self.deserialize_item(
+                cast_away_optional(local_version.current_item_change).serialized_item
+            )
+
+        else:
+            old_item = None
+
+        for tracked_query in self.get_tracked_queries():
+            if self._check_impacts_query(
+                item=item, query=tracked_query.query, vector_clock=None
+            ):
+                self._update_query_vector_clock(
+                    query=tracked_query.query, item_change_record=item_change_record
+                )
+            elif old_item and self._check_impacts_query(
+                item=old_item,
+                query=tracked_query.query,
+                vector_clock=tracked_query.vector_clock,
+            ):
+                self._update_query_vector_clock(
+                    query=tracked_query.query, item_change_record=item_change_record
+                )
+
+    def _update_vector_clocks(self, item_change_record: "Any"):
+        """
+        Updates the cached VectorClocks with the new change.
+
+        Args:
+            item_change (ItemChange): ItemChange that was saved to the data store
+
+        """
+        self._update_provider_global_vector_clock(item_change_record=item_change_record)
+        self._check_tracked_query_vector_clocks(item_change_record=item_change_record)
+
+    def _check_impacts_query(
+        self, item: "Dict", query: "Query", vector_clock: "Optional[VectorClock]"
+    ) -> "bool":
+        filter_check = query_filter_to_lambda(query.filter)
+        if filter_check(item):
+            items = self.query_items(query=query, vector_clock=vector_clock)
+            item_ids = {item["id"] for item in items}
+            if item["item_id"] in item_ids:
+                return True
+
+        return False
 
     @abstractmethod
     def find_item_changes(self, ids: "List[str]") -> "List[ItemChange]":
@@ -80,10 +142,8 @@ class NoSQLDataStore(BaseDataStore):
             collection=type_to_collection(key=CollectionType.ITEM_CHANGES),
         )
         if is_creating:
-            self._save_provider_id(
-                provider_id=item_change_record["provider_id"],
-                timestamp=item_change_record["provider_timestamp"],
-            )
+            self._update_vector_clocks(item_change_record=item_change_record)
+
         return item_change
 
     def save_conflict_log(self, conflict_log: "ConflictLog"):

@@ -192,6 +192,9 @@ class FirestoreDataStore(NoSQLDataStore):
 
         self._usage.register_write(collection_name=collection, document_id=pk)
 
+    def _check_tracked_query_vector_clocks(self, item_change_record: "Any"):
+        pass
+
     def get_local_vector_clock(self, query: "Optional[Query]" = None) -> "VectorClock":
         if query is not None:
             raise ValueError("This backend doesn't support queries!")

@@ -36,6 +36,8 @@ from maestro.backends.mongo import (
     MongoSyncProvider,
     DateConverter,
 )
+
+from maestro.backends.base_nosql.converters import TrackedQueryMetadataConverter
 import uuid
 import tests.base
 import datetime as dt
@@ -184,6 +186,10 @@ class MongoBackendTestMixin(tests.base.BackendTestMixin):
                 vector_clock_converter=vector_clock_metadata_converter,
             )
 
+            tracked_query_metadata_converter = TrackedQueryMetadataConverter(
+                vector_clock_converter=vector_clock_metadata_converter
+            )
+
             data_store = TestMongoDataStore(
                 local_provider_id=local_provider_id,
                 sync_session_metadata_converter=sync_session_metadata_converter,
@@ -192,6 +198,7 @@ class MongoBackendTestMixin(tests.base.BackendTestMixin):
                 conflict_log_metadata_converter=conflict_log_metadata_converter,
                 vector_clock_metadata_converter=vector_clock_metadata_converter,
                 item_serializer=self.item_serializer,
+                tracked_query_metadata_converter=tracked_query_metadata_converter,
                 db=self.db,
                 client=self.client,
             )

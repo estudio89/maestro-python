@@ -1,4 +1,4 @@
-from typing import ContextManager, Any
+from typing import ContextManager, Any, TypeVar, Optional
 import dateutil.parser
 from abc import ABC, abstractmethod
 from maestro.core.exceptions import SyncTimeoutException
@@ -102,3 +102,8 @@ def parse_datetime(value: "str") -> "dt.datetime":
 
     return dateutil.parser.isoparse(value)
 
+T = TypeVar("T")
+
+def cast_away_optional(arg: Optional[T]) -> T:
+    assert arg is not None
+    return arg

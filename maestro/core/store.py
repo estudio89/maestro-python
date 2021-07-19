@@ -8,6 +8,7 @@ from .metadata import (
     ConflictLog,
     Operation,
     SyncSession,
+    TrackedQuery,
 )
 from .query import Query
 from .utils import BaseMetadataConverter, get_now_utc
@@ -61,6 +62,19 @@ class BaseDataStore(ABC):
         return (
             f"{self.__class__.__name__}(local_provider_id='{self.local_provider_id}')"
         )
+
+    def query_items(
+        self, query: "Query", vector_clock: "Optional[VectorClock]"
+    ) -> "List[Any]":
+        """Returns a list of the item ids that satisfy a query.
+
+        Args:
+            query (Query): The query being tested
+            vector_clock (Optional[VectorClock]): A VectorClock that if provided, returns the items that would have
+            matched the query at the time indicated by the clock, enabling time-travel through the data. The items
+            are returned in the same state they were at the time of the clock.
+        """
+        raise NotImplementedError("This backend doesn't support queries!")
 
     def get_local_version(self, item_id: "str",) -> "ItemVersion":
         """Retrieves the current version of the item with the given id.
@@ -209,7 +223,10 @@ class BaseDataStore(ABC):
 
     @abstractmethod
     def select_changes(
-        self, vector_clock: "VectorClock", max_num: "int", query: "Optional[Query]" = None
+        self,
+        vector_clock: "VectorClock",
+        max_num: "int",
+        query: "Optional[Query]" = None,
     ) -> "ItemChangeBatch":  # pragma: no cover
         """Selects all changes commited after the VectorClock.
         The ItemChanges are returned in the same order as they were saved to the data store.
@@ -222,7 +239,10 @@ class BaseDataStore(ABC):
 
     @abstractmethod
     def select_deferred_changes(
-        self, vector_clock: "VectorClock", max_num: "int", query: "Optional[Query]" = None
+        self,
+        vector_clock: "VectorClock",
+        max_num: "int",
+        query: "Optional[Query]" = None,
     ) -> "ItemChangeBatch":  # pragma: no cover
         """Selects all the changes that were not applied in the last sync session due to an exception having occurred.
         The ItemChanges are returned in the same order as they were saved to the data store.
@@ -334,6 +354,11 @@ class BaseDataStore(ABC):
             ItemNotFoundException: If the item is not found.
         """
         raise NotImplementedError()
+
+    def get_tracked_queries(self) -> "List[TrackedQuery]":
+        """Returns a list of all the queries being tracked."""
+
+        return []
 
     @abstractmethod
     def get_item_changes(self) -> "List[ItemChange]":

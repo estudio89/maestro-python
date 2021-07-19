@@ -1,4 +1,4 @@
-from typing import TypedDict, Dict, List, Optional, Union
+from typing import TypedDict, Dict, List, Optional, Union, Literal, Any
 import datetime as dt
 import enum
 
@@ -9,6 +9,7 @@ class CollectionType(enum.Enum):
     CONFLICT_LOGS = "conflict_logs"
     SYNC_SESSIONS = "sync_sessions"
     PROVIDER_IDS = "provider_ids"
+    TRACKED_QUERIES = "tracked_queries"
 
 
 class VectorClockItemRecord(TypedDict):
@@ -59,3 +60,31 @@ class SyncSessionRecord(TypedDict):
     target_provider_id: "str"
     source_provider_id: "str"
     item_change_ids: "List[str]"
+
+class ComparisonRecord(TypedDict):
+    type: "Literal['comparison']"
+    field_name: "str"
+    comparator: "str"
+    value: "Any"
+
+class FilterRecord(TypedDict):
+    type: "Literal['filter']"
+    connector: "str"
+    children: "List[Union[FilterRecord, ComparisonRecord]]" # type: ignore
+
+class SortOrderRecord(TypedDict):
+    field_name: "str"
+    descending: "bool"
+
+class QueryRecord(TypedDict):
+    filter: "FilterRecord"
+    ordering: "List[SortOrderRecord]"
+    collection_name: "str"
+    limit: "Optional[int]"
+    offset: "Optional[int]"
+
+class TrackedQueryRecord(TypedDict):
+    id: "str"
+    vector_clock: "List[VectorClockItemRecord]"
+    query: "QueryRecord"
+

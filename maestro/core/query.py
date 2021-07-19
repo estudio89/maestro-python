@@ -66,7 +66,7 @@ class Comparison:
         return "<%s: %s>" % (self.__class__.__name__, self)
 
     def __hash__(self):
-        return hash(self.__class__, self.comparator, make_hashable(self.value))
+        return hash((self.__class__, self.comparator, make_hashable(self.value)))
 
     def __eq__(self, other):
         return (
@@ -184,14 +184,7 @@ class Filter:
         )
 
     def __hash__(self):
-        return hash(
-            (
-                self.__class__,
-                self.connector,
-                self.negated,
-                *make_hashable(self.children),
-            )
-        )
+        return hash((self.__class__, self.connector, *make_hashable(self.children),))
 
 
 class SortOrder:
@@ -204,6 +197,14 @@ class SortOrder:
         self.field_name = field_name
         self.descending = descending
 
+    def __hash__(self):
+        return hash((self.field_name, self.descending))
+
+    def __str__(self):
+        return f"{self.field_name} -> {'ASC' if not self.descending else 'DESC'}"
+
+    def __repr__(self):
+        return self.__str__()
 
 class Query:
     """Represents a query with an optional filter and an ordering.
@@ -232,3 +233,25 @@ class Query:
         self.ordering = ordering
         self.limit = limit
         self.offset = offset
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return f"Query(entity_name='{self.entity_name}', filter={self.filter}, ordering={self.ordering}, limit={self.limit}, offset={self.offset})"
+
+    def __hash__(self):
+        return hash(
+            (
+                self.filter,
+                tuple(self.ordering),
+                self.entity_name,
+                self.limit,
+                self.offset,
+            )
+        )
+
+    def get_id(self):
+        """Returns a unique identifier for this query."""
+
+        return str(self.__hash__())

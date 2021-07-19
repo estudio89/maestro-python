@@ -10,29 +10,42 @@ from maestro.core.metadata import (
     VectorClockItem,
     SyncSessionStatus,
     Operation,
+    TrackedQuery,
 )
+from maestro.backends.base_nosql.utils import (
+    collection_to_entity_name,
+    entity_name_to_collection,
+)
+from maestro.core.query import (
+    Query,
+    SortOrder,
+    Filter,
+    Comparison,
+    Comparator,
+    Connector,
+)
+from maestro.core.utils import cast_away_optional
+
 import datetime as dt
 import uuid
 from .utils import get_collection_name
 from .serializer import NoSQLItemSerializer
-from typing import List, TYPE_CHECKING, Optional, Any, Type, TypeVar
+from typing import List, TYPE_CHECKING, Optional, Any, Type, Union, cast
 from .collections import (
     SyncSessionRecord,
     ItemChangeRecord,
     ItemVersionRecord,
     ConflictLogRecord,
     VectorClockItemRecord,
+    TrackedQueryRecord,
+    QueryRecord,
+    FilterRecord,
+    SortOrderRecord,
+    ComparisonRecord,
 )
 
 if TYPE_CHECKING:
     from .store import NoSQLDataStore
-
-T = TypeVar("T")
-
-
-def cast_away_optional(arg: Optional[T]) -> T:
-    assert arg is not None
-    return arg
 
 
 class DateConverter:
@@ -287,4 +300,145 @@ class ItemChangeMetadataConverter(DataStoreAccessConverter):
             should_ignore=metadata_object.should_ignore,
             is_applied=metadata_object.is_applied,
             vector_clock=vector_clock,
+        )
+
+
+class SortOrderConverter(NoSQLConverter):
+    def to_metadata(self, record: "SortOrderRecord") -> "SortOrder":
+        return SortOrder(
+            field_name=record["field_name"], descending=record["descending"]
+        )
+
+    def to_record(self, metadata_object: "SortOrder") -> "SortOrderRecord":
+        return SortOrderRecord(
+            field_name=metadata_object.field_name, descending=metadata_object.descending
+        )
+
+
+class ComparisonMetadataConverter(NoSQLConverter):
+    def to_metadata(self, record: "ComparisonRecord") -> "Comparison":
+        return Comparison(
+            field_name=record["field_name"],
+            comparator=Comparator[record["comparator"]],
+            value=record["value"],
+        )
+
+    def to_record(self, metadata_object: "Comparison") -> "ComparisonRecord":
+        return ComparisonRecord(
+            type="comparison",
+            field_name=metadata_object.field_name,
+            comparator=metadata_object.comparator.value,
+            value=metadata_object.value,
+        )
+
+
+class FilterMetadataConverter(NoSQLConverter):
+    def __init__(
+        self,
+        comparison_converter: "ComparisonMetadataConverter" = ComparisonMetadataConverter(),
+    ):
+        self.comparison_converter = comparison_converter
+
+    def to_metadata(self, record: "FilterRecord") -> "Filter":
+        children: "List[Union[Filter, Comparison]]" = []
+
+        for child in record["children"]:
+            if record["type"] == "filter":
+                metadata_child = self.to_metadata(record=cast("FilterRecord", child))
+            else:
+                metadata_child = self.comparison_converter.to_metadata(record=child)
+
+            children.append(metadata_child)
+
+        return Filter(connector=Connector[record["connector"]], children=children)
+
+    def to_record(self, metadata_object: "Filter") -> "FilterRecord":
+        children: "List[Union[FilterRecord, ComparisonRecord]]" = []
+
+        for child in metadata_object.children:
+            record_child: "Union[FilterRecord, ComparisonRecord]"
+            if isinstance(child, Filter):
+                record_child = self.to_record(metadata_object=child)
+            else:
+                record_child = self.comparison_converter.to_record(
+                    metadata_object=child
+                )
+            children.append(record_child)
+
+        return FilterRecord(
+            type="filter", connector=metadata_object.connector.value, children=children
+        )
+
+
+class QueryMetadataConverter(NoSQLConverter):
+    def __init__(
+        self,
+        filter_converter: "FilterMetadataConverter" = FilterMetadataConverter(),
+        sort_order_converter: "SortOrderConverter" = SortOrderConverter(),
+    ):
+        self.filter_converter = filter_converter
+        self.sort_order_converter = sort_order_converter
+
+    def to_metadata(self, record: "QueryRecord") -> "Query":
+        entity_name = collection_to_entity_name(record["collection_name"])
+        filter = self.filter_converter.to_metadata(record=record["filter"])
+
+        ordering: "List[SortOrder]" = []
+        for sort_order_record in record["ordering"]:
+            ordering.append(
+                self.sort_order_converter.to_metadata(record=sort_order_record)
+            )
+
+        query = Query(
+            entity_name=entity_name,
+            filter=filter,
+            ordering=ordering,
+            limit=record["limit"],
+            offset=record["offset"],
+        )
+        return query
+
+    def to_record(self, metadata_object: "Query") -> "QueryRecord":
+        collection_name = entity_name_to_collection(metadata_object.entity_name)
+        filter = self.filter_converter.to_record(metadata_object=metadata_object.filter)
+
+        ordering: "List[SortOrderRecord]" = []
+        for sort_order in metadata_object.ordering:
+            ordering.append(
+                self.sort_order_converter.to_record(metadata_object=sort_order)
+            )
+
+        return QueryRecord(
+            filter=filter,
+            ordering=ordering,
+            collection_name=collection_name,
+            limit=metadata_object.limit,
+            offset=metadata_object.offset,
+        )
+
+
+class TrackedQueryMetadataConverter(NoSQLConverter):
+    def __init__(
+        self,
+        vector_clock_converter: "VectorClockMetadataConverter" = VectorClockMetadataConverter(),
+        query_converter: "QueryMetadataConverter" = QueryMetadataConverter(),
+    ):
+        self.vector_clock_converter = vector_clock_converter
+        self.query_converter = query_converter
+
+    def to_metadata(self, record: "TrackedQueryRecord") -> "TrackedQuery":
+        vector_clock = self.vector_clock_converter.to_metadata(
+            record=record["vector_clock"]
+        )
+        query = self.query_converter.to_metadata(record=record["query"])
+        tracked_query = TrackedQuery(query=query, vector_clock=vector_clock)
+        return tracked_query
+
+    def to_record(self, metadata_object: "TrackedQuery") -> "TrackedQueryRecord":
+        vector_clock = self.vector_clock_converter.to_record(
+            metadata_object=metadata_object.vector_clock
+        )
+        query = self.query_converter.to_record(metadata_object=metadata_object.query)
+        return TrackedQueryRecord(
+            id=metadata_object.query.get_id(), vector_clock=vector_clock, query=query
         )
