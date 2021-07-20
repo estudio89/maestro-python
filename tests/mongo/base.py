@@ -86,7 +86,7 @@ class TestInMemoryDataStore(InMemoryDataStore):
 
     def serialize_item(self, item):
         return (
-            '{"entity_name": "test_items", "fields": {"name": "%s", "version": "%s"}, "pk": "%s"}'
+            '{"entity_name": "my_app_item", "fields": {"name": "%s", "version": "%s"}, "pk": "%s"}'
             % (item["name"], item["version"], str(item["id"]))
         )
 
@@ -106,21 +106,21 @@ class TestMongoDataStore(MongoDataStore):
         return (item["id"], item["name"], item["version"])
 
     def get_items(self):
-        docs = self.db["test_items"].find(filter={})
+        docs = self.db["my_app_item"].find(filter={})
         items = []
         for doc in docs:
             record = self._document_to_raw_instance(doc)
-            record["collection_name"] = "test_items"
+            record["collection_name"] = "my_app_item"
             items.append(record)
         return items
 
     def get_item_by_id(self, id):
-        doc = self.db["test_items"].find_one(filter={"_id": str(id)})
+        doc = self.db["my_app_item"].find_one(filter={"_id": str(id)})
         if not doc:
             raise ItemNotFoundException(item_type="Item", id=id)
 
         record = self._document_to_raw_instance(doc)
-        record["collection_name"] = "test_items"
+        record["collection_name"] = "my_app_item"
         return record
 
 
@@ -141,12 +141,12 @@ class MongoBackendTestMixin(tests.base.BackendTestMixin):
             "id": id,
             "name": name,
             "version": version,
-            "collection_name": "test_items",
+            "collection_name": "my_app_item",
         }
 
     def _serialize_item(self, id: "str", name: "str", version: "str") -> "str":
         return (
-            '{"entity_name": "test_items", "fields": {"name": "%s", "version": "%s"}, "pk": "%s"}'
+            '{"entity_name": "my_app_item", "fields": {"name": "%s", "version": "%s"}, "pk": "%s"}'
             % (name, version, str(id))
         )
 

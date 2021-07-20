@@ -48,7 +48,7 @@ def _delete_data():
         for doc in docs:
             doc.reference.delete()
 
-    docs = db.collection("test_items").get()
+    docs = db.collection("my_app_item").get()
     for doc in docs:
         doc.reference.delete()
 
@@ -89,7 +89,7 @@ class TestInMemoryDataStore(InMemoryDataStore):
 
     def serialize_item(self, item):
         return (
-            '{"entity_name": "test_items", "fields": {"name": "%s", "version": "%s"}, "pk": "%s"}'
+            '{"entity_name": "my_app_item", "fields": {"name": "%s", "version": "%s"}, "pk": "%s"}'
             % (item["name"], item["version"], str(item["id"]))
         )
 
@@ -109,21 +109,21 @@ class TestFirestoreDataStore(FirestoreDataStore):
         return (item["id"], item["name"], item["version"])
 
     def get_items(self):
-        docs = self.db.collection("test_items").get()
+        docs = self.db.collection("my_app_item").get()
         items = []
         for doc in docs:
             record = self._document_to_raw_instance(doc, ignore_read=True)
-            record["collection_name"] = "test_items"
+            record["collection_name"] = "my_app_item"
             items.append(record)
         return items
 
     def get_item_by_id(self, id):
-        doc = self.db.collection("test_items").document(str(id)).get()
+        doc = self.db.collection("my_app_item").document(str(id)).get()
         if not doc.exists:
             raise ItemNotFoundException(item_type="Item", id=id)
 
         record = self._document_to_raw_instance(doc, ignore_read=True)
-        record["collection_name"] = "test_items"
+        record["collection_name"] = "my_app_item"
         return record
 
 
@@ -147,12 +147,12 @@ class FirestoreBackendTestMixin(tests.base.BackendTestMixin):
             "id": id,
             "name": name,
             "version": version,
-            "collection_name": "test_items",
+            "collection_name": "my_app_item",
         }
 
     def _serialize_item(self, id: "str", name: "str", version: "str") -> "str":
         return (
-            '{"entity_name": "test_items", "fields": {"name": "%s", "version": "%s"}, "pk": "%s"}'
+            '{"entity_name": "my_app_item", "fields": {"name": "%s", "version": "%s"}, "pk": "%s"}'
             % (name, version, str(id))
         )
 

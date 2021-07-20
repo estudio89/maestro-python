@@ -7,4 +7,4 @@ class MongoStoreTest(
     tests.base_store.BaseStoreTest,
     tests.mongo.base.MongoTestCase,
 ):
-    supports_queries = False
+    pass

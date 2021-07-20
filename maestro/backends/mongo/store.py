@@ -1,9 +1,14 @@
-from maestro.backends.base_nosql.utils import get_collection_name, type_to_collection
+from maestro.backends.base_nosql.utils import (
+    get_collection_name,
+    type_to_collection,
+    entity_name_to_collection,
+)
 from maestro.backends.base_nosql.store import NoSQLDataStore
-from maestro.backends.base_nosql.converters import TrackedQueryMetadataConverter
 from maestro.backends.mongo.converters import DateConverter
+from maestro.backends.mongo.utils import convert_to_mongo_filter, convert_to_mongo_sort
 from maestro.core.exceptions import ItemNotFoundException
-from maestro.core.query import Query
+from maestro.core.query.metadata import Query, TrackedQuery, Filter
+from maestro.core.query.store import TrackQueriesStoreMixin
 from maestro.core.metadata import (
     VectorClock,
     ItemVersion,
@@ -12,28 +17,27 @@ from maestro.core.metadata import (
     ConflictLog,
     ConflictStatus,
     SyncSession,
-    TrackedQuery,
 )
 from maestro.backends.base_nosql.collections import (
     CollectionType,
     ItemChangeRecord,
     ConflictLogRecord,
 )
-from typing import Dict, Optional, List, Callable, cast
+from typing import Dict, Optional, List, Callable, Any, Set
 import uuid
-import copy
 import pymongo
 
 
-class MongoDataStore(NoSQLDataStore):
-    tracked_query_metadata_converter: "TrackedQueryMetadataConverter"
-
+class MongoDataStore(TrackQueriesStoreMixin, NoSQLDataStore):
     def __init__(self, *args, **kwargs):
         self.db = kwargs.pop("db")
         self.client = kwargs.pop("client")
         self.tracked_query_metadata_converter = kwargs.pop(
             "tracked_query_metadata_converter"
         )
+        self.item_field_getter: "Callable[[Any, str], Any]" = lambda item, field_name: item[
+            field_name
+        ]
         super().__init__(*args, **kwargs)
         self.session = None
         self.date_converter = DateConverter()
@@ -58,7 +62,7 @@ class MongoDataStore(NoSQLDataStore):
         provider_ids = [doc["_id"] for doc in docs]
         return provider_ids
 
-    def _get_tracked_query(self, query: "Query") -> "Optional[TrackedQuery]":
+    def get_tracked_query(self, query: "Query") -> "Optional[TrackedQuery]":
         doc = self._get_collection_query(CollectionType.TRACKED_QUERIES).find_one(
             {"_id": query.get_id()}
         )
@@ -66,34 +70,111 @@ class MongoDataStore(NoSQLDataStore):
             return None
 
         instance = self._document_to_raw_instance(document=doc)
-        tracked_query = self.tracked_query_metadata_converter.to_metadata(record=instance)
+        tracked_query = self.tracked_query_metadata_converter.to_metadata(
+            record=instance
+        )
         return tracked_query
 
-    def _update_query_vector_clock(
-        self, query: "Query", item_change_record: "ItemChangeRecord"
-    ):
-        tracked_query = self._get_tracked_query(query=query)
+    def get_tracked_queries(self) -> "List[TrackedQuery]":
+        docs = self._get_collection_query(CollectionType.TRACKED_QUERIES).find(
+            filter={}
+        )
 
-        if tracked_query:
-            vector_clock = copy.deepcopy(tracked_query.vector_clock)
-        else:
-            vector_clock = VectorClock.create_empty(
-                provider_ids=self._get_provider_ids()
+        tracked_queries: "List[TrackedQuery]" = []
+        for doc in docs:
+            instance = self._document_to_raw_instance(doc)
+            tracked_query = self.tracked_query_metadata_converter.to_metadata(
+                record=instance
             )
-            tracked_query = TrackedQuery(query=query, vector_clock=vector_clock)
+            tracked_queries.append(tracked_query)
 
-        vector_clock.update_vector_clock_item(
-            provider_id=item_change_record["provider_id"],
-            timestamp=self.date_converter.deserialize_date(
-                item_change_record["provider_timestamp"]
-            ),
+        return tracked_queries
+
+    def _to_mongo_filter(self, filter: "Filter") -> "Dict":
+        pass
+
+    def query_items(
+        self, query: "Query", vector_clock: "Optional[VectorClock]"
+    ) -> "List[Any]":
+        # TODO >>> PAGINATION
+        collection_name = entity_name_to_collection(query.entity_name)
+        mongo_filter: "Dict" = {
+            "is_applied": {"$eq": True},
+            "should_ignore": {"$eq": False,},
+            "collection_name": {"$eq": collection_name},
+        }
+        item_mongo_filter = convert_to_mongo_filter(
+            filter=query.filter, field_prefix="serialized_item."
         )
-        updated_tracked_query = TrackedQuery(query=query, vector_clock=vector_clock)
+        mongo_filter.update(item_mongo_filter)
+
+        if vector_clock:
+            or_expressions: "List[Dict]" = []
+            provider_ids = []
+            for vector_clock_item in vector_clock:
+                provider_ids.append(vector_clock_item.provider_id)
+                or_expressions.append(
+                    {
+                        "$and": [
+                            {
+                                "provider_id": vector_clock_item.provider_id,
+                                "provider_timestamp": {
+                                    "$lte": self.date_converter.serialize_date(
+                                        vector_clock_item.timestamp
+                                    )
+                                },
+                            }
+                        ]
+                    }
+                )
+            or_expressions.append({"provider_id": {"$nin": provider_ids}})
+
+            mongo_filter["$or"] = or_expressions
+
+        pipeline = [
+            {"$match": mongo_filter,},
+            {
+                "$setWindowFields": {
+                    "partitionBy": "$item_id",
+                    "sortBy": {"date_created": pymongo.DESCENDING},
+                    "output": {"serialized_item": {"$first": "$serialized_item"}},
+                },
+            },
+            {
+                "$group": {
+                    "_id": "$item_id",
+                    "item": {"$first": "$$ROOT.serialized_item"},
+                },
+            },
+            {"$replaceRoot": {"newRoot": "$item"},},
+        ]
+
+        if query.ordering:
+            mongo_sort = convert_to_mongo_sort(ordering=query.ordering)
+            pipeline.append({"$sort": mongo_sort})
+
+        if query.offset:
+            pipeline.append({"$skip": query.offset})
+
+        if query.limit:
+            pipeline.append({"$limit": query.limit})
+
+        docs = self._get_collection_query(CollectionType.ITEM_CHANGES).aggregate(
+            pipeline
+        )
+
+        items = [doc for doc in docs]
+
+        return items
+
+    def save_tracked_query(self, tracked_query: "TrackedQuery"):
         instance = self.tracked_query_metadata_converter.to_record(
-            metadata_object=updated_tracked_query
+            metadata_object=tracked_query
         )
-        collection_name = type_to_collection(key=CollectionType.TRACKED_QUERIES)
-        self._save(instance=cast("Dict", instance), collection=collection_name)
+        self._save(
+            instance=instance,
+            collection=type_to_collection(key=CollectionType.TRACKED_QUERIES),
+        )
 
     def _save(self, instance: "Dict", collection: "str"):
         pk = instance.pop("id")
@@ -106,7 +187,7 @@ class MongoDataStore(NoSQLDataStore):
 
     def get_local_vector_clock(self, query: "Optional[Query]" = None) -> "VectorClock":
         if query is not None:
-            tracked_query = self._get_tracked_query(query=query)
+            tracked_query = self.get_tracked_query(query=query)
             if tracked_query:
                 return tracked_query.vector_clock
             else:
@@ -157,8 +238,11 @@ class MongoDataStore(NoSQLDataStore):
         query: "Optional[Query]" = None,
     ) -> "ItemChangeBatch":
 
-        if query is not None:
-            raise ValueError("This backend doesn't support queries!")
+        filtered_item_ids: "Optional[Set[str]]" = None
+        if query:
+            filtered_item_ids = self.get_item_ids_for_query(
+                query=query, vector_clock=vector_clock
+            )
 
         item_change_records: "List[ItemChangeRecord]" = []
         provider_ids = self._get_provider_ids()
@@ -167,15 +251,20 @@ class MongoDataStore(NoSQLDataStore):
             vector_clock_item = vector_clock.get_vector_clock_item(
                 provider_id=provider_id
             )
-            docs = self._get_collection_query(CollectionType.ITEM_CHANGES).find(
-                filter={
-                    "provider_id": {"$eq": vector_clock_item.provider_id},
-                    "provider_timestamp": {
-                        "$gt": self.date_converter.serialize_date(
-                            vector_clock_item.timestamp
-                        )
-                    },
+            mongo_filter = {
+                "provider_id": {"$eq": vector_clock_item.provider_id},
+                "provider_timestamp": {
+                    "$gt": self.date_converter.serialize_date(
+                        vector_clock_item.timestamp
+                    )
                 },
+            }
+
+            if filtered_item_ids:
+                mongo_filter["item_id"] = {"$in": list(filtered_item_ids)}
+
+            docs = self._get_collection_query(CollectionType.ITEM_CHANGES).find(
+                filter=mongo_filter,
                 limit=max_num,
                 sort=[["provider_timestamp", pymongo.ASCENDING]],
             )
@@ -208,9 +297,6 @@ class MongoDataStore(NoSQLDataStore):
         query: "Optional[Query]" = None,
     ) -> "ItemChangeBatch":
 
-        if query is not None:
-            raise ValueError("This backend doesn't support queries!")
-
         docs = self._get_collection_query(CollectionType.CONFLICT_LOGS).find(
             filter={"status": {"$eq": ConflictStatus.DEFERRED.value}},
             sort=[["created_at", pymongo.ASCENDING]],
@@ -227,12 +313,23 @@ class MongoDataStore(NoSQLDataStore):
         item_changes = self.find_item_changes(ids=item_change_ids)
         item_changes.sort(key=lambda item_change: item_change.date_created)
 
+        filtered_item_ids: "Optional[Set[str]]" = None
+        if query:
+            filtered_item_ids = self.get_item_ids_for_query(
+                query=query, vector_clock=vector_clock
+            )
+
         selected_item_changes = []
         for item_change in item_changes:
             vector_clock_item = vector_clock.get_vector_clock_item(
                 provider_id=item_change.provider_id
             )
             if item_change.provider_timestamp > vector_clock_item.timestamp:
+                if (
+                    filtered_item_ids is not None
+                    and item_change.item_id not in filtered_item_ids
+                ):
+                    continue
                 selected_item_changes.append(item_change)
 
         current_count = len(selected_item_changes)
@@ -279,6 +376,15 @@ class MongoDataStore(NoSQLDataStore):
             metadata_objects.append(metadata_object)
 
         return metadata_objects
+
+    def save_item_change(
+        self, item_change: "ItemChange", is_creating: "bool" = False
+    ) -> "ItemChange":
+
+        super().save_item_change(item_change=item_change, is_creating=is_creating)
+        if is_creating:
+            self.check_tracked_query_vector_clocks(new_item_change=item_change)
+        return item_change
 
     def get_item_changes(self) -> "List[ItemChange]":
         docs = self._get_collection_query(key=CollectionType.ITEM_CHANGES).find(
