@@ -90,9 +90,6 @@ class MongoDataStore(TrackQueriesStoreMixin, NoSQLDataStore):
 
         return tracked_queries
 
-    def _to_mongo_filter(self, filter: "Filter") -> "Dict":
-        pass
-
     def query_items(
         self, query: "Query", vector_clock: "Optional[VectorClock]"
     ) -> "List[Any]":
