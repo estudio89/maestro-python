@@ -1,4 +1,4 @@
-from maestro.core.query import Filter, Comparison, Comparator, Connector
+from maestro.core.query.metadata import Filter, Comparison, Comparator, Connector
 import unittest
 
 

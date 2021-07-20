@@ -10,19 +10,19 @@ from maestro.core.metadata import (
     VectorClockItem,
     SyncSessionStatus,
     Operation,
-    TrackedQuery,
 )
 from maestro.backends.base_nosql.utils import (
     collection_to_entity_name,
     entity_name_to_collection,
 )
-from maestro.core.query import (
+from maestro.core.query.metadata import (
     Query,
     SortOrder,
     Filter,
     Comparison,
     Comparator,
     Connector,
+    TrackedQuery,
 )
 from maestro.core.utils import cast_away_optional
 
@@ -319,7 +319,7 @@ class ComparisonMetadataConverter(NoSQLConverter):
     def to_metadata(self, record: "ComparisonRecord") -> "Comparison":
         return Comparison(
             field_name=record["field_name"],
-            comparator=Comparator[record["comparator"]],
+            comparator=Comparator(record["comparator"]),
             value=record["value"],
         )
 
@@ -343,10 +343,14 @@ class FilterMetadataConverter(NoSQLConverter):
         children: "List[Union[Filter, Comparison]]" = []
 
         for child in record["children"]:
-            if record["type"] == "filter":
+            metadata_child: "Union[Filter, Comparison]"
+
+            if child["type"] == "filter":
                 metadata_child = self.to_metadata(record=cast("FilterRecord", child))
             else:
-                metadata_child = self.comparison_converter.to_metadata(record=child)
+                metadata_child = self.comparison_converter.to_metadata(
+                    record=cast("ComparisonRecord", child)
+                )
 
             children.append(metadata_child)
 

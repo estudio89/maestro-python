@@ -4,7 +4,7 @@ from .metadata import VectorClock
 
 if TYPE_CHECKING:  # pragma: no cover
     from maestro.core.provider import BaseSyncProvider
-    from maestro.core.query import Query
+    from maestro.core.query.metadata import Query
 
 
 class SyncOrchestrator:

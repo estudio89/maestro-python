@@ -3,8 +3,6 @@ import copy
 from enum import Enum
 import uuid
 from typing import List, Optional, Dict, cast
-from maestro.core.query import Query
-
 
 class VectorClockItem:
     """Stores the timestamp from a specific provider"""
@@ -587,11 +585,3 @@ class SyncSession:
                 return False
 
         return True
-
-class TrackedQuery:
-    query: "Query"
-    vector_clock: "VectorClock"
-
-    def __init__(self, query: "Query", vector_clock: "VectorClock"):
-        self.query = query
-        self.vector_clock = vector_clock

@@ -6,7 +6,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from maestro.core.events import EventsManager
     from maestro.core.metadata import VectorClock, ItemChangeBatch
     from maestro.core.execution import ChangesExecutor
-    from maestro.core.query import Query
+    from maestro.core.query.metadata import Query
 
 
 class BaseSyncProvider(ABC):

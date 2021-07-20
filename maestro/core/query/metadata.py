@@ -1,3 +1,4 @@
+from maestro.core.metadata import VectorClock
 from enum import Enum
 from typing import List, Any, Union, Optional
 import copy
@@ -206,6 +207,7 @@ class SortOrder:
     def __repr__(self):
         return self.__str__()
 
+
 class Query:
     """Represents a query with an optional filter and an ordering.
 
@@ -228,6 +230,11 @@ class Query:
         limit: "Optional[Any]",
         offset: "Optional[Any]",
     ):
+        if limit is not None:
+            assert ordering, "Can't define limit for unordered query!"
+        if offset is not None:
+            assert ordering, "Can't define offset for unordered query!"
+
         self.entity_name = entity_name
         self.filter = filter
         self.ordering = ordering
@@ -255,3 +262,15 @@ class Query:
         """Returns a unique identifier for this query."""
 
         return str(self.__hash__())
+
+
+class TrackedQuery:
+    query: "Query"
+    vector_clock: "VectorClock"
+
+    def __init__(self, query: "Query", vector_clock: "VectorClock"):
+        self.query = query
+        self.vector_clock = vector_clock
+
+    def __repr__(self):
+        return f"TrackedQuery(query={self.query}, vector_clock={self.vector_clock})"

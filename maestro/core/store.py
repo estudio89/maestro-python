@@ -8,9 +8,8 @@ from .metadata import (
     ConflictLog,
     Operation,
     SyncSession,
-    TrackedQuery,
 )
-from .query import Query
+from .query.metadata import Query
 from .utils import BaseMetadataConverter, get_now_utc
 from .serializer import BaseItemSerializer
 from .exceptions import ItemNotFoundException
@@ -355,10 +354,6 @@ class BaseDataStore(ABC):
         """
         raise NotImplementedError()
 
-    def get_tracked_queries(self) -> "List[TrackedQuery]":
-        """Returns a list of all the queries being tracked."""
-
-        return []
 
     @abstractmethod
     def get_item_changes(self) -> "List[ItemChange]":

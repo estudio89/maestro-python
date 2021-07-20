@@ -1,12 +1,11 @@
 from maestro.backends.base_nosql.store import NoSQLDataStore
 from maestro.core.exceptions import ItemNotFoundException
-from maestro.core.query import Query
+from maestro.core.query.metadata import Query
 from maestro.core.metadata import (
     VectorClock,
     ItemVersion,
     ItemChange,
     ItemChangeBatch,
-    Operation,
     ConflictLog,
     ConflictStatus,
     SyncSession,
@@ -21,7 +20,6 @@ from maestro.backends.base_nosql.utils import get_collection_name, type_to_colle
 import copy
 from typing import Dict, Optional, List, Any, Callable
 import uuid
-import datetime as dt
 import logging
 
 logger = logging.getLogger(__name__)
@@ -191,9 +189,6 @@ class FirestoreDataStore(NoSQLDataStore):
             self.current_transaction.set(doc_ref, instance)
 
         self._usage.register_write(collection_name=collection, document_id=pk)
-
-    def _check_tracked_query_vector_clocks(self, item_change_record: "Any"):
-        pass
 
     def get_local_vector_clock(self, query: "Optional[Query]" = None) -> "VectorClock":
         if query is not None:

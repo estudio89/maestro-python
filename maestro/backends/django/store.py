@@ -1,6 +1,6 @@
 from django.db import models, transaction
 from maestro.core.store import BaseDataStore
-from maestro.core.query import Query
+from maestro.core.query.metadata import Query
 from maestro.core.exceptions import ItemNotFoundException
 from maestro.core.metadata import (
     VectorClock,
