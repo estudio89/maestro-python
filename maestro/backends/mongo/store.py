@@ -93,7 +93,7 @@ class MongoDataStore(TrackQueriesStoreMixin, NoSQLDataStore):
     def query_items(
         self, query: "Query", vector_clock: "Optional[VectorClock]"
     ) -> "List[Any]":
-        # TODO >>> PAGINATION
+
         collection_name = entity_name_to_collection(query.entity_name)
         mongo_filter: "Dict" = {
             "is_applied": {"$eq": True},

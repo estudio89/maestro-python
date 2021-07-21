@@ -15,7 +15,7 @@ def _comparison_to_mongo_expression(
     if comparison.comparator == Comparator.EQUALS:
         mongo_operator = "$eq"
     elif comparison.comparator == Comparator.NOT_EQUALS:
-        mongo_operator = "$neq"
+        mongo_operator = "$ne"
     elif comparison.comparator == Comparator.LESS_THAN:
         mongo_operator = "$lt"
     elif comparison.comparator == Comparator.LESS_THAN_OR_EQUALS:
