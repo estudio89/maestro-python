@@ -7,6 +7,7 @@ from typing import Any, Optional, Callable, List, cast, Set
 from abc import abstractmethod
 import copy
 
+
 class TrackQueriesStoreMixin:
     """ A mixin that allows a data store to track queries."""
 
@@ -39,7 +40,9 @@ class TrackQueriesStoreMixin:
         )
         return item_change
 
-    def get_item_ids_for_query(self, query: "Query", vector_clock="VectorClock") -> "Set[str]":
+    def get_item_ids_for_query(
+        self, query: "Query", vector_clock="VectorClock"
+    ) -> "Set[str]":
         old_query_items = self.query_items(query=query, vector_clock=vector_clock)
         old_item_ids = {item["id"] for item in old_query_items}
 
@@ -104,10 +107,7 @@ class TrackQueriesStoreMixin:
             tracked_query = self.start_tracking_query(query=query)
 
         vector_clock = copy.deepcopy(tracked_query.vector_clock)
-        vector_clock.update_vector_clock_item(
-            provider_id=item_change.provider_id,
-            timestamp=item_change.provider_timestamp,
-        )
+        vector_clock.update(vector_clock_item=item_change.change_vector_clock_item)
         updated_tracked_query = TrackedQuery(query=query, vector_clock=vector_clock)
         self.save_tracked_query(tracked_query=updated_tracked_query)
 
@@ -124,14 +124,14 @@ class TrackQueriesStoreMixin:
         """
 
         filter_check = query_filter_to_lambda(
-            filter=query.filter, item_field_getter=self.item_field_getter # type: ignore
+            filter=query.filter, item_field_getter=self.item_field_getter  # type: ignore
         )
         if filter_check(item):
             query_items = self.query_items(query=query, vector_clock=vector_clock)
             item_ids = {
-                self.item_field_getter(query_item, "id") for query_item in query_items # type: ignore
+                self.item_field_getter(query_item, "id") for query_item in query_items  # type: ignore
             }
-            if self.item_field_getter(item, "id") in item_ids: # type: ignore
+            if self.item_field_getter(item, "id") in item_ids:  # type: ignore
                 return True
 
         return False

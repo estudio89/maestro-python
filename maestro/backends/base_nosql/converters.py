@@ -149,16 +149,40 @@ class ConflictLogMetadataConverter(DataStoreAccessConverter):
         )
 
 
+class VectorClockItemMetadataConverter(NoSQLConverter):
+    def to_metadata(self, record: "VectorClockItemRecord") -> "VectorClockItem":
+        timestamp = cast_away_optional(
+            self.date_converter.deserialize_date(record["timestamp"])
+        )
+        timestamp = timestamp.replace(tzinfo=dt.timezone.utc)
+        vector_clock_item = VectorClockItem(
+            provider_id=record["provider_id"], timestamp=timestamp
+        )
+        return vector_clock_item
+
+    def to_record(self, metadata_object: "VectorClockItem") -> "VectorClockItemRecord":
+        return VectorClockItemRecord(
+            provider_id=metadata_object.provider_id,
+            timestamp=cast_away_optional(
+                self.date_converter.serialize_date(metadata_object.timestamp)
+            ),
+        )
+
+
 class VectorClockMetadataConverter(NoSQLConverter):
+    vector_clock_item_converter: "VectorClockItemMetadataConverter"
+
+    def __init__(
+        self,
+        vector_clock_item_converter: "VectorClockItemMetadataConverter" = VectorClockItemMetadataConverter(),
+    ):
+        self.vector_clock_item_converter = vector_clock_item_converter
+
     def to_metadata(self, record: "List[VectorClockItemRecord]") -> "VectorClock":
         vector_clock_items: "List[VectorClockItem]" = []
         for item in record:
-            timestamp = cast_away_optional(
-                self.date_converter.deserialize_date(item["timestamp"])
-            )
-            timestamp = timestamp.replace(tzinfo=dt.timezone.utc)
-            vector_clock_item = VectorClockItem(
-                provider_id=item["provider_id"], timestamp=timestamp
+            vector_clock_item = self.vector_clock_item_converter.to_metadata(
+                record=item
             )
             vector_clock_items.append(vector_clock_item)
 
@@ -170,14 +194,10 @@ class VectorClockMetadataConverter(NoSQLConverter):
     ) -> "List[VectorClockItemRecord]":
         items: "List[VectorClockItemRecord]" = []
         for vector_clock_item in metadata_object:
-            items.append(
-                {
-                    "provider_id": vector_clock_item.provider_id,
-                    "timestamp": cast_away_optional(
-                        self.date_converter.serialize_date(vector_clock_item.timestamp)
-                    ),
-                }
+            record = self.vector_clock_item_converter.to_record(
+                metadata_object=vector_clock_item
             )
+            items.append(record)
         return items
 
 
@@ -230,14 +250,19 @@ class ItemVersionMetadataConverter(DataStoreAccessConverter):
 
 class ItemChangeMetadataConverter(DataStoreAccessConverter):
     item_serializer: "NoSQLItemSerializer"
+    vector_clock_item_converter: "VectorClockItemMetadataConverter"
+    vector_clock_converter: "VectorClockMetadataConverter"
 
     def __init__(
         self,
         item_serializer: "NoSQLItemSerializer",
+        vector_clock_item_converter: "VectorClockItemMetadataConverter" = VectorClockItemMetadataConverter(),
         vector_clock_converter: "VectorClockMetadataConverter" = VectorClockMetadataConverter(),
     ):
         self.item_serializer = item_serializer
         self.vector_clock_converter = vector_clock_converter
+        self.vector_clock_item_converter = vector_clock_item_converter
+
         super().__init__()
 
     def to_metadata(self, record: "ItemChangeRecord") -> "ItemChange":
@@ -247,22 +272,21 @@ class ItemChangeMetadataConverter(DataStoreAccessConverter):
         serialization_result = self.item_serializer.serialize_item(
             item=record["serialized_item"]
         )
+        change_vector_clock_item = self.vector_clock_item_converter.to_metadata(
+            record=record["change_vector_clock_item"]
+        )
+        insert_vector_clock_item = self.vector_clock_item_converter.to_metadata(
+            record=record["insert_vector_clock_item"]
+        )
+
         metadata_object = ItemChange(
             id=uuid.UUID(record["id"]),
             date_created=cast_away_optional(
                 self.date_converter.deserialize_date(record["date_created"])
             ),
             operation=Operation[record["operation"]],
-            provider_timestamp=cast_away_optional(
-                self.date_converter.deserialize_date(record["provider_timestamp"])
-            ),
-            provider_id=record["provider_id"],
-            insert_provider_timestamp=cast_away_optional(
-                self.date_converter.deserialize_date(
-                    record["insert_provider_timestamp"]
-                )
-            ),
-            insert_provider_id=record["insert_provider_id"],
+            change_vector_clock_item=change_vector_clock_item,
+            insert_vector_clock_item=insert_vector_clock_item,
             serialization_result=serialization_result,
             should_ignore=record["should_ignore"],
             is_applied=record["is_applied"],
@@ -280,6 +304,12 @@ class ItemChangeMetadataConverter(DataStoreAccessConverter):
         deserialized_item = self.item_serializer.deserialize_item(
             serialization_result=metadata_object.serialization_result
         )
+        change_vector_clock_item = self.vector_clock_item_converter.to_record(
+            metadata_object=metadata_object.change_vector_clock_item
+        )
+        insert_vector_clock_item = self.vector_clock_item_converter.to_record(
+            metadata_object=metadata_object.insert_vector_clock_item
+        )
         return ItemChangeRecord(
             id=str(metadata_object.id),
             date_created=cast_away_optional(
@@ -288,16 +318,8 @@ class ItemChangeMetadataConverter(DataStoreAccessConverter):
             operation=metadata_object.operation.value,
             item_id=str(metadata_object.serialization_result.item_id),
             collection_name=collection_name,
-            provider_timestamp=cast_away_optional(
-                self.date_converter.serialize_date(metadata_object.provider_timestamp)
-            ),
-            provider_id=metadata_object.provider_id,
-            insert_provider_timestamp=cast_away_optional(
-                self.date_converter.serialize_date(
-                    metadata_object.insert_provider_timestamp
-                )
-            ),
-            insert_provider_id=metadata_object.insert_provider_id,
+            change_vector_clock_item=change_vector_clock_item,
+            insert_vector_clock_item=insert_vector_clock_item,
             serialized_item=deserialized_item,
             should_ignore=metadata_object.should_ignore,
             is_applied=metadata_object.is_applied,

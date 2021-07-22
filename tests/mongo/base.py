@@ -96,14 +96,18 @@ class TestMongoDataStore(MongoDataStore):
                     "operation": item_change.operation.value,
                     "item_id": str(item_change.serialization_result.item_id),
                     "collection_name": "my_app_item",
-                    "provider_timestamp": self.date_converter.serialize_date(
-                        item_change.provider_timestamp
-                    ),
-                    "provider_id": item_change.provider_id,
-                    "insert_provider_timestamp": self.date_converter.serialize_date(
-                        item_change.insert_provider_timestamp
-                    ),
-                    "insert_provider_id": item_change.insert_provider_id,
+                    "change_vector_clock_item": {
+                        "timestamp": self.date_converter.serialize_date(
+                            item_change.change_vector_clock_item.timestamp
+                        ),
+                        "provider_id": item_change.change_vector_clock_item.provider_id,
+                    },
+                    "insert_vector_clock_item": {
+                        "timestamp": self.date_converter.serialize_date(
+                            item_change.insert_vector_clock_item.timestamp
+                        ),
+                        "provider_id": item_change.insert_vector_clock_item.provider_id,
+                    },
                     "serialized_item": self.item_serializer.deserialize_item(
                         item_change.serialization_result
                     ),
@@ -116,11 +120,11 @@ class TestMongoDataStore(MongoDataStore):
         )
 
         self.db["maestro__provider_ids"].update_one(
-            filter={"_id": item_change.provider_id},
+            filter={"_id": item_change.change_vector_clock_item.provider_id},
             update={
                 "$set": {
                     "timestamp": self.date_converter.serialize_date(
-                        item_change.provider_timestamp
+                        item_change.change_vector_clock_item.timestamp
                     )
                 }
             },
@@ -185,7 +189,6 @@ class TestMongoDataStore(MongoDataStore):
         self.db["my_app_item"].update_one(
             filter={"_id": str(id)}, update={"$set": item_to_save}, upsert=True,
         )
-
 
     def get_items(self):
         docs = self.db["my_app_item"].find(filter={})

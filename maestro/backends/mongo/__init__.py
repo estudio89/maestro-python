@@ -6,6 +6,7 @@ from .converters import (
     ItemChangeMetadataConverter,
     ConflictLogMetadataConverter,
     VectorClockMetadataConverter,
+    VectorClockItemMetadataConverter,
     DateConverter,
 )
 from .serializer import MongoItemSerializer

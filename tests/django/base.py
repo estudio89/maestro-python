@@ -34,6 +34,7 @@ import uuid
 import tests.base
 import tests.in_memory.base
 
+
 class TestDjangoDataStore(DjangoDataStore, tests.base.TestDataStoreMixin):
     __test__ = False
 
@@ -48,9 +49,7 @@ class TestDjangoDataStore(DjangoDataStore, tests.base.TestDataStoreMixin):
         except Item.DoesNotExist:
             raise ItemNotFoundException(item_type="Item", id=id)
 
-    def _create_item(
-        self, id: "str", name: "str", version: "str"
-    ) -> "Any":
+    def _create_item(self, id: "str", name: "str", version: "str") -> "Any":
         Item = apps.get_model("my_app", "Item")
         return Item(id=uuid.UUID(id), name=name, version=version)
 
@@ -73,10 +72,10 @@ class TestDjangoDataStore(DjangoDataStore, tests.base.TestDataStoreMixin):
             operation=item_change.operation.value,
             item_id=item_change.serialization_result.item_id,
             content_type=content_type,
-            provider_timestamp=item_change.provider_timestamp,
-            provider_id=item_change.provider_id,
-            insert_provider_timestamp=item_change.insert_provider_timestamp,
-            insert_provider_id=item_change.insert_provider_id,
+            provider_timestamp=item_change.change_vector_clock_item.timestamp,
+            provider_id=item_change.change_vector_clock_item.provider_id,
+            insert_provider_timestamp=item_change.insert_vector_clock_item.timestamp,
+            insert_provider_id=item_change.insert_vector_clock_item.provider_id,
             serialized_item=item_change.serialization_result.serialized_item,
             should_ignore=item_change.should_ignore,
             is_applied=item_change.is_applied,
@@ -121,7 +120,6 @@ class TestDjangoDataStore(DjangoDataStore, tests.base.TestDataStoreMixin):
 
 
 class DjangoBackendTestMixin(tests.base.BackendTestMixin):
-
     def _create_data_store(self, local_provider_id: "str") -> "BaseDataStore":
         if local_provider_id == "other_provider":
             return tests.in_memory.base.TestInMemoryDataStore(

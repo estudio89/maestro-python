@@ -15,6 +15,7 @@ from maestro.backends.base_nosql.collections import (
     ItemChangeRecord,
     ConflictLogRecord,
 )
+from google.api_core.datetime_helpers import DatetimeWithNanoseconds
 from firebase_admin import firestore
 from maestro.backends.base_nosql.utils import (
     type_to_collection,
@@ -269,9 +270,9 @@ class FirestoreDataStore(NoSQLDataStore):
             )
             docs = (
                 self._get_collection_query(CollectionType.ITEM_CHANGES)
-                .where("provider_id", "==", vector_clock_item.provider_id)
-                .where("provider_timestamp", ">", vector_clock_item.timestamp)
-                .order_by("provider_timestamp")
+                .where("change_vector_clock_item.provider_id", "==", vector_clock_item.provider_id)
+                .where("change_vector_clock_item.timestamp", ">", DatetimeWithNanoseconds.fromisoformat(vector_clock_item.timestamp.isoformat()))
+                .order_by("change_vector_clock_item.timestamp")
                 .limit(max_num)
                 .get()
             )
@@ -333,9 +334,9 @@ class FirestoreDataStore(NoSQLDataStore):
         selected_item_changes = []
         for item_change in item_changes:
             vector_clock_item = vector_clock.get_vector_clock_item(
-                provider_id=item_change.provider_id
+                provider_id=item_change.change_vector_clock_item.provider_id
             )
-            if item_change.provider_timestamp > vector_clock_item.timestamp:
+            if item_change.change_vector_clock_item > vector_clock_item:
                 selected_item_changes.append(item_change)
 
         current_count = len(selected_item_changes)

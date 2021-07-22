@@ -14,7 +14,6 @@ import copy
 
 
 class NoSQLDataStore(BaseDataStore):
-
     def update_vector_clocks(self, item_change: "ItemChange"):
         """
         Updates the cached VectorClocks with the new change.
@@ -26,11 +25,12 @@ class NoSQLDataStore(BaseDataStore):
         item_change_record = self.item_change_metadata_converter.to_record(
             metadata_object=item_change
         )
+        change_vector_clock_item = copy.deepcopy(
+            item_change_record["change_vector_clock_item"]
+        )
+        change_vector_clock_item["id"] = change_vector_clock_item["provider_id"]
         self._save(
-            instance={
-                "timestamp": item_change_record["provider_timestamp"],
-                "id": item_change_record["provider_id"],
-            },
+            instance=change_vector_clock_item,
             collection=type_to_collection(key=CollectionType.PROVIDER_IDS),
         )
 
@@ -97,7 +97,9 @@ class NoSQLDataStore(BaseDataStore):
         )
 
     def execute_item_change(self, item_change: "ItemChange"):
-        item = self.deserialize_item(serialization_result=item_change.serialization_result)
+        item = self.deserialize_item(
+            serialization_result=item_change.serialization_result
+        )
 
         if item_change.operation == Operation.DELETE:
             self.delete_item(item=item)
@@ -126,4 +128,3 @@ class NoSQLDataStore(BaseDataStore):
         data = copy.deepcopy(cast("Dict", item))
         data.pop("collection_name")
         return data
-

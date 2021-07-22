@@ -51,10 +51,7 @@ class InMemoryDataStore(TrackQueriesStoreMixin, BaseDataStore):
         item_changes = self.get_item_changes()
 
         for item_change in item_changes:
-            vector_clock.update_vector_clock_item(
-                provider_id=item_change.provider_id,
-                timestamp=item_change.provider_timestamp,
-            )
+            vector_clock.update(vector_clock_item=item_change.change_vector_clock_item)
         return vector_clock
 
     def update_item(
@@ -93,10 +90,10 @@ class InMemoryDataStore(TrackQueriesStoreMixin, BaseDataStore):
 
         selected_changes: "List[ItemChange]" = []
         for item_change in self.get_item_changes():
-            remote_timestamp = vector_clock.get_vector_clock_item(
-                provider_id=item_change.provider_id
-            ).timestamp
-            if item_change.provider_timestamp > remote_timestamp:
+            vector_clock_item = vector_clock.get_vector_clock_item(
+                provider_id=item_change.change_vector_clock_item.provider_id
+            )
+            if item_change.change_vector_clock_item > vector_clock_item:
                 if filtered_item_ids:
                     if (
                         item_change.serialization_result.item_id
@@ -133,10 +130,10 @@ class InMemoryDataStore(TrackQueriesStoreMixin, BaseDataStore):
             if conflict_log.status == ConflictStatus.DEFERRED:
                 item_change = conflict_log.item_change_loser
 
-                remote_timestamp = vector_clock.get_vector_clock_item(
-                    provider_id=item_change.provider_id
-                ).timestamp
-                if remote_timestamp < item_change.provider_timestamp:
+                vector_clock_item = vector_clock.get_vector_clock_item(
+                    provider_id=item_change.change_vector_clock_item.provider_id
+                )
+                if vector_clock_item < item_change.change_vector_clock_item:
                     if filtered_item_ids:
                         if (
                             item_change.serialization_result.item_id
@@ -282,9 +279,9 @@ class InMemoryDataStore(TrackQueriesStoreMixin, BaseDataStore):
                 if (
                     vector_clock
                     and vector_clock.get_vector_clock_item(
-                        item_change.provider_id
-                    ).timestamp
-                    < item_change.provider_timestamp
+                        item_change.change_vector_clock_item.provider_id
+                    )
+                    < item_change.change_vector_clock_item
                 ):
                     continue
                 item = self.deserialize_item(item_change.serialization_result)
@@ -470,4 +467,3 @@ class InMemoryDataStore(TrackQueriesStoreMixin, BaseDataStore):
         data = copy.deepcopy(cast("Dict", item))
         data.pop("entity_name")
         return data
-

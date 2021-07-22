@@ -39,10 +39,7 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
         # Adding a change to an object
         item = self.data_store._create_item(
-            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
-            name="item_1",
-            version="1",
-
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="1",
         )
         self.data_store._add_item(item=item)
 
@@ -61,14 +58,18 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="1",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            provider_id="provider_in_test",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            insert_provider_id="provider_in_test",
             should_ignore=False,
             is_applied=True,
             vector_clock=VectorClock(
@@ -112,10 +113,7 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
         # Adding a change to another object
 
         item = self.data_store._create_item(
-            id="915a67f9-e597-491a-a28f-cf0fda241b68",
-            name="item_2",
-            version="1",
-
+            id="915a67f9-e597-491a-a28f-cf0fda241b68", name="item_2", version="1",
         )
         self.data_store._add_item(item=item)
 
@@ -134,14 +132,18 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="1",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            provider_id="provider_in_test",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            insert_provider_id="provider_in_test",
             should_ignore=False,
             is_applied=True,
             vector_clock=VectorClock(
@@ -228,10 +230,7 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
     def test_get_or_create_item_change(self):
         item = self.data_store._create_item(
-            id="2d6c7fef-a337-43cb-828a-4e6d2341ac7d",
-            name="item_1",
-            version="1",
-
+            id="2d6c7fef-a337-43cb-828a-4e6d2341ac7d", name="item_1", version="1",
         )
         self.data_store._add_item(item=item)
 
@@ -250,14 +249,18 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="2",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=9, tzinfo=dt.timezone.utc
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=9, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            provider_id="provider_in_test",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=9, tzinfo=dt.timezone.utc
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=9, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            insert_provider_id="provider_in_test",
             should_ignore=True,
             is_applied=True,
             vector_clock=VectorClock(
@@ -311,14 +314,18 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="2.1",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=9, tzinfo=dt.timezone.utc
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=9, tzinfo=dt.timezone.utc
+                ),
+                provider_id="other_provider",
             ),
-            provider_id="other_provider",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=9, tzinfo=dt.timezone.utc
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=9, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            insert_provider_id="provider_in_test",
             should_ignore=False,
             is_applied=True,
             vector_clock=VectorClock(
@@ -371,14 +378,23 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="2.1",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=10, tzinfo=dt.timezone.utc
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021,
+                    month=6,
+                    day=26,
+                    hour=7,
+                    minute=10,
+                    tzinfo=dt.timezone.utc,
+                ),
+                provider_id="other_provider",
             ),
-            provider_id="other_provider",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=9, tzinfo=dt.timezone.utc
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=9, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            insert_provider_id="provider_in_test",
             should_ignore=False,
             is_applied=False,
             vector_clock=VectorClock(
@@ -430,10 +446,7 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
     def test_serialize_item(self):
         item = self.data_store._create_item(
-            id="2d24691e-7958-4ed9-830d-1afe7f5157e0",
-            name="my item",
-            version="1",
-
+            id="2d24691e-7958-4ed9-830d-1afe7f5157e0", name="my item", version="1",
         )
         serialization_result = self.data_store.serialize_item(item=item)
         manually_serialized = self._serialize_item(
@@ -443,10 +456,7 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
     def test_deserialize_item(self):
         item = self.data_store._create_item(
-            id="2d24691e-7958-4ed9-830d-1afe7f5157e0",
-            name="my item",
-            version="1",
-
+            id="2d24691e-7958-4ed9-830d-1afe7f5157e0", name="my item", version="1",
         )
         manually_serialized = self._serialize_item(
             id="2d24691e-7958-4ed9-830d-1afe7f5157e0", name="my item", version="1"
@@ -465,10 +475,7 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
         # Adding a change to an object
         item = self.data_store._create_item(
-            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
-            name="item_1",
-            version="1",
-
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="1",
         )
         self.data_store._add_item(item=item)
 
@@ -487,14 +494,18 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="1",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            provider_id="provider_in_test",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            insert_provider_id="provider_in_test",
             should_ignore=False,
             is_applied=True,
             vector_clock=VectorClock(
@@ -527,10 +538,7 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
         # Adding a change to another object
         item = self.data_store._create_item(
-            id="915a67f9-e597-491a-a28f-cf0fda241b68",
-            name="item_2",
-            version="1",
-
+            id="915a67f9-e597-491a-a28f-cf0fda241b68", name="item_2", version="1",
         )
         self.data_store._add_item(item=item)
 
@@ -549,14 +557,18 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="1",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            provider_id="provider_in_test",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            insert_provider_id="provider_in_test",
             should_ignore=False,
             is_applied=True,
             vector_clock=VectorClock(
@@ -602,14 +614,18 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="2",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=9, tzinfo=dt.timezone.utc
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=9, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            provider_id="provider_in_test",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            insert_provider_id="provider_in_test",
             should_ignore=True,
             is_applied=True,
             vector_clock=VectorClock(
@@ -654,14 +670,23 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="2.1",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=11, tzinfo=dt.timezone.utc
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021,
+                    month=6,
+                    day=26,
+                    hour=7,
+                    minute=11,
+                    tzinfo=dt.timezone.utc,
+                ),
+                provider_id="other_provider",
             ),
-            provider_id="other_provider",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            insert_provider_id="provider_in_test",
             should_ignore=False,
             is_applied=False,
             vector_clock=VectorClock(
@@ -748,10 +773,7 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
             operation=Operation.INSERT,
             item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
             item=self.data_store._create_item(
-                id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
-                name="item_1",
-                version="1",
-
+                id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="1",
             ),
         )
 
@@ -759,10 +781,7 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
             operation=Operation.UPDATE,
             item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
             item=self.data_store._create_item(
-                id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
-                name="item_1",
-                version="2",
-
+                id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="2",
             ),
         )
 
@@ -770,10 +789,7 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
             operation=Operation.UPDATE,
             item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
             item=self.data_store._create_item(
-                id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
-                name="item_1",
-                version="2.1",
-
+                id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="2.1",
             ),
         )
 
@@ -782,31 +798,19 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
             operation=Operation.UPDATE,
             item_id="915a67f9-e597-491a-a28f-cf0fda241b68",
             item=self.data_store._create_item(
-                id="915a67f9-e597-491a-a28f-cf0fda241b68",
-                name="item_2",
-                version="1",
-
+                id="915a67f9-e597-491a-a28f-cf0fda241b68", name="item_2", version="1",
             ),
         )
 
         # Filtering with a query
         result = self.data_store.get_local_vector_clock(query=query1)
         self.assertEqual(
-            result,
-            VectorClock(
-                VectorClockItem(
-                    provider_id=item_change4.provider_id,
-                    timestamp=item_change4.provider_timestamp,
-                )
-            ),
+            result, VectorClock(item_change4.change_vector_clock_item),
         )
 
     def test_get_item_change_by_id(self):
         item = self.data_store._create_item(
-            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
-            name="item_1",
-            version="2.1",
-
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="2.1",
         )
         self.data_store._add_item(item=item)
 
@@ -825,14 +829,28 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="2.1",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=11, tzinfo=dt.timezone.utc
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021,
+                    month=6,
+                    day=26,
+                    hour=7,
+                    minute=11,
+                    tzinfo=dt.timezone.utc,
+                ),
+                provider_id="other_provider",
             ),
-            provider_id="other_provider",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=11, tzinfo=dt.timezone.utc
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021,
+                    month=6,
+                    day=26,
+                    hour=7,
+                    minute=11,
+                    tzinfo=dt.timezone.utc,
+                ),
+                provider_id="other_provider",
             ),
-            insert_provider_id="other_provider",
             should_ignore=False,
             is_applied=False,
             vector_clock=VectorClock(
@@ -868,10 +886,7 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
     def test_select_changes(self):
         # Adding a change to an object
         item = self.data_store._create_item(
-            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
-            name="item_1",
-            version="1",
-
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="1",
         )
         self.data_store._add_item(item=item)
 
@@ -890,14 +905,18 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="1",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            provider_id="provider_in_test",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            insert_provider_id="provider_in_test",
             should_ignore=False,
             is_applied=True,
             vector_clock=VectorClock(
@@ -933,10 +952,7 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
         # Adding a change to another object
 
         item = self.data_store._create_item(
-            id="915a67f9-e597-491a-a28f-cf0fda241b68",
-            name="item_2",
-            version="1",
-
+            id="915a67f9-e597-491a-a28f-cf0fda241b68", name="item_2", version="1",
         )
         self.data_store._add_item(item=item)
 
@@ -955,14 +971,18 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="1",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            provider_id="provider_in_test",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            insert_provider_id="provider_in_test",
             should_ignore=False,
             is_applied=True,
             vector_clock=VectorClock(
@@ -1008,14 +1028,18 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="2",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=9, tzinfo=dt.timezone.utc
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=9, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            provider_id="provider_in_test",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            insert_provider_id="provider_in_test",
             should_ignore=True,
             is_applied=True,
             vector_clock=VectorClock(
@@ -1060,14 +1084,23 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="2.1",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=11, tzinfo=dt.timezone.utc
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021,
+                    month=6,
+                    day=26,
+                    hour=7,
+                    minute=11,
+                    tzinfo=dt.timezone.utc,
+                ),
+                provider_id="other_provider",
             ),
-            provider_id="other_provider",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            insert_provider_id="provider_in_test",
             should_ignore=True,
             is_applied=False,
             vector_clock=VectorClock(
@@ -1112,14 +1145,18 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="2.1",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=8, tzinfo=dt.timezone.utc
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=8, tzinfo=dt.timezone.utc
+                ),
+                provider_id="other_provider",
             ),
-            provider_id="other_provider",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            insert_provider_id="provider_in_test",
             should_ignore=False,
             is_applied=True,
             vector_clock=VectorClock(
@@ -1230,10 +1267,7 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
         # Adding 3 changes to an object
         item = self.data_store._create_item(
-            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
-            name="item_1",
-            version="1",
-
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="1",
         )
         self.data_store._add_item(item=item)
 
@@ -1252,14 +1286,18 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="1",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            provider_id="provider_in_test",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            insert_provider_id="provider_in_test",
             should_ignore=False,
             is_applied=True,
             vector_clock=VectorClock(
@@ -1305,14 +1343,18 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="2",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=9, tzinfo=dt.timezone.utc
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=9, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            provider_id="provider_in_test",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            insert_provider_id="provider_in_test",
             should_ignore=True,
             is_applied=True,
             vector_clock=VectorClock(
@@ -1357,14 +1399,23 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="2.1",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=11, tzinfo=dt.timezone.utc
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021,
+                    month=6,
+                    day=26,
+                    hour=7,
+                    minute=11,
+                    tzinfo=dt.timezone.utc,
+                ),
+                provider_id="other_provider",
             ),
-            provider_id="other_provider",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            insert_provider_id="provider_in_test",
             should_ignore=False,
             is_applied=False,
             vector_clock=VectorClock(
@@ -1407,10 +1458,7 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
         # Adding a change to another object
         item = self.data_store._create_item(
-            id="915a67f9-e597-491a-a28f-cf0fda241b68",
-            name="item_2",
-            version="3",
-
+            id="915a67f9-e597-491a-a28f-cf0fda241b68", name="item_2", version="3",
         )
         self.data_store._add_item(item=item)
 
@@ -1429,14 +1477,18 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="3",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            provider_id="provider_in_test",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            insert_provider_id="provider_in_test",
             should_ignore=False,
             is_applied=True,
             vector_clock=VectorClock(
@@ -1523,10 +1575,7 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
         # Adding 3 changes to an object
         item = self.data_store._create_item(
-            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
-            name="item_1",
-            version="2.1",
-
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="2.1",
         )
         self.data_store._add_item(item=item)
 
@@ -1545,14 +1594,18 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="1",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            provider_id="provider_in_test",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            insert_provider_id="provider_in_test",
             should_ignore=False,
             is_applied=True,
             vector_clock=VectorClock(
@@ -1598,14 +1651,18 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="2",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=9, tzinfo=dt.timezone.utc
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=9, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            provider_id="provider_in_test",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            insert_provider_id="provider_in_test",
             should_ignore=False,
             is_applied=True,
             vector_clock=VectorClock(
@@ -1650,14 +1707,23 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="2.1",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=11, tzinfo=dt.timezone.utc
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021,
+                    month=6,
+                    day=26,
+                    hour=7,
+                    minute=11,
+                    tzinfo=dt.timezone.utc,
+                ),
+                provider_id="provider_in_test",
             ),
-            provider_id="provider_in_test",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            insert_provider_id="provider_in_test",
             should_ignore=False,
             is_applied=False,
             vector_clock=VectorClock(
@@ -1698,10 +1764,7 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
         # Adding a change to another object
         item = self.data_store._create_item(
-            id="915a67f9-e597-491a-a28f-cf0fda241b68",
-            name="item_2",
-            version="2",
-
+            id="915a67f9-e597-491a-a28f-cf0fda241b68", name="item_2", version="2",
         )
         self.data_store._add_item(item=item)
 
@@ -1720,14 +1783,18 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="1",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            provider_id="provider_in_test",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            insert_provider_id="provider_in_test",
             should_ignore=False,
             is_applied=True,
             vector_clock=VectorClock(
@@ -1773,14 +1840,23 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="2",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=11, tzinfo=dt.timezone.utc
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021,
+                    month=6,
+                    day=26,
+                    hour=7,
+                    minute=11,
+                    tzinfo=dt.timezone.utc,
+                ),
+                provider_id="provider_in_test",
             ),
-            provider_id="provider_in_test",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            insert_provider_id="provider_in_test",
             should_ignore=False,
             is_applied=True,
             vector_clock=VectorClock(
@@ -1822,10 +1898,7 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
         # Adding a third item
         item = self.data_store._create_item(
-            id="559168e5-a155-49eb-be16-5161f7c29e55",
-            name="item_3",
-            version="1",
-
+            id="559168e5-a155-49eb-be16-5161f7c29e55", name="item_3", version="1",
         )
         self.data_store._add_item(item=item)
 
@@ -1844,14 +1917,28 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="1",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=12, tzinfo=dt.timezone.utc
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021,
+                    month=6,
+                    day=26,
+                    hour=7,
+                    minute=12,
+                    tzinfo=dt.timezone.utc,
+                ),
+                provider_id="provider_in_test",
             ),
-            provider_id="provider_in_test",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=12, tzinfo=dt.timezone.utc
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021,
+                    month=6,
+                    day=26,
+                    hour=7,
+                    minute=12,
+                    tzinfo=dt.timezone.utc,
+                ),
+                provider_id="provider_in_test",
             ),
-            insert_provider_id="provider_in_test",
             should_ignore=False,
             is_applied=True,
             vector_clock=VectorClock(
@@ -1942,10 +2029,7 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
     def test_select_deferred_changes(self):
         # Adding a change to an object
         item = self.data_store._create_item(
-            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
-            name="item_1",
-            version="1",
-
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="1",
         )
         self.data_store._add_item(item=item)
 
@@ -1964,14 +2048,18 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="1",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            provider_id="provider_in_test",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            insert_provider_id="provider_in_test",
             should_ignore=False,
             is_applied=True,
             vector_clock=VectorClock(
@@ -2006,10 +2094,7 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
         # Adding a change to another object
         item = self.data_store._create_item(
-            id="915a67f9-e597-491a-a28f-cf0fda241b68",
-            name="item_2",
-            version="1",
-
+            id="915a67f9-e597-491a-a28f-cf0fda241b68", name="item_2", version="1",
         )
         self.data_store._add_item(item=item)
 
@@ -2028,14 +2113,18 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="1",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            provider_id="provider_in_test",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            insert_provider_id="provider_in_test",
             should_ignore=False,
             is_applied=True,
             vector_clock=VectorClock(
@@ -2081,14 +2170,18 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="2",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=9, tzinfo=dt.timezone.utc
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=9, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            provider_id="provider_in_test",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            insert_provider_id="provider_in_test",
             should_ignore=True,
             is_applied=True,
             vector_clock=VectorClock(
@@ -2133,14 +2226,23 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="2.1",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=11, tzinfo=dt.timezone.utc
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021,
+                    month=6,
+                    day=26,
+                    hour=7,
+                    minute=11,
+                    tzinfo=dt.timezone.utc,
+                ),
+                provider_id="other_provider",
             ),
-            provider_id="other_provider",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            insert_provider_id="provider_in_test",
             should_ignore=True,
             is_applied=False,
             vector_clock=VectorClock(
@@ -2199,14 +2301,18 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="2.1",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=8, tzinfo=dt.timezone.utc
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=8, tzinfo=dt.timezone.utc
+                ),
+                provider_id="other_provider",
             ),
-            provider_id="other_provider",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            insert_provider_id="provider_in_test",
             should_ignore=False,
             is_applied=True,
             vector_clock=VectorClock(
@@ -2260,10 +2366,7 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
     def test_save_item_change(self):
         item = self.data_store._create_item(
-            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
-            name="item_1",
-            version="1",
-
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="1",
         )
         self.data_store._add_item(item=item)
 
@@ -2282,14 +2385,28 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="2.1",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=11, tzinfo=dt.timezone.utc
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021,
+                    month=6,
+                    day=26,
+                    hour=7,
+                    minute=11,
+                    tzinfo=dt.timezone.utc,
+                ),
+                provider_id="other_provider",
             ),
-            provider_id="other_provider",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=11, tzinfo=dt.timezone.utc
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021,
+                    month=6,
+                    day=26,
+                    hour=7,
+                    minute=11,
+                    tzinfo=dt.timezone.utc,
+                ),
+                provider_id="other_provider",
             ),
-            insert_provider_id="other_provider",
             should_ignore=True,
             is_applied=False,
             vector_clock=VectorClock(
@@ -2325,10 +2442,7 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
     def test_save_item(self):
         item = self.data_store._create_item(
-            id="dd418733-571d-4208-af50-ef53765b9dac",
-            name="hello",
-            version="10",
-
+            id="dd418733-571d-4208-af50-ef53765b9dac", name="hello", version="10",
         )
         self.data_store.save_item(item=item)
 
@@ -2339,10 +2453,7 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
     def test_delete_item(self):
         item = self.data_store._create_item(
-            id="dd418733-571d-4208-af50-ef53765b9dac",
-            name="hello",
-            version="10",
-
+            id="dd418733-571d-4208-af50-ef53765b9dac", name="hello", version="10",
         )
         self.data_store._add_item(item=item)
 
@@ -2353,10 +2464,7 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
     def test_run_in_transaction(self):
         item = self.data_store._create_item(
-            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
-            name="item_1",
-            version="2.1",
-
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="2.1",
         )
         self.data_store._add_item(item=item)
 
@@ -2375,14 +2483,28 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="2.1",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=11, tzinfo=dt.timezone.utc
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021,
+                    month=6,
+                    day=26,
+                    hour=7,
+                    minute=11,
+                    tzinfo=dt.timezone.utc,
+                ),
+                provider_id="other_provider",
             ),
-            provider_id="other_provider",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=11, tzinfo=dt.timezone.utc
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021,
+                    month=6,
+                    day=26,
+                    hour=7,
+                    minute=11,
+                    tzinfo=dt.timezone.utc,
+                ),
+                provider_id="other_provider",
             ),
-            insert_provider_id="other_provider",
             should_ignore=True,
             is_applied=False,
             vector_clock=VectorClock(
@@ -2423,10 +2545,7 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
     def test_save_conflict_log(self):
         item = self.data_store._create_item(
-            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
-            name="item_1",
-            version="1",
-
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="1",
         )
         self.data_store._add_item(item=item)
 
@@ -2445,14 +2564,28 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="2.1",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=11, tzinfo=dt.timezone.utc
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021,
+                    month=6,
+                    day=26,
+                    hour=7,
+                    minute=11,
+                    tzinfo=dt.timezone.utc,
+                ),
+                provider_id="other_provider",
             ),
-            provider_id="other_provider",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=11, tzinfo=dt.timezone.utc
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021,
+                    month=6,
+                    day=26,
+                    hour=7,
+                    minute=11,
+                    tzinfo=dt.timezone.utc,
+                ),
+                provider_id="other_provider",
             ),
-            insert_provider_id="other_provider",
             should_ignore=True,
             is_applied=False,
             vector_clock=VectorClock(
@@ -2501,10 +2634,7 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
     def test_execute_item_change(self):
         # Insert
         item1 = self.data_store._create_item(
-            id="dd418733-571d-4208-af50-ef53765b9dac",
-            name="hello",
-            version="12",
-
+            id="dd418733-571d-4208-af50-ef53765b9dac", name="hello", version="12",
         )
         item_change1 = ItemChange(
             id=uuid.UUID("54417070-60f1-47e7-a2f3-7755dfafb194"),
@@ -2521,14 +2651,28 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="12",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=11, tzinfo=dt.timezone.utc
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021,
+                    month=6,
+                    day=26,
+                    hour=7,
+                    minute=11,
+                    tzinfo=dt.timezone.utc,
+                ),
+                provider_id="other_provider",
             ),
-            provider_id="other_provider",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=11, tzinfo=dt.timezone.utc
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021,
+                    month=6,
+                    day=26,
+                    hour=7,
+                    minute=11,
+                    tzinfo=dt.timezone.utc,
+                ),
+                provider_id="other_provider",
             ),
-            insert_provider_id="other_provider",
             should_ignore=True,
             is_applied=False,
             vector_clock=VectorClock(
@@ -2562,10 +2706,7 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
         # Update
         item2 = self.data_store._create_item(
-            id="dd418733-571d-4208-af50-ef53765b9dac",
-            name="hello there",
-            version="13",
-
+            id="dd418733-571d-4208-af50-ef53765b9dac", name="hello there", version="13",
         )
         item_change2 = ItemChange(
             id=uuid.UUID("54417070-60f1-47e7-a2f3-7755dfafb194"),
@@ -2582,14 +2723,28 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="13",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=12, tzinfo=dt.timezone.utc,
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021,
+                    month=6,
+                    day=26,
+                    hour=7,
+                    minute=12,
+                    tzinfo=dt.timezone.utc,
+                ),
+                provider_id="other_provider",
             ),
-            provider_id="other_provider",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=11, tzinfo=dt.timezone.utc,
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021,
+                    month=6,
+                    day=26,
+                    hour=7,
+                    minute=11,
+                    tzinfo=dt.timezone.utc,
+                ),
+                provider_id="other_provider",
             ),
-            insert_provider_id="other_provider",
             should_ignore=True,
             is_applied=False,
             vector_clock=VectorClock(
@@ -2637,14 +2792,28 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="13",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=13, tzinfo=dt.timezone.utc,
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021,
+                    month=6,
+                    day=26,
+                    hour=7,
+                    minute=13,
+                    tzinfo=dt.timezone.utc,
+                ),
+                provider_id="other_provider",
             ),
-            provider_id="other_provider",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=11, tzinfo=dt.timezone.utc,
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021,
+                    month=6,
+                    day=26,
+                    hour=7,
+                    minute=11,
+                    tzinfo=dt.timezone.utc,
+                ),
+                provider_id="other_provider",
             ),
-            insert_provider_id="other_provider",
             should_ignore=True,
             is_applied=False,
             vector_clock=VectorClock(
@@ -2678,10 +2847,7 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
     def test_save_item_version(self):
         item1 = self.data_store._create_item(
-            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
-            name="item_1",
-            version="1",
-
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="1",
         )
         self.data_store._add_item(item=item1)
 
@@ -2700,14 +2866,18 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="1",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            provider_id="provider_in_test",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            insert_provider_id="provider_in_test",
             should_ignore=False,
             is_applied=True,
             vector_clock=VectorClock(
@@ -2752,10 +2922,7 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
     def test_get_deferred_conflict_logs(self):
         item1 = self.data_store._create_item(
-            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
-            name="item_1",
-            version="1",
-
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="1",
         )
         self.data_store._add_item(item=item1)
 
@@ -2774,14 +2941,18 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="1",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            provider_id="provider_in_test",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            insert_provider_id="provider_in_test",
             should_ignore=False,
             is_applied=True,
             vector_clock=VectorClock(
@@ -2830,10 +3001,7 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
         self.data_store._add_conflict_log(conflict_log=conflict_log1)
 
         item2 = self.data_store._create_item(
-            id="915a67f9-e597-491a-a28f-cf0fda241b68",
-            name="item_2",
-            version="1",
-
+            id="915a67f9-e597-491a-a28f-cf0fda241b68", name="item_2", version="1",
         )
         self.data_store._add_item(item=item2)
 
@@ -2852,14 +3020,18 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="1",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            provider_id="provider_in_test",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            insert_provider_id="provider_in_test",
             should_ignore=False,
             is_applied=True,
             vector_clock=VectorClock(
@@ -2916,10 +3088,7 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
     def test_save_sync_session(self):
         item1 = self.data_store._create_item(
-            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
-            name="item_1",
-            version="1",
-
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="1",
         )
         self.data_store._add_item(item=item1)
 
@@ -2938,14 +3107,18 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                     version="1",
                 ),
             ),
-            provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            provider_id="provider_in_test",
-            insert_provider_timestamp=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
             ),
-            insert_provider_id="provider_in_test",
             should_ignore=False,
             is_applied=True,
             vector_clock=VectorClock(

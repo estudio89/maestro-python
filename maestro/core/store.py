@@ -2,6 +2,7 @@ from typing import List, Any, Optional, Callable, Dict
 from abc import ABC, abstractmethod
 from .metadata import (
     VectorClock,
+    VectorClockItem,
     ItemChange,
     ItemVersion,
     ItemChangeBatch,
@@ -142,17 +143,17 @@ class BaseDataStore(ABC):
             provider_id=self.local_provider_id, timestamp=now_utc
         )
 
+        change_vector_clock_item = VectorClockItem(
+            provider_id=self.local_provider_id, timestamp=now_utc,
+        )
+
         item_change = ItemChange(
             id=uuid.uuid4(),
             operation=operation,
-            provider_timestamp=now_utc,
-            provider_id=self.local_provider_id,
-            insert_provider_timestamp=old_version.current_item_change.insert_provider_timestamp
+            change_vector_clock_item=change_vector_clock_item,
+            insert_vector_clock_item=old_version.current_item_change.insert_vector_clock_item
             if old_version.current_item_change
-            else now_utc,
-            insert_provider_id=old_version.current_item_change.insert_provider_id
-            if old_version.current_item_change
-            else self.local_provider_id,
+            else change_vector_clock_item,
             serialization_result=self.serialize_item(item),
             should_ignore=False,
             is_applied=True,
@@ -435,15 +436,19 @@ class BaseDataStore(ABC):
             if key in ["sync_sessions", "conflict_logs"]:
                 continue
             if key == "items":
-                vals = set(make_hashable(dict(sorted(item.items()))) for item in self_db[key])
-                other_vals = set(make_hashable(dict(sorted(item.items()))) for item in other_db[key])
+                vals = set(
+                    make_hashable(dict(sorted(item.items()))) for item in self_db[key]
+                )
+                other_vals = set(
+                    make_hashable(dict(sorted(item.items()))) for item in other_db[key]
+                )
             elif key == "item_changes":
 
                 attrs = [
                     "id",
                     "operation",
-                    "provider_timestamp",
-                    "provider_id",
+                    "change_vector_clock_item",
+                    "insert_vector_clock_item",
                     "serialization_result",
                     "vector_clock",
                 ]

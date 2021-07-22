@@ -1,4 +1,5 @@
 import maestro.backends.base_nosql.converters
+import maestro.backends.base_nosql.serializer
 from typing import Any, Optional
 import datetime as dt
 
@@ -31,14 +32,14 @@ class ItemVersionMetadataConverter(
     date_converter_class = DateConverter
 
 
-class ItemChangeMetadataConverter(
-    maestro.backends.base_nosql.converters.ItemChangeMetadataConverter
+class ConflictLogMetadataConverter(
+    maestro.backends.base_nosql.converters.ConflictLogMetadataConverter
 ):
     date_converter_class = DateConverter
 
 
-class ConflictLogMetadataConverter(
-    maestro.backends.base_nosql.converters.ConflictLogMetadataConverter
+class VectorClockItemMetadataConverter(
+    maestro.backends.base_nosql.converters.VectorClockItemMetadataConverter
 ):
     date_converter_class = DateConverter
 
@@ -47,3 +48,27 @@ class VectorClockMetadataConverter(
     maestro.backends.base_nosql.converters.VectorClockMetadataConverter
 ):
     date_converter_class = DateConverter
+
+    def __init__(
+        self,
+        vector_clock_item_converter: "VectorClockItemMetadataConverter" = VectorClockItemMetadataConverter(),
+    ):
+        super().__init__(vector_clock_item_converter=vector_clock_item_converter)
+
+
+class ItemChangeMetadataConverter(
+    maestro.backends.base_nosql.converters.ItemChangeMetadataConverter
+):
+    date_converter_class = DateConverter
+
+    def __init__(
+        self,
+        item_serializer: "maestro.backends.base_nosql.serializer.NoSQLItemSerializer",
+        vector_clock_item_converter: "VectorClockItemMetadataConverter" = VectorClockItemMetadataConverter(),
+        vector_clock_converter: "VectorClockMetadataConverter" = VectorClockMetadataConverter(),
+    ):
+        super().__init__(
+            item_serializer=item_serializer,
+            vector_clock_item_converter=vector_clock_item_converter,
+            vector_clock_converter=vector_clock_converter,
+        )

@@ -99,10 +99,14 @@ class TestFirestoreDataStore(FirestoreDataStore, tests.base.TestDataStoreMixin):
                 "operation": item_change.operation.value,
                 "item_id": str(item_change.serialization_result.item_id),
                 "collection_name": "my_app_item",
-                "provider_timestamp": item_change.provider_timestamp,
-                "provider_id": item_change.provider_id,
-                "insert_provider_timestamp": item_change.insert_provider_timestamp,
-                "insert_provider_id": item_change.insert_provider_id,
+                "change_vector_clock_item": {
+                    "timestamp": item_change.change_vector_clock_item.timestamp,
+                    "provider_id": item_change.change_vector_clock_item.provider_id,
+                },
+                "insert_vector_clock_item": {
+                    "timestamp": item_change.insert_vector_clock_item.timestamp,
+                    "provider_id": item_change.insert_vector_clock_item.provider_id,
+                },
                 "serialized_item": self.item_serializer.deserialize_item(
                     item_change.serialization_result
                 ),
@@ -113,8 +117,12 @@ class TestFirestoreDataStore(FirestoreDataStore, tests.base.TestDataStoreMixin):
         )
 
         self.db.collection("maestro__provider_ids").document(
-            item_change.provider_id
-        ).set({"timestamp": item_change.provider_timestamp})
+            item_change.change_vector_clock_item.provider_id
+        ).set(
+            {
+                "timestamp": item_change.change_vector_clock_item.timestamp,
+            }
+        )
 
     def _add_item_version(self, item_version: "ItemVersion"):
         vector_clock = []

@@ -113,8 +113,8 @@ class MongoDataStore(TrackQueriesStoreMixin, NoSQLDataStore):
                     {
                         "$and": [
                             {
-                                "provider_id": vector_clock_item.provider_id,
-                                "provider_timestamp": {
+                                "change_vector_clock_item.provider_id": vector_clock_item.provider_id,
+                                "change_vector_clock_item.timestamp": {
                                     "$lte": self.date_converter.serialize_date(
                                         vector_clock_item.timestamp
                                     )
@@ -248,8 +248,10 @@ class MongoDataStore(TrackQueriesStoreMixin, NoSQLDataStore):
                 provider_id=provider_id
             )
             mongo_filter = {
-                "provider_id": {"$eq": vector_clock_item.provider_id},
-                "provider_timestamp": {
+                "change_vector_clock_item.provider_id": {
+                    "$eq": vector_clock_item.provider_id
+                },
+                "change_vector_clock_item.timestamp": {
                     "$gt": self.date_converter.serialize_date(
                         vector_clock_item.timestamp
                     )
@@ -262,7 +264,7 @@ class MongoDataStore(TrackQueriesStoreMixin, NoSQLDataStore):
             docs = self._get_collection_query(CollectionType.ITEM_CHANGES).find(
                 filter=mongo_filter,
                 limit=max_num,
-                sort=[["provider_timestamp", pymongo.ASCENDING]],
+                sort=[["change_vector_clock_item.timestamp", pymongo.ASCENDING]],
             )
 
             if docs:
@@ -318,9 +320,9 @@ class MongoDataStore(TrackQueriesStoreMixin, NoSQLDataStore):
         selected_item_changes = []
         for item_change in item_changes:
             vector_clock_item = vector_clock.get_vector_clock_item(
-                provider_id=item_change.provider_id
+                provider_id=item_change.change_vector_clock_item.provider_id
             )
-            if item_change.provider_timestamp > vector_clock_item.timestamp:
+            if item_change.change_vector_clock_item > vector_clock_item:
                 if (
                     filtered_item_ids is not None
                     and item_change.serialization_result.item_id

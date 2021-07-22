@@ -12,7 +12,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 class ConflictCheckResult(NamedTuple):
-    '''Stores the result of a conflict check.'''
+    """Stores the result of a conflict check."""
 
     has_conflict: "bool"
     conflict_type: "Optional[ConflictType]"
@@ -22,7 +22,7 @@ class ConflictCheckResult(NamedTuple):
 
 
 class ConflictResolution(NamedTuple):
-    '''Stores information about which change won and which lost a conflict. '''
+    """Stores information about which change won and which lost a conflict. """
 
     item_change_loser: "ItemChange"
     item_change_winner: "ItemChange"
@@ -56,17 +56,15 @@ class ConflictResolver:
             or conflict_type == ConflictType.LOCAL_UPDATE_REMOTE_INSERT
         ):  # Most recent change wins
             if (
-                local_item_change.provider_timestamp
-                > remote_item_change.provider_timestamp
+                local_item_change.change_vector_clock_item.timestamp
+                > remote_item_change.change_vector_clock_item.timestamp
             ):
                 item_change_winner = local_item_change
                 item_change_loser = remote_item_change
             else:
                 item_change_winner = remote_item_change
                 item_change_loser = local_item_change
-        elif (
-            conflict_type == ConflictType.LOCAL_UPDATE_REMOTE_DELETE
-        ):  # Deletion wins
+        elif conflict_type == ConflictType.LOCAL_UPDATE_REMOTE_DELETE:  # Deletion wins
             item_change_winner = remote_item_change
             item_change_loser = local_item_change
         elif conflict_type == ConflictType.LOCAL_DELETE_REMOTE_UPDATE:
@@ -181,15 +179,15 @@ class ChangesExecutor:
         local_item_change = local_version.current_item_change
         local_vector_clock = local_item_change.vector_clock
         local_vector_clock_item = local_vector_clock.get_vector_clock_item(
-            provider_id=local_item_change.provider_id
+            provider_id=local_item_change.change_vector_clock_item.provider_id
         )
 
         remote_vector_clock = remote_item_change.vector_clock
         remote_vector_clock_item = remote_vector_clock.get_vector_clock_item(
-            provider_id=local_item_change.provider_id
+            provider_id=local_item_change.change_vector_clock_item.provider_id
         )
 
-        if local_vector_clock_item.timestamp > remote_vector_clock_item.timestamp:
+        if local_vector_clock_item > remote_vector_clock_item:
             # Source provider was not aware of the local version of the item = conflict
 
             if (
