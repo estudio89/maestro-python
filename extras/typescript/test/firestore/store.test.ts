@@ -102,21 +102,28 @@ class FirestoreDataStoreTest {
         assert.equal(savedItemChanges[0].item_id, itemId);
         assert.equal(savedItemChanges[0].collection_name, "my_collection");
         assert.equal(
-            savedItemChanges[0].provider_timestamp.toDate().getTime(),
+            savedItemChanges[0].change_vector_clock_item.timestamp
+                .toDate()
+                .getTime(),
             savedItemChanges[0].date_created.toDate().getTime()
         );
-        assert.equal(savedItemChanges[0].provider_id, "provider1");
+        assert.equal(
+            savedItemChanges[0].change_vector_clock_item.provider_id,
+            "provider1"
+        );
 
         assert.equal(
-            savedItemChanges[0].insert_provider_timestamp.toDate().getTime(),
+            savedItemChanges[0].insert_vector_clock_item.timestamp
+                .toDate()
+                .getTime(),
             savedItemChanges[0].date_created.toDate().getTime()
         );
 
-        assert.equal(savedItemChanges[0].insert_provider_id, "provider1");
         assert.equal(
-            savedItemChanges[0].serialized_item,
-            '{"entity_name":"my_collection","pk":"7932bf9f-8e45-42da-8e91-43a55ad9dee4","fields":{"hello":"world"}}'
+            savedItemChanges[0].insert_vector_clock_item.provider_id,
+            "provider1"
         );
+        assert.equal(savedItemChanges[0].serialized_item, '{"hello":"world"}');
         assert.isFalse(savedItemChanges[0].should_ignore);
         assert.isTrue(savedItemChanges[0].is_applied);
         assert.equal(savedItemChanges[0].vector_clock.length, 1);
@@ -236,12 +243,15 @@ class FirestoreDataStoreTest {
                                     collection_name: "my_collection",
                                     item_id: itemId,
                                     date_created: creationDate,
-                                    provider_id: "provider2",
-                                    provider_timestamp: creationDate,
-                                    insert_provider_id: "provider2",
-                                    insert_provider_timestamp: creationDate,
-                                    serialized_item:
-                                        '{"entity_name":"my_collection","pk":"7932bf9f-8e45-42da-8e91-43a55ad9dee4","fields":{"hello":"world"}}',
+                                    change_vector_clock_item: {
+                                        provider_id: "provider2",
+                                        timestamp: creationDate,
+                                    },
+                                    insert_vector_clock_item: {
+                                        provider_id: "provider2",
+                                        timestamp: creationDate,
+                                    },
+                                    serialized_item: '{"hello":"world"}',
                                     should_ignore: false,
                                     is_applied: true,
                                     vector_clock: [
@@ -281,21 +291,28 @@ class FirestoreDataStoreTest {
         assert.equal(savedItemChanges[0].item_id, itemId);
         assert.equal(savedItemChanges[0].collection_name, "my_collection");
         assert.equal(
-            savedItemChanges[0].provider_timestamp.toDate().getTime(),
+            savedItemChanges[0].change_vector_clock_item.timestamp
+                .toDate()
+                .getTime(),
             savedItemChanges[0].date_created.toDate().getTime()
         );
-        assert.equal(savedItemChanges[0].provider_id, "provider1");
+        assert.equal(
+            savedItemChanges[0].change_vector_clock_item.provider_id,
+            "provider1"
+        );
 
         assert.equal(
-            savedItemChanges[0].insert_provider_timestamp.toDate().getTime(),
+            savedItemChanges[0].insert_vector_clock_item.timestamp
+                .toDate()
+                .getTime(),
             creationDate.toDate().getTime()
         );
 
-        assert.equal(savedItemChanges[0].insert_provider_id, "provider2");
         assert.equal(
-            savedItemChanges[0].serialized_item,
-            '{"entity_name":"my_collection","pk":"7932bf9f-8e45-42da-8e91-43a55ad9dee4","fields":{"hello":"world"}}'
+            savedItemChanges[0].insert_vector_clock_item.provider_id,
+            "provider2"
         );
+        assert.equal(savedItemChanges[0].serialized_item, '{"hello":"world"}');
         assert.isFalse(savedItemChanges[0].should_ignore);
         assert.isTrue(savedItemChanges[0].is_applied);
 

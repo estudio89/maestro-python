@@ -1,4 +1,11 @@
-import { Operation, ItemVersion, VectorClock, ItemChange } from "./metadata";
+import {
+    Operation,
+    ItemVersion,
+    VectorClock,
+    ItemChange,
+    VectorClockItem,
+    SerializationResult,
+} from "./metadata";
 import { ItemNotFoundError } from "./errors";
 import { getNowUTC } from "./utils";
 import { v4 as uuid } from "uuid";
@@ -23,19 +30,20 @@ export abstract class BaseDataStore<T> {
         let oldVersion = await this.getLocalVersion(itemId);
         let localVectorClock = oldVersion.vectorClock.clone();
         let nowUTC = getNowUTC();
+        let changeVectorClockItem = new VectorClockItem(
+            this.localProviderId,
+            nowUTC
+        );
 
         localVectorClock.updateVectorClockItem(this.localProviderId, nowUTC);
 
         let itemChange = new ItemChange(
             uuid(),
             operation,
-            itemId,
-            nowUTC,
-            this.localProviderId,
-            oldVersion.currentItemChange?.insertProviderId ??
-                this.localProviderId,
-            oldVersion.currentItemChange?.insertProviderTimestamp ?? nowUTC,
             this.serializeItem(item),
+            changeVectorClockItem,
+            oldVersion.currentItemChange?.insertVectorClockItem ??
+                changeVectorClockItem,
             false,
             true,
             localVectorClock,
@@ -79,7 +87,7 @@ export abstract class BaseDataStore<T> {
         return localVersion.clone();
     }
 
-    serializeItem(item: T): string {
+    serializeItem(item: T): SerializationResult {
         return this.itemSerializer.serializeItem(item);
     }
     abstract async getItemVersion(

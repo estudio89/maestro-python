@@ -13,6 +13,7 @@ import {
     FirestoreItem,
     ItemVersionRecord,
     ItemChangeRecord,
+    VectorClockItemRecord,
 } from "./collections";
 import { typeToCollection } from "./utils";
 
@@ -64,15 +65,12 @@ export class FirestoreDataStore extends BaseDataStore<AppItem> {
         await ref.set(instance);
     }
 
-    private async saveProviderId(
-        providerId: string,
-        timestamp: admin.firestore.Timestamp
-    ) {
+    private async saveProviderId(vectorClockItem: VectorClockItemRecord) {
         const collectionName = typeToCollection(CollectionType.PROVIDER_IDS);
         await this.save(
             {
-                id: providerId,
-                timestamp: timestamp,
+                id: vectorClockItem.provider_id,
+                timestamp: vectorClockItem.timestamp,
             },
             collectionName
         );
@@ -129,10 +127,7 @@ export class FirestoreDataStore extends BaseDataStore<AppItem> {
         await this.save(itemChangeRecord, collectionName);
 
         if (isCreating) {
-            this.saveProviderId(
-                itemChangeRecord.provider_id,
-                itemChangeRecord.provider_timestamp
-            );
+            this.saveProviderId(itemChangeRecord.change_vector_clock_item);
         }
     }
     async saveItemVersion(itemVersion: ItemVersion): Promise<void> {
