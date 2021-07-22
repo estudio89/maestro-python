@@ -16,7 +16,10 @@ from maestro.backends.base_nosql.collections import (
     ConflictLogRecord,
 )
 from firebase_admin import firestore
-from maestro.backends.base_nosql.utils import get_collection_name, type_to_collection
+from maestro.backends.base_nosql.utils import (
+    type_to_collection,
+    entity_name_to_collection,
+)
 import copy
 from typing import Dict, Optional, List, Any, Callable
 import uuid
@@ -346,15 +349,15 @@ class FirestoreDataStore(NoSQLDataStore):
 
     def run_in_transaction(self, item_change: "ItemChange", callback: "Callable"):
         self.current_transaction = self.db.transaction()
-        collection_name = get_collection_name(
-            serialized_item=item_change.serialized_item
+        collection_name = entity_name_to_collection(
+            entity_name=item_change.serialization_result.entity_name
         )
 
         @firestore.transactional
         def in_transaction(transaction):
             try:
                 self.db.collection(collection_name).document(
-                    str(item_change.item_id)
+                    str(item_change.serialization_result.item_id)
                 ).get(transaction=self.current_transaction)
                 callback()
             finally:

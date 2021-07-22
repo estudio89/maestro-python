@@ -8,9 +8,10 @@ from .metadata import (
     ConflictLog,
     Operation,
     SyncSession,
+    SerializationResult,
 )
 from .query.metadata import Query
-from .utils import BaseMetadataConverter, get_now_utc
+from .utils import BaseMetadataConverter, get_now_utc, make_hashable
 from .serializer import BaseItemSerializer
 from .exceptions import ItemNotFoundException
 import copy
@@ -144,7 +145,6 @@ class BaseDataStore(ABC):
         item_change = ItemChange(
             id=uuid.uuid4(),
             operation=operation,
-            item_id=item_id,
             provider_timestamp=now_utc,
             provider_id=self.local_provider_id,
             insert_provider_timestamp=old_version.current_item_change.insert_provider_timestamp
@@ -153,7 +153,7 @@ class BaseDataStore(ABC):
             insert_provider_id=old_version.current_item_change.insert_provider_id
             if old_version.current_item_change
             else self.local_provider_id,
-            serialized_item=self.serialize_item(item),
+            serialization_result=self.serialize_item(item),
             should_ignore=False,
             is_applied=True,
             vector_clock=local_vector_clock,
@@ -175,21 +175,23 @@ class BaseDataStore(ABC):
         self.save_item_version(item_version=new_version)
         return item_change
 
-    def serialize_item(self, item: "Any") -> "str":
-        """Serializes the given item to a string.
+    def serialize_item(self, item: "Any") -> "SerializationResult":
+        """Serializes the given item.
 
         Args:
             item (Any): Item to be serialized.
         """
-        return self.item_serializer.serialize_item(item=item)
+        return self.item_serializer.serialize_item(item=copy.deepcopy(item))
 
-    def deserialize_item(self, serialized_item: "str") -> "Any":
-        """Deserializes a string back to an item.
+    def deserialize_item(self, serialization_result: "SerializationResult") -> "Any":
+        """Deserializes an item.
 
         Args:
-            serialized_item (str): Serialized item string.
+            serialization_result (SerializationResult): The result of the item serialization.
         """
-        return self.item_serializer.deserialize_item(serialized_item=serialized_item)
+        return self.item_serializer.deserialize_item(
+            serialization_result=serialization_result
+        )
 
     @abstractmethod
     def get_local_vector_clock(
@@ -354,7 +356,6 @@ class BaseDataStore(ABC):
         """
         raise NotImplementedError()
 
-
     @abstractmethod
     def get_item_changes(self) -> "List[ItemChange]":
         """Returns all the changes in the data store in the order that they were saved. DO NOT use in production, used only in tests.
@@ -387,17 +388,6 @@ class BaseDataStore(ABC):
             List[ConflictLog]: Conflict logs in the data store.
         """
 
-    @abstractmethod
-    def _get_hashable_item(self, item: "Any") -> "Any":
-        """Returns a hashable representation of an item.
-
-        Args:
-            item (Any): The item that needs hashing.
-
-        Returns:
-            Any: Hashable object.
-        """
-
     def _get_raw_db(self) -> "Dict":
         """Returns a dictionary containing all the data in the data store. DO NOT use in production, used only in tests.
 
@@ -414,10 +404,14 @@ class BaseDataStore(ABC):
             "conflict_logs": conflict_logs,
             "item_changes": item_changes,
             "item_versions": item_versions,
-            "items": items,
+            "items": [self.item_to_dict(item) for item in items],
             "sync_sessions": sync_sessions,
         }
         return db
+
+    @abstractmethod
+    def item_to_dict(self, item: "Any") -> "Dict":
+        """Converts an item to a dictionary. This is used only in tests"""
 
     def show(self, items_only=False):  # pragma: no cover
         """Prints all the data in the store. DO NOT use in production, used only in tests.
@@ -441,19 +435,16 @@ class BaseDataStore(ABC):
             if key in ["sync_sessions", "conflict_logs"]:
                 continue
             if key == "items":
-                vals = set(self._get_hashable_item(item) for item in self_db[key])
-                other_vals = set(
-                    other._get_hashable_item(item) for item in other_db[key]
-                )
+                vals = set(make_hashable(dict(sorted(item.items()))) for item in self_db[key])
+                other_vals = set(make_hashable(dict(sorted(item.items()))) for item in other_db[key])
             elif key == "item_changes":
 
                 attrs = [
                     "id",
                     "operation",
-                    "item_id",
                     "provider_timestamp",
                     "provider_id",
-                    "serialized_item",
+                    "serialization_result",
                     "vector_clock",
                 ]
                 vals = set()

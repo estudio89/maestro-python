@@ -21,9 +21,10 @@ from .converters import (
     VectorClockMetadataConverter,
 )
 from .serializer import DjangoItemSerializer
-from typing import Optional, Any, Callable, List
+from typing import Optional, Any, Callable, List, Dict
 import uuid
 import operator
+from itertools import chain
 from functools import reduce
 
 
@@ -171,7 +172,9 @@ class DjangoDataStore(BaseDataStore):
         item.delete()
 
     def run_in_transaction(self, item_change: "ItemChange", callback: "Callable"):
-        item = self.deserialize_item(serialized_item=item_change.serialized_item)
+        item = self.deserialize_item(
+            serialization_result=item_change.serialization_result
+        )
         Model = item._meta.model
 
         with transaction.atomic():
@@ -213,7 +216,9 @@ class DjangoDataStore(BaseDataStore):
     def execute_item_change(self, item_change: "ItemChange"):
         from .contrib.signals import temporarily_disable_signals
 
-        item = self.deserialize_item(serialized_item=item_change.serialized_item)
+        item = self.deserialize_item(
+            serialization_result=item_change.serialization_result
+        )
         model = item._meta.model
 
         with temporarily_disable_signals(model=model):
@@ -268,9 +273,6 @@ class DjangoDataStore(BaseDataStore):
 
         sync_session_record.item_changes.add(*sync_session_record._item_changes)
 
-    def _get_hashable_item(self, item: "Any"):
-        return item
-
     def get_item_changes(self):
         ItemChangeRecord = apps.get_model("maestro", "ItemChangeRecord")
         records = list(ItemChangeRecord.objects.order_by("date_created"))
@@ -310,3 +312,14 @@ class DjangoDataStore(BaseDataStore):
             metadata_object = converter.to_metadata(record)
             metadata_objects.append(metadata_object)
         return metadata_objects
+
+    def item_to_dict(self, item: "Any") -> "Dict":
+        opts = item._meta
+        data = {}
+        for f in chain(opts.concrete_fields, opts.private_fields):
+            data[f.name] = f.value_from_object(item)
+        for f in opts.many_to_many:
+            data[f.name] = [i.id for i in f.value_from_object(item)]
+
+        data["id"] = str(data["id"])
+        return data

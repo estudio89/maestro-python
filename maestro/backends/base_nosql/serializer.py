@@ -1,5 +1,6 @@
 from maestro.core.utils import parse_datetime
 from maestro.core.serializer import BaseItemSerializer
+from maestro.core.metadata import SerializationResult
 import json
 from typing import Dict, Any, List
 from maestro.backends.base_nosql.utils import (
@@ -10,7 +11,6 @@ import datetime as dt
 
 
 class NoSQLItemSerializer(BaseItemSerializer):
-
     def get_skip_fields(self) -> "List[str]":
         return ["id", "collection_name"]
 
@@ -22,7 +22,7 @@ class NoSQLItemSerializer(BaseItemSerializer):
             value = value.isoformat()
         return value
 
-    def serialize_item(self, item: "Dict[str, Any]") -> "str":
+    def serialize_item(self, item: "Dict[str, Any]") -> "SerializationResult":
         pk = item["id"]
         collection_name = item["collection_name"]
 
@@ -38,10 +38,11 @@ class NoSQLItemSerializer(BaseItemSerializer):
 
         entity_name = collection_to_entity_name(collection=collection_name)
         sorted_fields = dict(sorted(fields.items()))
-        serialized_data = {"entity_name": entity_name, "pk": pk, "fields": sorted_fields}
-        serialized_data = dict(sorted(serialized_data.items()))
-        serialized_item = json.dumps(serialized_data)
-        return serialized_item
+        serialized_item = json.dumps(sorted_fields)
+        result = SerializationResult(
+            item_id=pk, entity_name=entity_name, serialized_item=serialized_item
+        )
+        return result
 
     def deserialize_field_value(
         self, collection_name: "str", fields: "Dict[str, Any]", key: "str"
@@ -66,12 +67,14 @@ class NoSQLItemSerializer(BaseItemSerializer):
 
         return value
 
-    def deserialize_item(self, serialized_item: "str") -> "Dict[str, Any]":
-        raw_data = json.loads(serialized_item)
-        entity_name = raw_data.pop("entity_name")
+    def deserialize_item(
+        self, serialization_result: "SerializationResult"
+    ) -> "Dict[str, Any]":
+        entity_name = serialization_result.entity_name
         collection_name = entity_name_to_collection(entity_name=entity_name)
-        pk = raw_data.pop("pk")
-        fields = raw_data.pop("fields")
+        pk = serialization_result.item_id
+
+        fields = json.loads(serialization_result.serialized_item)
         item = {"id": pk, "collection_name": collection_name}
 
         for key in fields:

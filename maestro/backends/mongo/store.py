@@ -1,5 +1,4 @@
 from maestro.backends.base_nosql.utils import (
-    get_collection_name,
     type_to_collection,
     entity_name_to_collection,
 )
@@ -324,7 +323,8 @@ class MongoDataStore(TrackQueriesStoreMixin, NoSQLDataStore):
             if item_change.provider_timestamp > vector_clock_item.timestamp:
                 if (
                     filtered_item_ids is not None
-                    and item_change.item_id not in filtered_item_ids
+                    and item_change.serialization_result.item_id
+                    not in filtered_item_ids
                 ):
                     continue
                 selected_item_changes.append(item_change)
@@ -339,15 +339,15 @@ class MongoDataStore(TrackQueriesStoreMixin, NoSQLDataStore):
         return item_change_batch
 
     def run_in_transaction(self, item_change: "ItemChange", callback: "Callable"):
-        collection_name = get_collection_name(
-            serialized_item=item_change.serialized_item
+        collection_name = entity_name_to_collection(
+            entity_name=item_change.serialization_result.entity_name
         )
 
         with self.client.start_session() as self.session:
             with self.session.start_transaction():
                 try:
                     self.db[collection_name].find_one_and_update(
-                        filter={"_id": str(item_change.item_id)},
+                        filter={"_id": str(item_change.serialization_result.item_id)},
                         update={"$set": {"_lock": uuid.uuid4()}},
                         session=self.session,
                     )

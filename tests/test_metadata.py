@@ -6,6 +6,7 @@ from maestro.core.metadata import (
     ItemChange,
     ItemChangeBatch,
     Operation,
+    SerializationResult,
 )
 import datetime as dt
 import uuid
@@ -172,7 +173,9 @@ class ItemChangeBatchTest(unittest.TestCase):
             ItemChange(
                 id=uuid.uuid4(),
                 operation=Operation.INSERT,
-                item_id=uuid.uuid4(),
+                serialization_result=SerializationResult(
+                    item_id=uuid.uuid4(), serialized_item="", entity_name="my_app_item"
+                ),
                 provider_timestamp=dt.datetime(
                     day=17,
                     month=6,
@@ -191,7 +194,6 @@ class ItemChangeBatchTest(unittest.TestCase):
                     tzinfo=dt.timezone.utc,
                 ),
                 insert_provider_id="provider1",
-                serialized_item="",
                 should_ignore=False,
                 is_applied=False,
                 date_created=dt.datetime(
@@ -241,7 +243,9 @@ class ItemChangeBatchTest(unittest.TestCase):
             ItemChange(
                 id=uuid.uuid4(),
                 operation=Operation.UPDATE,
-                item_id=uuid.uuid4(),
+                serialization_result=SerializationResult(
+                    item_id=uuid.uuid4(), serialized_item="", entity_name="my_app_item"
+                ),
                 date_created=dt.datetime(
                     day=18,
                     month=6,
@@ -268,7 +272,6 @@ class ItemChangeBatchTest(unittest.TestCase):
                     tzinfo=dt.timezone.utc,
                 ),
                 insert_provider_id="provider1",
-                serialized_item="",
                 should_ignore=False,
                 is_applied=False,
                 vector_clock=VectorClock(
@@ -310,7 +313,9 @@ class ItemChangeBatchTest(unittest.TestCase):
             ItemChange(
                 id=uuid.uuid4(),
                 operation=Operation.UPDATE,
-                item_id=uuid.uuid4(),
+                serialization_result=SerializationResult(
+                    item_id=uuid.uuid4(), serialized_item="", entity_name="my_app_item"
+                ),
                 date_created=dt.datetime(
                     day=19,
                     month=6,
@@ -337,7 +342,6 @@ class ItemChangeBatchTest(unittest.TestCase):
                     tzinfo=dt.timezone.utc,
                 ),
                 insert_provider_id="provider1",
-                serialized_item="",
                 should_ignore=False,
                 is_applied=False,
                 vector_clock=VectorClock(

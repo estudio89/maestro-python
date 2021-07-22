@@ -1,40 +1,8 @@
 from maestro.core.metadata import VectorClock
+from maestro.core.utils import make_hashable
 from enum import Enum
 from typing import List, Any, Union, Optional
 import copy
-
-
-def is_iterable(value: "Any"):
-    """Checks if a value is an iterable"""
-    try:
-        iter(value)
-    except TypeError:
-        return False
-    else:
-        return True
-
-
-def make_hashable(value):
-    """Attempts to make a value hashable.
-    If the value is a dictionary, it will be converted to a tuple (key, val) and the dict values will be made hashable recursively.
-    If the value is a non-hashable iterable, it will be converted to a tuble and its values will be made hashable recursively.
-    """
-
-    if isinstance(value, dict):
-        return tuple(
-            [(key, make_hashable(nested_value)) for key, nested_value in value.items()]
-        )
-    # Try hash to avoid converting a hashable iterable (e.g. string, frozenset)
-    # to a tuple.
-    try:
-        hash(value)
-    except TypeError:
-        if is_iterable(value):
-            return tuple(map(make_hashable, value))
-        # Non-hashable, non-iterable.
-        raise
-    return value
-
 
 class Comparator(Enum):
     """Represents a comparison operation that can be performed in a field."""

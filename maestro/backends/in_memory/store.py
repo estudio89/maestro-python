@@ -12,9 +12,10 @@ from maestro.core.metadata import (
     ConflictLog,
     Operation,
     SyncSession,
+    SerializationResult,
 )
 from maestro.core.exceptions import ItemNotFoundException
-from typing import List, Set, Callable, Any, Dict, Optional, cast
+from typing import List, Set, Callable, Any, Dict, Optional, cast, Union
 import datetime as dt
 import uuid
 import copy
@@ -34,7 +35,7 @@ class InMemoryDataStore(TrackQueriesStoreMixin, BaseDataStore):
             "item_versions": [],
             "conflict_logs": [],
             "sync_sessions": [],
-            "items": [],
+            "items": {},
             "tracked_queries": [],
         }
 
@@ -56,8 +57,10 @@ class InMemoryDataStore(TrackQueriesStoreMixin, BaseDataStore):
             )
         return vector_clock
 
-    def update_item(self, item: "Optional[Any]", serialized_item: "str") -> "Any":
-        deserialized = self.deserialize_item(serialized_item)
+    def update_item(
+        self, item: "Optional[Any]", serialization_result: "SerializationResult"
+    ) -> "Any":
+        deserialized = self.deserialize_item(serialization_result)
         if item:
             item.update(deserialized)
             deserialized = item
@@ -95,7 +98,10 @@ class InMemoryDataStore(TrackQueriesStoreMixin, BaseDataStore):
             ).timestamp
             if item_change.provider_timestamp > remote_timestamp:
                 if filtered_item_ids:
-                    if item_change.item_id not in filtered_item_ids:
+                    if (
+                        item_change.serialization_result.item_id
+                        not in filtered_item_ids
+                    ):
                         continue
 
                 selected_changes.append(item_change)
@@ -132,7 +138,10 @@ class InMemoryDataStore(TrackQueriesStoreMixin, BaseDataStore):
                 ).timestamp
                 if remote_timestamp < item_change.provider_timestamp:
                     if filtered_item_ids:
-                        if item_change.item_id not in filtered_item_ids:
+                        if (
+                            item_change.serialization_result.item_id
+                            not in filtered_item_ids
+                        ):
                             continue
 
                     selected_changes.append(item_change)
@@ -187,23 +196,22 @@ class InMemoryDataStore(TrackQueriesStoreMixin, BaseDataStore):
         ):
             item: "Optional[Dict]"
             try:
-                item = self.get_item_by_id(id=item_change.item_id)
+                item = self.get_item_by_id(id=item_change.serialization_result.item_id)
             except ItemNotFoundException:
                 item = None
-            item = self.update_item(item, item_change.serialized_item)
+            item = self.update_item(item, item_change.serialization_result)
             self.save_item(cast("Dict", item))
         elif item_change.operation == Operation.DELETE:
-            item_idx = None
-            get_id = lambda item: item["id"] if isinstance(item, dict) else item.id
-            item_id = str(item_change.item_id)
-            for idx, item in enumerate(self._db["items"]):
-                old_item_id = str(get_id(item))
-                if item_id == old_item_id:
-                    item_idx = idx
-                    break
-
-            if item_idx != None:
-                del self._db["items"][item_idx]
+            entity_items = self._db["items"].get(
+                item_change.serialization_result.entity_name, []
+            )
+            item = self.deserialize_item(
+                serialization_result=item_change.serialization_result
+            )
+            id_getter = lambda item: item["id"] if isinstance(item, dict) else item.id
+            self._delete_entity_item(
+                entity_items=entity_items, item=item, id_getter=id_getter
+            )
 
     def save_item_version(self, item_version: "ItemVersion"):
         item_version_record = self.item_version_metadata_converter.to_record(
@@ -245,7 +253,7 @@ class InMemoryDataStore(TrackQueriesStoreMixin, BaseDataStore):
                 provider_id=provider_id
             )
             if (
-                item_change.item_id == item_id
+                item_change.serialization_result.item_id == item_id
                 and item_change.is_applied
                 and not item_change.should_ignore
                 and vector_clock_item.timestamp < timestamp
@@ -270,7 +278,7 @@ class InMemoryDataStore(TrackQueriesStoreMixin, BaseDataStore):
         item_ids_set: "Set[str]" = set()
         items = []
         for item_change in self.get_item_changes():
-            if item_change.item_id not in item_ids_set:
+            if item_change.serialization_result.item_id not in item_ids_set:
                 if (
                     vector_clock
                     and vector_clock.get_vector_clock_item(
@@ -279,7 +287,7 @@ class InMemoryDataStore(TrackQueriesStoreMixin, BaseDataStore):
                     < item_change.provider_timestamp
                 ):
                     continue
-                item = self.deserialize_item(item_change.serialized_item)
+                item = self.deserialize_item(item_change.serialization_result)
                 in_query = filter_lambda(item)
                 if in_query:
                     items.append(item)
@@ -315,23 +323,47 @@ class InMemoryDataStore(TrackQueriesStoreMixin, BaseDataStore):
         ]
 
     def save_item(self, item: "Dict"):
-        self._save(item=item, key="items")
+        entity_name = copy.deepcopy(item).pop("entity_name")
+        self._save(item=item, key="items." + entity_name)
 
-    def delete_item(self, item: "Any"):
-        get_id = lambda item: item["id"] if isinstance(item, dict) else item.id
-        item_id = str(get_id(item))
+    def _delete_entity_item(
+        self, entity_items: "List", item: "Any", id_getter: "Callable"
+    ):
         item_idx = None
-        for idx, old_item in enumerate(self._db["items"]):
-            old_id = str(get_id(old_item))
+        item_id = str(id_getter(item))
+        for idx, old_item in enumerate(entity_items):
+            old_id = str(id_getter(old_item))
             if old_id == item_id:
                 item_idx = idx
 
         if item_idx is not None:
-            del self._db["items"][item_idx]
+            del entity_items[item_idx]
 
-    def _save(self, item: "Any", key: "str", id_attr: "str" = "id"):
+    def delete_item(self, item: "Any"):
+        id_getter = lambda item: item["id"] if isinstance(item, dict) else item.id
+        for entity_name in self._db["items"].keys():
+            entity_items = self._db["items"][entity_name]
+            self._delete_entity_item(
+                entity_items=entity_items, item=item, id_getter=id_getter
+            )
+
+    def _get_nested_list(self, key: "str") -> "List":
+        keys = key.split(".")
+        list_obj: "Union[Dict, List]" = self._db[keys[0]]
+        for nested_key in keys[1:]:
+            if not isinstance(list_obj, dict):
+                raise ValueError("Invalid key: " + key)
+            nested_list = cast("Dict", list_obj).get(nested_key)
+            if nested_list is None:
+                list_obj[nested_key] = []
+                nested_list = list_obj[nested_key]
+            list_obj = nested_list
+
+        return cast("List", list_obj)
+
+    def _save_to_list(self, list_obj: "List", item: "Any", id_attr: "str"):
         item_idx = None
-        for idx, old_item in enumerate(self._db[key]):
+        for idx, old_item in enumerate(list_obj):
             if isinstance(item, dict):
                 new_item_id = item[id_attr]
             else:
@@ -347,12 +379,18 @@ class InMemoryDataStore(TrackQueriesStoreMixin, BaseDataStore):
                 break
 
         if item_idx is not None:
-            self._db[key][item_idx] = copy.deepcopy(item)
+            list_obj[item_idx] = copy.deepcopy(item)
         else:
-            self._db[key].append(copy.deepcopy(item))
+            list_obj.append(copy.deepcopy(item))
 
-    def _get_by_id(self, id: "Any", key: "str", id_attr: "str" = "id"):
-        for item in self._db[key]:
+    def _save(self, item: "Any", key: "str", id_attr: "str" = "id"):
+        list_obj = self._get_nested_list(key=key)
+        self._save_to_list(list_obj=cast("List", list_obj), item=item, id_attr=id_attr)
+
+    def _get_by_id_from_list(
+        self, list_obj: "List", id: "Any", id_attr: "str"
+    ) -> "Optional[Any]":
+        for item in list_obj:
             if isinstance(item, dict):
                 item_id = item[id_attr]
             else:
@@ -361,7 +399,18 @@ class InMemoryDataStore(TrackQueriesStoreMixin, BaseDataStore):
             if str(item_id) == str(id):
                 return item
 
-        raise ItemNotFoundException(item_type=key, id=id)
+        return None
+
+    def _get_by_id(self, id: "Any", key: "str", id_attr: "str" = "id") -> "Any":
+        list_obj = self._get_nested_list(key=key)
+        item = self._get_by_id_from_list(
+            list_obj=cast("List", list_obj), id=id, id_attr=id_attr
+        )
+
+        if item is None:
+            raise ItemNotFoundException(item_type=key, id=id)
+
+        return item
 
     def get_item_versions(self) -> "List[ItemVersion]":
         return [
@@ -382,10 +431,21 @@ class InMemoryDataStore(TrackQueriesStoreMixin, BaseDataStore):
         ]
 
     def get_items(self) -> "List[Dict]":
-        return self._db["items"]
+        all_items: "List[Dict]" = []
+        for entity_name in self._db["items"]:
+            entity_items = self._db["items"][entity_name]
+            all_items.extend(entity_items)
+
+        return all_items
 
     def get_item_by_id(self, id: "str") -> "Dict":
-        return self._get_by_id(id=id, key="items")
+        for entity_name in self._db["items"].keys():
+            try:
+                return self._get_by_id(id=id, key="items." + entity_name)
+            except ItemNotFoundException:
+                continue
+
+        raise ItemNotFoundException(item_type="items", id=id)
 
     def get_item_version(self, item_id: "str") -> "Optional[ItemVersion]":
         try:
@@ -406,5 +466,8 @@ class InMemoryDataStore(TrackQueriesStoreMixin, BaseDataStore):
         )
         return item_change
 
-    def _get_hashable_item(self, item: "Any"):
-        return tuple(item[attr] for attr in item)
+    def item_to_dict(self, item: "Any") -> "Dict":
+        data = copy.deepcopy(cast("Dict", item))
+        data.pop("entity_name")
+        return data
+

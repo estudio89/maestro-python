@@ -1,5 +1,5 @@
 from firebase_admin import firestore
-from typing import Any, cast
+from typing import Any, cast, Optional
 from maestro.core.utils import BaseSyncLock
 from maestro.core.events import EventsManager
 from maestro.core.provider import BaseSyncProvider
@@ -19,7 +19,6 @@ from maestro.core.metadata import (
 )
 from maestro.core.exceptions import ItemNotFoundException
 from maestro.backends.in_memory import (
-    InMemoryDataStore,
     InMemorySyncProvider,
     InMemorySyncLock,
     NullConverter,
@@ -38,6 +37,7 @@ from maestro.backends.firestore import (
 )
 import uuid
 import tests.base
+import tests.in_memory.base
 
 
 def _delete_data():
@@ -62,51 +62,96 @@ class FirestoreTestCase(unittest.TestCase):
         _delete_data()
 
 
-class TestInMemoryDataStore(InMemoryDataStore):
+class TestFirestoreDataStore(FirestoreDataStore, tests.base.TestDataStoreMixin):
     __test__ = False
 
-    def _get_hashable_item(self, item: "Any"):
-        """Retorna uma versão hashable de um item.
+    def _create_item(self, id: "str", name: "str", version: "str"):
+        if isinstance(id, uuid.UUID):
+            id = str(id)
+        return {
+            "id": id,
+            "name": name,
+            "version": version,
+            "collection_name": "my_app_item",
+        }
 
-        Args:
-            item (Any): Description
+    def _get_id(self, item: "Any") -> "str":
+        return item["id"]
 
-        Returns:
-            TYPE: Description
-        """
-        return (item["id"], item["name"], item["version"])
+    def _add_item(self, item: "Any"):
+        item_to_save = copy.deepcopy(item)
+        id = item_to_save.pop("id")
+        item_to_save.pop("collection_name")
+        self.db.collection("my_app_item").document(str(id)).set(item_to_save)
 
-    def update_item(self, item: "Any", serialized_item: "str") -> "Any":
-        # print("update_item - serialized_item:", serialized_item)
-        serializer = FirestoreItemSerializer()
-        deserialized = serializer.deserialize_item(serialized_item=serialized_item)
-        # print("update_item - deserialized:", deserialized)
-        if item:
-            item.update(deserialized)
-            return item
-        else:
-            return deserialized
-
-    def serialize_item(self, item):
-        return (
-            '{"entity_name": "my_app_item", "fields": {"name": "%s", "version": "%s"}, "pk": "%s"}'
-            % (item["name"], item["version"], str(item["id"]))
+    def _add_item_change(self, item_change: "ItemChange"):
+        vector_clock = []
+        for vector_clock_item in item_change.vector_clock:
+            vector_clock.append(
+                {
+                    "provider_id": vector_clock_item.provider_id,
+                    "timestamp": vector_clock_item.timestamp,
+                }
+            )
+        self.db.collection("maestro__item_changes").document(str(item_change.id)).set(
+            {
+                "date_created": item_change.date_created,
+                "operation": item_change.operation.value,
+                "item_id": str(item_change.serialization_result.item_id),
+                "collection_name": "my_app_item",
+                "provider_timestamp": item_change.provider_timestamp,
+                "provider_id": item_change.provider_id,
+                "insert_provider_timestamp": item_change.insert_provider_timestamp,
+                "insert_provider_id": item_change.insert_provider_id,
+                "serialized_item": self.item_serializer.deserialize_item(
+                    item_change.serialization_result
+                ),
+                "should_ignore": item_change.should_ignore,
+                "is_applied": item_change.is_applied,
+                "vector_clock": vector_clock,
+            }
         )
 
+        self.db.collection("maestro__provider_ids").document(
+            item_change.provider_id
+        ).set({"timestamp": item_change.provider_timestamp})
 
-class TestFirestoreDataStore(FirestoreDataStore):
-    __test__ = False
+    def _add_item_version(self, item_version: "ItemVersion"):
+        vector_clock = []
+        for vector_clock_item in item_version.vector_clock:
+            vector_clock.append(
+                {
+                    "provider_id": vector_clock_item.provider_id,
+                    "timestamp": vector_clock_item.timestamp,
+                }
+            )
 
-    def _get_hashable_item(self, item: "Any"):
-        """Retorna uma versão hashable de um item.
+        current_item_change = cast("ItemChange", item_version.current_item_change)
+        self.db.collection("maestro__item_versions").document(
+            str(item_version.item_id)
+        ).set(
+            {
+                "date_created": item_version.date_created,
+                "current_item_change_id": str(current_item_change.id),
+                "vector_clock": vector_clock,
+                "collection_name": "my_app_item",
+            }
+        )
 
-        Args:
-            item (Any): Description
-
-        Returns:
-            TYPE: Description
-        """
-        return (item["id"], item["name"], item["version"])
+    def _add_conflict_log(self, conflict_log: "ConflictLog"):
+        self.db.collection("maestro__conflict_logs").document(str(conflict_log.id)).set(
+            {
+                "created_at": conflict_log.created_at,
+                "resolved_at": conflict_log.resolved_at,
+                "item_change_loser_id": str(conflict_log.item_change_loser.id),
+                "item_change_winner_id": str(conflict_log.item_change_winner.id)
+                if conflict_log.item_change_winner is not None
+                else None,
+                "status": conflict_log.status.value,
+                "conflict_type": conflict_log.conflict_type.value,
+                "description": conflict_log.description,
+            }
+        )
 
     def get_items(self):
         docs = self.db.collection("my_app_item").get()
@@ -134,34 +179,12 @@ class FirestoreBackendTestMixin(tests.base.BackendTestMixin):
             self._db = firestore.client()
         return self._db
 
-    def _get_id(self, item: "Any") -> "str":  # pragma: no cover
-        return item["id"]
-
-    def _create_sync_lock(self) -> "BaseSyncLock":  # pragma: no cover
+    def _create_sync_lock(self) -> "BaseSyncLock":
         return InMemorySyncLock()
-
-    def _create_item(self, id: "str", name: "str", version: "str"):
-        if isinstance(id, uuid.UUID):
-            id = str(id)
-        return {
-            "id": id,
-            "name": name,
-            "version": version,
-            "collection_name": "my_app_item",
-        }
-
-    def _serialize_item(self, id: "str", name: "str", version: "str") -> "str":
-        return (
-            '{"entity_name": "my_app_item", "fields": {"name": "%s", "version": "%s"}, "pk": "%s"}'
-            % (name, version, str(id))
-        )
-
-    def _deserialize_item(self, id: "str", name: "str", version: "str") -> "Any":
-        return self._create_item(id=id, name=name, version=version)
 
     def _create_data_store(self, local_provider_id: "str") -> "BaseDataStore":
         if local_provider_id == "other_provider":
-            return TestInMemoryDataStore(
+            return tests.in_memory.base.TestInMemoryDataStore(
                 local_provider_id=local_provider_id,
                 sync_session_metadata_converter=NullConverter(
                     metadata_class=SyncSession
@@ -229,78 +252,3 @@ class FirestoreBackendTestMixin(tests.base.BackendTestMixin):
                 changes_executor=changes_executor,
                 max_num=max_num,
             )
-
-    def _add_item_change(self, item_change: "ItemChange"):  # pragma: no cover
-        vector_clock = []
-        for vector_clock_item in item_change.vector_clock:
-            vector_clock.append(
-                {
-                    "provider_id": vector_clock_item.provider_id,
-                    "timestamp": vector_clock_item.timestamp,
-                }
-            )
-        self.db.collection("maestro__item_changes").document(str(item_change.id)).set(
-            {
-                "date_created": item_change.date_created,
-                "operation": item_change.operation.value,
-                "item_id": str(item_change.item_id),
-                "collection_name": "my_app_item",
-                "provider_timestamp": item_change.provider_timestamp,
-                "provider_id": item_change.provider_id,
-                "insert_provider_timestamp": item_change.insert_provider_timestamp,
-                "insert_provider_id": item_change.insert_provider_id,
-                "serialized_item": self.item_serializer.deserialize_item(
-                    item_change.serialized_item
-                ),
-                "should_ignore": item_change.should_ignore,
-                "is_applied": item_change.is_applied,
-                "vector_clock": vector_clock,
-            }
-        )
-
-        self.db.collection("maestro__provider_ids").document(
-            item_change.provider_id
-        ).set({"timestamp": item_change.provider_timestamp})
-
-    def _add_item_version(self, item_version: "ItemVersion"):  # pragma: no cover
-        vector_clock = []
-        for vector_clock_item in item_version.vector_clock:
-            vector_clock.append(
-                {
-                    "provider_id": vector_clock_item.provider_id,
-                    "timestamp": vector_clock_item.timestamp,
-                }
-            )
-
-        current_item_change = cast("ItemChange", item_version.current_item_change)
-        self.db.collection("maestro__item_versions").document(
-            str(item_version.item_id)
-        ).set(
-            {
-                "date_created": item_version.date_created,
-                "current_item_change_id": str(current_item_change.id),
-                "vector_clock": vector_clock,
-                "collection_name": "my_app_item",
-            }
-        )
-
-    def _add_conflict_log(self, conflict_log: "ConflictLog"):  # pragma: no cover
-        self.db.collection("maestro__conflict_logs").document(str(conflict_log.id)).set(
-            {
-                "created_at": conflict_log.created_at,
-                "resolved_at": conflict_log.resolved_at,
-                "item_change_loser_id": str(conflict_log.item_change_loser.id),
-                "item_change_winner_id": str(conflict_log.item_change_winner.id)
-                if conflict_log.item_change_winner is not None
-                else None,
-                "status": conflict_log.status.value,
-                "conflict_type": conflict_log.conflict_type.value,
-                "description": conflict_log.description,
-            }
-        )
-
-    def _add_item(self, item: "Any"):  # pragma: no cover
-        item_to_save = copy.deepcopy(item)
-        id = item_to_save.pop("id")
-        item_to_save.pop("collection_name")
-        self.db.collection("my_app_item").document(str(id)).set(item_to_save)

@@ -8,7 +8,7 @@ from maestro.core.metadata import (
 )
 from maestro.backends.base_nosql.collections import CollectionType
 from maestro.backends.base_nosql.utils import type_to_collection
-from typing import List, Dict, Any
+from typing import List, Dict, Any, cast
 from abc import abstractmethod
 import copy
 
@@ -64,9 +64,6 @@ class NoSQLDataStore(BaseDataStore):
             collection (str): collection name
         """
 
-    def _get_hashable_item(self, item: "Any"):
-        return tuple(item[attr] for attr in item)
-
     def save_item(self, item: "Any"):
         copied = copy.deepcopy(item)
         self._save(instance=copied, collection=copied.pop("collection_name"))
@@ -100,7 +97,7 @@ class NoSQLDataStore(BaseDataStore):
         )
 
     def execute_item_change(self, item_change: "ItemChange"):
-        item = self.deserialize_item(serialized_item=item_change.serialized_item)
+        item = self.deserialize_item(serialization_result=item_change.serialization_result)
 
         if item_change.operation == Operation.DELETE:
             self.delete_item(item=item)
@@ -124,3 +121,9 @@ class NoSQLDataStore(BaseDataStore):
             instance=sync_session_record,
             collection=type_to_collection(key=CollectionType.SYNC_SESSIONS),
         )
+
+    def item_to_dict(self, item: "Any") -> "Dict":
+        data = copy.deepcopy(cast("Dict", item))
+        data.pop("collection_name")
+        return data
+

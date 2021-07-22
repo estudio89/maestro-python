@@ -166,7 +166,7 @@ class ChangesExecutor:
             ConflictCheckResult: The result of the analysis
         """
         local_version = self.data_store.get_local_version(
-            item_id=remote_item_change.item_id
+            item_id=remote_item_change.serialization_result.item_id
         )
         if local_version.current_item_change is None:
             # The item does not exist in storage yet, therefore there's no conflict
@@ -312,7 +312,7 @@ class ChangesExecutor:
         """
         new_version = ItemVersion(
             current_item_change=item_change,
-            item_id=item_change.item_id,
+            item_id=item_change.serialization_result.item_id,
             vector_clock=item_change.vector_clock,
             date_created=old_version.date_created,
         )

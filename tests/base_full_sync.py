@@ -45,36 +45,6 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
 
     maxDiff = None
 
-    def _create_data_store(
-        self, local_provider_id: "str"
-    ) -> "BaseDataStore":  # pragma: no cover
-        raise NotImplementedError()
-
-    def _create_provider(
-        self,
-        provider_id: "str",
-        data_store: "BaseDataStore",
-        events_manager: "EventsManager",
-        changes_executor: "ChangesExecutor",
-        max_num: "int",
-    ) -> "BaseSyncProvider":  # pragma: no cover
-        raise NotImplementedError()
-
-    def _create_item(self, id, name, version):  # pragma: no cover
-        raise NotImplementedError()
-
-    def _serialize_item(self, id, name, version):  # pragma: no cover
-        raise NotImplementedError()
-
-    def _deserialize_item(self, id, name, version):  # pragma: no cover
-        raise NotImplementedError()
-
-    def _get_id(self, item):  # pragma: no cover
-        raise NotImplementedError()
-
-    def _create_sync_lock(self) -> "BaseSyncLock":  # pragma: no cover
-        raise NotImplementedError()
-
     def setUp(self):
 
         # Provider 1
@@ -132,30 +102,31 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         self.data_store1.commit_item_change(
             operation=Operation.INSERT,
             item_id=self.item1_id,
-            item=self._create_item(id=self.item1_id, name="I1", version="1"),
+            item=self.data_store1._create_item(id=self.item1_id, name="I1", version="1"),
         )
         for i in range(2, 6):
             last_item_change = self.data_store1.commit_item_change(
                 operation=Operation.UPDATE,
                 item_id=self.item1_id,
-                item=self._create_item(id=self.item1_id, name="I1", version=str(i)),
+                item=self.data_store1._create_item(id=self.item1_id, name="I1", version=str(i)),
             )
 
         self.last_item_change_1 = last_item_change
         self.assertEqual(num_changes + 5, len(self.data_store1.get_item_changes()))
 
         item = self.data_store1.get_item_by_id(id=self.item1_id)
+
         self.assertEqual(
-            item, self._deserialize_item(id=str(self.item1_id), name="I1", version="5")
+            item, self.data_store1._create_item(id=str(self.item1_id), name="I1", version="5")
         )
 
-        version = self.data_store1.get_local_version(item_id=last_item_change.item_id)
+        version = self.data_store1.get_local_version(item_id=last_item_change.serialization_result.item_id)
         self.assertEqual(version.item_id, self.item1_id)
 
         self.assertEqual(version.current_item_change, last_item_change)
 
         self.assertEqual(
-            self.to_dict(version.current_item_change.serialized_item),
+            self.to_dict(version.current_item_change.serialization_result.serialized_item),
             self.to_dict(self._serialize_item(name="I1", version="5", id=self.item1_id)),
         )
         self.assertEqual(len(self.data_store1.get_item_versions()), 1)
@@ -166,13 +137,13 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         self.data_store1.commit_item_change(
             operation=Operation.INSERT,
             item_id=self.item2_id,
-            item=self._create_item(id=self.item2_id, name="I2", version="1"),
+            item=self.data_store1._create_item(id=self.item2_id, name="I2", version="1"),
         )
         for i in range(2, 4):
             last_item_change = self.data_store1.commit_item_change(
                 operation=Operation.UPDATE,
                 item_id=self.item2_id,
-                item=self._create_item(id=self.item2_id, name="I2", version=str(i)),
+                item=self.data_store1._create_item(id=self.item2_id, name="I2", version=str(i)),
             )
 
         self.last_item_change_2 = last_item_change
@@ -180,15 +151,15 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
 
         item = self.data_store1.get_item_by_id(id=self.item2_id)
         self.assertEqual(
-            item, self._deserialize_item(id=str(self.item2_id), name="I2", version="3")
+            item, self.data_store1._create_item(id=str(self.item2_id), name="I2", version="3")
         )
 
-        version = self.data_store1.get_local_version(item_id=last_item_change.item_id)
+        version = self.data_store1.get_local_version(item_id=last_item_change.serialization_result.item_id)
         self.assertEqual(version.item_id, self.item2_id)
         self.assertEqual(version.current_item_change, last_item_change)
 
         self.assertEqual(
-            self.to_dict(version.current_item_change.serialized_item),
+            self.to_dict(version.current_item_change.serialization_result.serialized_item),
             self.to_dict(self._serialize_item(name="I2", version="3", id=self.item2_id)),
         )
         self.assertEqual(len(self.data_store1.get_item_versions()), 2)
@@ -199,13 +170,13 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         self.data_store1.commit_item_change(
             operation=Operation.INSERT,
             item_id=self.item3_id,
-            item=self._create_item(id=self.item3_id, name="I3", version="1"),
+            item=self.data_store1._create_item(id=self.item3_id, name="I3", version="1"),
         )
         for i in range(2, 5):
             last_item_change = self.data_store1.commit_item_change(
                 operation=Operation.UPDATE,
                 item_id=self.item3_id,
-                item=self._create_item(id=self.item3_id, name="I3", version=str(i)),
+                item=self.data_store1._create_item(id=self.item3_id, name="I3", version=str(i)),
             )
 
         self.last_item_change_3 = last_item_change
@@ -213,15 +184,15 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
 
         item = self.data_store1.get_item_by_id(id=self.item3_id)
         self.assertEqual(
-            item, self._deserialize_item(id=str(self.item3_id), name="I3", version="4")
+            item, self.data_store1._create_item(id=str(self.item3_id), name="I3", version="4")
         )
 
-        version = self.data_store1.get_local_version(item_id=last_item_change.item_id)
+        version = self.data_store1.get_local_version(item_id=last_item_change.serialization_result.item_id)
         self.assertEqual(version.item_id, self.item3_id)
         self.assertEqual(version.current_item_change, last_item_change)
 
         self.assertEqual(
-            self.to_dict(version.current_item_change.serialized_item),
+            self.to_dict(version.current_item_change.serialization_result.serialized_item),
             self.to_dict(self._serialize_item(name="I3", version="4", id=self.item3_id)),
         )
         self.assertEqual(len(self.data_store1.get_item_versions()), 3)
@@ -234,13 +205,13 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         self.data_store2.commit_item_change(
             operation=Operation.INSERT,
             item_id=self.item104_id,
-            item=self._create_item(id=self.item104_id, name="I104", version="1"),
+            item=self.data_store2._create_item(id=self.item104_id, name="I104", version="1"),
         )
         for i in range(2, 3):
             last_item_change = self.data_store2.commit_item_change(
                 operation=Operation.UPDATE,
                 item_id=self.item104_id,
-                item=self._create_item(id=self.item104_id, name="I104", version=str(i)),
+                item=self.data_store2._create_item(id=self.item104_id, name="I104", version=str(i)),
             )
 
         self.last_item_change_104 = last_item_change
@@ -248,15 +219,15 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
 
         item = self.data_store2.get_item_by_id(id=self.item104_id)
         self.assertEqual(
-            item, self._deserialize_item(id=self.item104_id, name="I104", version="2")
+            item, self.data_store2._create_item(id=self.item104_id, name="I104", version="2")
         )
 
-        version = self.data_store2.get_local_version(item_id=last_item_change.item_id)
+        version = self.data_store2.get_local_version(item_id=last_item_change.serialization_result.item_id)
         self.assertEqual(version.item_id, self.item104_id)
         self.assertEqual(version.current_item_change, last_item_change)
 
         self.assertEqual(
-            self.to_dict(version.current_item_change.serialized_item),
+            self.to_dict(version.current_item_change.serialization_result.serialized_item),
             self.to_dict(
                 self._serialize_item(name="I104", version="2", id=self.item104_id)
             ),
@@ -270,13 +241,13 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         self.data_store2.commit_item_change(
             operation=Operation.INSERT,
             item_id=self.item105_id,
-            item=self._create_item(id=self.item105_id, name="I105", version="1"),
+            item=self.data_store2._create_item(id=self.item105_id, name="I105", version="1"),
         )
         for i in range(2, 5):
             last_item_change = self.data_store2.commit_item_change(
                 operation=Operation.UPDATE,
                 item_id=self.item105_id,
-                item=self._create_item(id=self.item105_id, name="I105", version=str(i)),
+                item=self.data_store2._create_item(id=self.item105_id, name="I105", version=str(i)),
             )
 
         self.last_item_change_105 = last_item_change
@@ -285,15 +256,15 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
 
         item = self.data_store2.get_item_by_id(id=self.item105_id)
         self.assertEqual(
-            item, self._deserialize_item(id=self.item105_id, name="I105", version="4")
+            item, self.data_store2._create_item(id=self.item105_id, name="I105", version="4")
         )
 
-        version = self.data_store2.get_local_version(item_id=last_item_change.item_id)
+        version = self.data_store2.get_local_version(item_id=last_item_change.serialization_result.item_id)
         self.assertEqual(version.item_id, self.item105_id)
         self.assertEqual(version.current_item_change, last_item_change)
 
         self.assertEqual(
-            self.to_dict(version.current_item_change.serialized_item),
+            self.to_dict(version.current_item_change.serialization_result.serialized_item),
             self.to_dict(
                 self._serialize_item(name="I105", version="4", id=self.item105_id)
             ),
@@ -358,21 +329,21 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         item105 = self.data_store2.get_item_by_id(self.item105_id)
 
         self.assertEqual(
-            item1, self._deserialize_item(id=str(self.item1_id), name="I1", version="5")
+            item1, self.data_store2._create_item(id=str(self.item1_id), name="I1", version="5")
         )
         self.assertEqual(
-            item2, self._deserialize_item(id=str(self.item2_id), name="I2", version="3")
+            item2, self.data_store2._create_item(id=str(self.item2_id), name="I2", version="3")
         )
         self.assertEqual(
-            item3, self._deserialize_item(id=str(self.item3_id), name="I3", version="4")
+            item3, self.data_store2._create_item(id=str(self.item3_id), name="I3", version="4")
         )
         self.assertEqual(
             item104,
-            self._deserialize_item(id=str(self.item104_id), name="I104", version="2"),
+            self.data_store2._create_item(id=str(self.item104_id), name="I104", version="2"),
         )
         self.assertEqual(
             item105,
-            self._deserialize_item(id=str(self.item105_id), name="I105", version="4"),
+            self.data_store2._create_item(id=str(self.item105_id), name="I105", version="4"),
         )
 
         # Checking if the versions were created correctly
@@ -382,11 +353,11 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
                 for item_version in self.data_store2.get_item_versions()
             },
             {
-                (str(self._get_id(item1)), str(self.last_item_change_1.id)),
-                (str(self._get_id(item2)), str(self.last_item_change_2.id)),
-                (str(self._get_id(item3)), str(self.last_item_change_3.id)),
-                (str(self._get_id(item104)), str(self.last_item_change_104.id),),
-                (str(self._get_id(item105)), str(self.last_item_change_105.id),),
+                (str(self.data_store2._get_id(item1)), str(self.last_item_change_1.id)),
+                (str(self.data_store2._get_id(item2)), str(self.last_item_change_2.id)),
+                (str(self.data_store2._get_id(item3)), str(self.last_item_change_3.id)),
+                (str(self.data_store2._get_id(item104)), str(self.last_item_change_104.id),),
+                (str(self.data_store2._get_id(item105)), str(self.last_item_change_105.id),),
             },
         )
 
@@ -458,21 +429,21 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         item105 = self.data_store1.get_item_by_id(self.item105_id)
 
         self.assertEqual(
-            item1, self._deserialize_item(id=str(self.item1_id), name="I1", version="5")
+            item1, self.data_store1._create_item(id=str(self.item1_id), name="I1", version="5")
         )
         self.assertEqual(
-            item2, self._deserialize_item(id=str(self.item2_id), name="I2", version="3")
+            item2, self.data_store1._create_item(id=str(self.item2_id), name="I2", version="3")
         )
         self.assertEqual(
-            item3, self._deserialize_item(id=str(self.item3_id), name="I3", version="4")
+            item3, self.data_store1._create_item(id=str(self.item3_id), name="I3", version="4")
         )
         self.assertEqual(
             item104,
-            self._deserialize_item(id=str(self.item104_id), name="I104", version="2"),
+            self.data_store1._create_item(id=str(self.item104_id), name="I104", version="2"),
         )
         self.assertEqual(
             item105,
-            self._deserialize_item(id=str(self.item105_id), name="I105", version="4"),
+            self.data_store1._create_item(id=str(self.item105_id), name="I105", version="4"),
         )
 
         # Making sure the version were created correctly
@@ -482,11 +453,11 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
                 for item_version in self.data_store2.get_item_versions()
             },
             {
-                (str(self._get_id(item1)), str(self.last_item_change_1.id)),
-                (str(self._get_id(item2)), str(self.last_item_change_2.id)),
-                (str(self._get_id(item3)), str(self.last_item_change_3.id)),
-                (str(self._get_id(item104)), str(self.last_item_change_104.id),),
-                (str(self._get_id(item105)), str(self.last_item_change_105.id),),
+                (str(self.data_store1._get_id(item1)), str(self.last_item_change_1.id)),
+                (str(self.data_store1._get_id(item2)), str(self.last_item_change_2.id)),
+                (str(self.data_store1._get_id(item3)), str(self.last_item_change_3.id)),
+                (str(self.data_store1._get_id(item104)), str(self.last_item_change_104.id),),
+                (str(self.data_store1._get_id(item105)), str(self.last_item_change_105.id),),
             },
         )
 
@@ -524,7 +495,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         other_provider_change = self.data_store1.commit_item_change(
             operation=Operation.UPDATE,
             item_id=self.item2_id,
-            item=self._deserialize_item(
+            item=self.data_store1._create_item(
                 id=str(self.item2_id), name="I2", version="other_provider_version",
             ),
         )
@@ -533,7 +504,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         provider_in_test_change = self.data_store2.commit_item_change(
             operation=Operation.UPDATE,
             item_id=self.item2_id,
-            item=self._deserialize_item(
+            item=self.data_store2._create_item(
                 id=str(self.item2_id), name="I2", version="provider_in_test_version",
             ),
         )
@@ -561,7 +532,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         self.assertEqual(num_changes + 1, len(self.data_store2.get_item_changes()))
 
         item_version = self.data_store2.get_local_version(
-            item_id=provider_in_test_change.item_id
+            item_id=provider_in_test_change.serialization_result.item_id
         )
         self.assertEqual(
             item_version.current_item_change.id, provider_in_test_change.id
@@ -581,7 +552,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         item2 = self.data_store2.get_item_by_id(id=self.item2_id)
         self.assertEqual(
             item2,
-            self._deserialize_item(
+            self.data_store2._create_item(
                 id=str(self.item2_id), name="I2", version="provider_in_test_version"
             ),
         )
@@ -608,7 +579,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         self.assertEqual(num_changes + 1, len(self.data_store1.get_item_changes()))
 
         item_version = self.data_store1.get_local_version(
-            item_id=provider_in_test_change.item_id
+            item_id=provider_in_test_change.serialization_result.item_id
         )
         self.assertEqual(
             item_version.current_item_change.id, provider_in_test_change.id
@@ -628,7 +599,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         item2 = self.data_store1.get_item_by_id(id=self.item2_id)
         self.assertEqual(
             item2,
-            self._deserialize_item(
+            self.data_store1._create_item(
                 id=str(self.item2_id), name="I2", version="provider_in_test_version"
             ),
         )
@@ -644,7 +615,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         other_provider_change = self.data_store1.commit_item_change(
             operation=Operation.UPDATE,
             item_id=self.item2_id,
-            item=self._deserialize_item(
+            item=self.data_store1._create_item(
                 id=str(self.item2_id), name="I2", version="other_provider_version",
             ),
         )
@@ -653,7 +624,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         provider_in_test_change = self.data_store2.commit_item_change(
             operation=Operation.DELETE,
             item_id=self.item2_id,
-            item=self._deserialize_item(id=str(self.item2_id), name="I2", version="3"),
+            item=self.data_store2._create_item(id=str(self.item2_id), name="I2", version="3"),
         )
 
         # Sinchronization: other_provider (1) -> provider_in_test (2)
@@ -681,7 +652,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         self.assertEqual(num_items, len(self.data_store2.get_items()))
 
         item_version = self.data_store2.get_local_version(
-            item_id=provider_in_test_change.item_id
+            item_id=provider_in_test_change.serialization_result.item_id
         )
         self.assertEqual(
             item_version.current_item_change.id, provider_in_test_change.id
@@ -725,7 +696,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         self.assertEqual(num_items - 1, len(self.data_store1.get_items()))
 
         item_version = self.data_store1.get_local_version(
-            item_id=provider_in_test_change.item_id
+            item_id=provider_in_test_change.serialization_result.item_id
         )
         self.assertEqual(
             item_version.current_item_change.id, provider_in_test_change.id
@@ -756,14 +727,14 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         other_provider_change = self.data_store1.commit_item_change(
             operation=Operation.DELETE,
             item_id=self.item2_id,
-            item=self._deserialize_item(id=str(self.item2_id), name="I2", version="3"),
+            item=self.data_store1._create_item(id=str(self.item2_id), name="I2", version="3"),
         )
 
         # Same item I2 is also deleted by data_store2 (provider_in_test)
         provider_in_test_change = self.data_store2.commit_item_change(
             operation=Operation.DELETE,
             item_id=self.item2_id,
-            item=self._deserialize_item(id=str(self.item2_id), name="I2", version="3"),
+            item=self.data_store2._create_item(id=str(self.item2_id), name="I2", version="3"),
         )
 
         # Sinchronization: other_provider (1) -> provider_in_test (2)
@@ -791,7 +762,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         self.assertEqual(num_items, len(self.data_store2.get_items()))
 
         item_version = self.data_store2.get_local_version(
-            item_id=provider_in_test_change.item_id
+            item_id=provider_in_test_change.serialization_result.item_id
         )
         self.assertEqual(
             item_version.current_item_change.id, provider_in_test_change.id
@@ -835,7 +806,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         self.assertEqual(num_items, len(self.data_store1.get_items()))
 
         item_version = self.data_store1.get_local_version(
-            item_id=provider_in_test_change.item_id
+            item_id=provider_in_test_change.serialization_result.item_id
         )
         self.assertEqual(
             item_version.current_item_change.id, provider_in_test_change.id
@@ -882,7 +853,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         other_provider_change_i2 = self.data_store1.commit_item_change(
             operation=Operation.UPDATE,
             item_id=self.item2_id,
-            item=self._deserialize_item(
+            item=self.data_store1._create_item(
                 id=str(self.item2_id), name="I2", version="other_provider_version_i2",
             ),
         )
@@ -890,7 +861,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         other_provider_change_i3 = self.data_store1.commit_item_change(
             operation=Operation.UPDATE,
             item_id=self.item3_id,
-            item=self._deserialize_item(
+            item=self.data_store1._create_item(
                 id=str(self.item3_id), name="I3", version="other_provider_version_i3",
             ),
         )
@@ -901,7 +872,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         item2_id = self.item2_id
 
         def execute_item_change_mock(item_change: "ItemChange"):
-            if str(item_change.item_id) == str(item2_id):
+            if str(item_change.serialization_result.item_id) == str(item2_id):
                 raise ValueError("Error!")
             else:
                 original(item_change)
@@ -930,11 +901,11 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         item2 = self.data_store2.get_item_by_id(id=self.item2_id)
         self.assertEqual(
             item2,
-            self._deserialize_item(id=str(self.item2_id), name="I2", version="3"),
+            self.data_store2._create_item(id=str(self.item2_id), name="I2", version="3"),
         )
 
         item2_version = self.data_store2.get_local_version(
-            item_id=other_provider_change_i2.item_id
+            item_id=other_provider_change_i2.serialization_result.item_id
         )
         self.assertEqual(
             item2_version.current_item_change.id, self.last_item_change_2.id
@@ -964,12 +935,12 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         item3 = self.data_store2.get_item_by_id(id=self.item3_id)
         self.assertEqual(
             item3,
-            self._deserialize_item(
+            self.data_store2._create_item(
                 id=str(self.item3_id), name="I3", version="other_provider_version_i3"
             ),
         )
         item3_version = self.data_store2.get_local_version(
-            item_id=other_provider_change_i3.item_id
+            item_id=other_provider_change_i3.serialization_result.item_id
         )
         self.assertEqual(
             item3_version.current_item_change.id, other_provider_change_i3.id
@@ -982,7 +953,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         item2_id = self.item2_id
 
         def execute_item_change_mock(item_change: "ItemChange"):
-            if str(item_change.item_id) == str(item2_id):
+            if str(item_change.serialization_result.item_id) == str(item2_id):
                 raise ValueError("Error!")
             else:
                 original(item_change)
@@ -1008,11 +979,11 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         item2 = self.data_store2.get_item_by_id(id=self.item2_id)
         self.assertEqual(
             item2,
-            self._deserialize_item(id=str(self.item2_id), name="I2", version="3"),
+            self.data_store2._create_item(id=str(self.item2_id), name="I2", version="3"),
         )
 
         item2_version = self.data_store2.get_local_version(
-            item_id=other_provider_change_i2.item_id
+            item_id=other_provider_change_i2.serialization_result.item_id
         )
         self.assertEqual(
             item2_version.current_item_change.id, self.last_item_change_2.id
@@ -1040,12 +1011,12 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         item3 = self.data_store2.get_item_by_id(id=self.item3_id)
         self.assertEqual(
             item3,
-            self._deserialize_item(
+            self.data_store2._create_item(
                 id=str(self.item3_id), name="I3", version="other_provider_version_i3"
             ),
         )
         item3_version = self.data_store2.get_local_version(
-            item_id=other_provider_change_i3.item_id
+            item_id=other_provider_change_i3.serialization_result.item_id
         )
         self.assertEqual(
             item3_version.current_item_change.id, other_provider_change_i3.id
@@ -1068,13 +1039,13 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         item2 = self.data_store2.get_item_by_id(id=self.item2_id)
         self.assertEqual(
             item2,
-            self._deserialize_item(
+            self.data_store2._create_item(
                 id=str(self.item2_id), name="I2", version="other_provider_version_i2"
             ),
         )
 
         item2_version = self.data_store2.get_local_version(
-            item_id=other_provider_change_i2.item_id
+            item_id=other_provider_change_i2.serialization_result.item_id
         )
         self.assertEqual(
             item2_version.current_item_change.id, other_provider_change_i2.id
@@ -1086,6 +1057,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         conflict_log = self.data_store2.get_conflict_logs()[0]
         self.assertEqual(conflict_log.item_change_loser.id, other_provider_change_i2.id)
         self.assertEqual(conflict_log.status, ConflictStatus.RESOLVED)
+
         self.assertEqual(self.data_store1, self.data_store2)
 
     def test_conflict_exception2(self):
@@ -1115,14 +1087,14 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         other_provider_delete_i2 = self.data_store1.commit_item_change(
             operation=Operation.DELETE,
             item_id=self.item2_id,
-            item=self._deserialize_item(id=str(self.item2_id), name=None, version=None),
+            item=self.data_store1._create_item(id=str(self.item2_id), name=None, version=None),
         )
 
         # provider_in_test >> Updates item I2
         provider_in_test_update_i2_1 = self.data_store2.commit_item_change(
             operation=Operation.UPDATE,
             item_id=self.item2_id,
-            item=self._deserialize_item(
+            item=self.data_store2._create_item(
                 id=str(self.item2_id),
                 name="I2",
                 version="provider_in_test_update_i2_1",
@@ -1133,7 +1105,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         provider_in_test_update_i2_2 = self.data_store2.commit_item_change(
             operation=Operation.UPDATE,
             item_id=self.item2_id,
-            item=self._deserialize_item(
+            item=self.data_store2._create_item(
                 id=str(self.item2_id),
                 name="I2",
                 version="provider_in_test_update_i2_2",
@@ -1144,7 +1116,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         other_provider_change_i3 = self.data_store1.commit_item_change(
             operation=Operation.UPDATE,
             item_id=self.item3_id,
-            item=self._deserialize_item(
+            item=self.data_store1._create_item(
                 id=str(self.item3_id), name="I3", version="other_provider_update_i3_1",
             ),
         )
@@ -1155,7 +1127,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         item2_id = self.item2_id
 
         def execute_item_change_mock(item_change: "ItemChange"):
-            if str(item_change.item_id) == str(item2_id):
+            if str(item_change.serialization_result.item_id) == str(item2_id):
                 raise ValueError("Error!")
             else:
                 original(item_change)
@@ -1184,7 +1156,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         item2 = self.data_store2.get_item_by_id(id=self.item2_id)
         self.assertEqual(
             item2,
-            self._deserialize_item(
+            self.data_store2._create_item(
                 id=str(self.item2_id),
                 name="I2",
                 version="provider_in_test_update_i2_2",
@@ -1192,7 +1164,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         )
 
         item2_version = self.data_store2.get_local_version(
-            item_id=provider_in_test_update_i2_2.item_id
+            item_id=provider_in_test_update_i2_2.serialization_result.item_id
         )
         self.assertEqual(
             item2_version.current_item_change.id, provider_in_test_update_i2_2.id
@@ -1222,12 +1194,12 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         item3 = self.data_store2.get_item_by_id(id=self.item3_id)
         self.assertEqual(
             item3,
-            self._deserialize_item(
+            self.data_store2._create_item(
                 id=str(self.item3_id), name="I3", version="other_provider_update_i3_1",
             ),
         )
         item3_version = self.data_store2.get_local_version(
-            item_id=other_provider_change_i3.item_id
+            item_id=other_provider_change_i3.serialization_result.item_id
         )
         self.assertEqual(
             item3_version.current_item_change.id, other_provider_change_i3.id
@@ -1240,7 +1212,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
             self.data_store1.get_item_by_id(id=self.item2_id)
 
         item2_version = self.data_store1.get_local_version(
-            item_id=other_provider_delete_i2.item_id
+            item_id=other_provider_delete_i2.serialization_result.item_id
         )
         self.assertEqual(
             item2_version.current_item_change.id, other_provider_delete_i2.id
@@ -1280,12 +1252,12 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         item3 = self.data_store1.get_item_by_id(id=self.item3_id)
         self.assertEqual(
             item3,
-            self._deserialize_item(
+            self.data_store1._create_item(
                 id=str(self.item3_id), name="I3", version="other_provider_update_i3_1",
             ),
         )
         item3_version = self.data_store1.get_local_version(
-            item_id=other_provider_change_i3.item_id
+            item_id=other_provider_change_i3.serialization_result.item_id
         )
         self.assertEqual(
             item3_version.current_item_change.id, other_provider_change_i3.id
@@ -1296,7 +1268,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         provider_in_test_update_i2_3 = self.data_store2.commit_item_change(
             operation=Operation.UPDATE,
             item_id=self.item2_id,
-            item=self._deserialize_item(
+            item=self.data_store2._create_item(
                 id=str(self.item2_id),
                 name="I2",
                 version="provider_in_test_update_i2_3",
@@ -1318,7 +1290,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
             self.data_store2.get_item_by_id(id=self.item2_id)
 
         item2_version = self.data_store2.get_local_version(
-            item_id=provider_in_test_update_i2_3.item_id
+            item_id=provider_in_test_update_i2_3.serialization_result.item_id
         )
         self.assertEqual(
             item2_version.current_item_change.id, other_provider_delete_i2.id
@@ -1358,7 +1330,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
             self.data_store1.get_item_by_id(id=self.item2_id)
 
         item2_version = self.data_store1.get_local_version(
-            item_id=other_provider_delete_i2.item_id
+            item_id=other_provider_delete_i2.serialization_result.item_id
         )
         self.assertEqual(
             item2_version.current_item_change.id, other_provider_delete_i2.id
@@ -1419,7 +1391,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         other_provider_update_i2_1 = self.data_store1.commit_item_change(
             operation=Operation.UPDATE,
             item_id=self.item2_id,
-            item=self._deserialize_item(
+            item=self.data_store1._create_item(
                 id=str(self.item2_id), name="I2", version="other_provider_update_i2_1",
             ),
         )
@@ -1428,14 +1400,14 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         provider_in_test_delete_i2 = self.data_store2.commit_item_change(
             operation=Operation.DELETE,
             item_id=self.item2_id,
-            item=self._deserialize_item(id=str(self.item2_id), name=None, version=None),
+            item=self.data_store2._create_item(id=str(self.item2_id), name=None, version=None),
         )
 
         # other_provider >> Updates item I2
         other_provider_update_i2_2 = self.data_store1.commit_item_change(
             operation=Operation.UPDATE,
             item_id=self.item2_id,
-            item=self._deserialize_item(
+            item=self.data_store1._create_item(
                 id=str(self.item2_id), name="I2", version="other_provider_update_i2_2",
             ),
         )
@@ -1530,7 +1502,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         item2 = self.data_store1.get_item_by_id(id=self.item2_id)
         self.assertEqual(
             item2,
-            self._deserialize_item(
+            self.data_store1._create_item(
                 id=str(self.item2_id), name="I2", version="other_provider_update_i2_2",
             ),
         )
@@ -1573,7 +1545,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         other_provider_update_i2_3 = self.data_store1.commit_item_change(
             operation=Operation.UPDATE,
             item_id=self.item2_id,
-            item=self._deserialize_item(
+            item=self.data_store1._create_item(
                 id=str(self.item2_id), name="I2", version="other_provider_update_i2_3",
             ),
         )

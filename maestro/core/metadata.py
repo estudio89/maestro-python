@@ -1,8 +1,10 @@
 import datetime as dt
 import copy
 from enum import Enum
+from dataclasses import dataclass, field
 import uuid
 from typing import List, Optional, Dict, cast
+
 
 class VectorClockItem:
     """Stores the timestamp from a specific provider"""
@@ -169,6 +171,21 @@ class Operation(Enum):
     DELETE = "DELETE"
 
 
+@dataclass(frozen=True)
+class SerializationResult:
+    """Stores the result of serializing an item
+
+    Attributes:
+        item_id (str): The primary key of the item.
+        entity_name (str): The type of entity represented by this item.
+        serialized_item (str): The serialized item.
+    """
+
+    item_id: "str"
+    entity_name: "str"
+    serialized_item: "str" = field(repr=False)
+
+
 class ItemChange:
     """Represents a change performed to an item.
 
@@ -178,11 +195,10 @@ class ItemChange:
         insert_provider_id (str): The identifier of the provider that first created the item being referenced by this change.
         insert_provider_timestamp (dt.datetime): The timestamp when the item that is referenced by this change was created.
         is_applied (bool): Indicates whether this change has already been applied to the item.
-        item_id (str): The primary key of the item referenced by this change.
         operation (Operation): The operation that was performed with this change.
         provider_id (str): The identifier of the provider that created the change.
         provider_timestamp (dt.datetime): The timestamp of the provider that created the change.
-        serialized_item (str): The serialized item.
+        serialization_result (SerializationResult): The serialization information for the item referenced by this change.
         should_ignore (bool): Indicates whether this change should be ignored (will only be true if this change lost a conflict dispute).
         vector_clock (VectorClock): The synchronization clock at the time this change was created.
     """
@@ -190,12 +206,11 @@ class ItemChange:
     id: "uuid.UUID"
     date_created: "dt.datetime"
     operation: "Operation"
-    item_id: "str"
+    serialization_result: "SerializationResult"
     provider_timestamp: "dt.datetime"
     provider_id: "str"
     insert_provider_id: "str"
     insert_provider_timestamp: "dt.datetime"
-    serialized_item: "str"
     should_ignore: "bool"
     is_applied: "bool"
     vector_clock: "VectorClock"
@@ -205,12 +220,11 @@ class ItemChange:
         id: "uuid.UUID",
         date_created: "dt.datetime",
         operation: "Operation",
-        item_id: "str",
         provider_timestamp: "dt.datetime",
         provider_id: "str",
         insert_provider_timestamp: "dt.datetime",
         insert_provider_id: "str",
-        serialized_item: "str",
+        serialization_result: "SerializationResult",
         should_ignore: "bool",
         is_applied: "bool",
         vector_clock: "VectorClock",
@@ -222,31 +236,29 @@ class ItemChange:
             insert_provider_id (str): The identifier of the provider that first created the item being referenced by this change.
             insert_provider_timestamp (dt.datetime): The timestamp when the item that is referenced by this change was created.
             is_applied (bool): Indicates whether this change has already been applied to the item.
-            item_id (str): The primary key of the item referenced by this change.
             operation (Operation): The operation that was performed with this change.
             provider_id (str): The identifier of the provider that created the change.
             provider_timestamp (dt.datetime): The timestamp of the provider that created the change.
-            serialized_item (str): The serialized item.
+            serialization_result (SerializationResult): The serialization information for the item referenced by this change.
             should_ignore (bool): Indicates whether this change should be ignored (will only be true if this change lost a conflict dispute).
             vector_clock (VectorClock): The synchronization clock at the time this change was created.
         """
         self.id = id
         self.date_created = date_created
         self.operation = operation
-        self.item_id = item_id
         self.provider_timestamp = provider_timestamp
         self.provider_id = provider_id
         self.insert_provider_timestamp = insert_provider_timestamp
         self.insert_provider_id = insert_provider_id
         self.insert_provider_id = provider_id
         self.insert_provider_id = provider_id
-        self.serialized_item = serialized_item
+        self.serialization_result = serialization_result
         self.should_ignore = should_ignore
         self.is_applied = is_applied
         self.vector_clock = vector_clock
 
     def __repr__(self):  # pragma: no cover
-        return f"ItemChange(id='{self.id}', operation={self.operation}, item_id={self.item_id}, provider_id={self.provider_id}, should_ignore={self.should_ignore}, is_applied={self.is_applied})"
+        return f"ItemChange(id='{self.id}', operation={self.operation}, serialization_result={self.serialization_result}, provider_id={self.provider_id}, should_ignore={self.should_ignore}, is_applied={self.is_applied})"
 
     def reset_status(self):
         """Resets all the fields that only make sense locally to a provider that applied the change.
@@ -261,21 +273,17 @@ class ItemChange:
         for param in [
             "id",
             "operation",
-            "item_id",
             "provider_timestamp",
             "provider_id",
             "insert_provider_timestamp",
             "insert_provider_id",
-            "serialized_item",
+            "serialization_result",
             "should_ignore",
             "is_applied",
             "vector_clock",
         ]:
             self_param = getattr(self, param)
             other_param = getattr(other, param)
-            if param == "item_id":
-                self_param = str(self_param)
-                other_param = str(other_param)
 
             if not self_param == other_param:
                 return False
@@ -289,10 +297,9 @@ class ItemChange:
                 for param in [
                     "id",
                     "operation",
-                    "item_id",
                     "provider_timestamp",
                     "provider_id",
-                    "serialized_item",
+                    "serialization_result",
                     "should_ignore",
                     "is_applied",
                     "vector_clock",

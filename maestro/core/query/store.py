@@ -149,13 +149,13 @@ class TrackQueriesStoreMixin:
             new_item_change (ItemChange): The new change
         """
         item = cast("BaseDataStore", self).item_serializer.deserialize_item(
-            new_item_change.serialized_item
+            new_item_change.serialization_result
         )
         old_item: "Optional[Any]" = None
 
         if not old_item_change and not ignore_old_change_if_none:
             item_version = cast("BaseDataStore", self).get_item_version(
-                item_id=new_item_change.item_id
+                item_id=new_item_change.serialization_result.item_id
             )
 
             if item_version:
@@ -163,7 +163,7 @@ class TrackQueriesStoreMixin:
 
         if old_item_change:
             old_item = cast("BaseDataStore", self).deserialize_item(
-                old_item_change.serialized_item
+                old_item_change.serialization_result
             )
 
         for tracked_query in self.get_tracked_queries():

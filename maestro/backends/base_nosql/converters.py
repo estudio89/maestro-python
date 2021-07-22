@@ -28,7 +28,6 @@ from maestro.core.utils import cast_away_optional
 
 import datetime as dt
 import uuid
-from .utils import get_collection_name
 from .serializer import NoSQLItemSerializer
 from typing import List, TYPE_CHECKING, Optional, Any, Type, Union, cast
 from .collections import (
@@ -215,7 +214,9 @@ class ItemVersionMetadataConverter(DataStoreAccessConverter):
             metadata_object=metadata_object.vector_clock
         )
         current_item_change = cast_away_optional(metadata_object.current_item_change)
-        collection_name = get_collection_name(current_item_change.serialized_item)
+        collection_name = entity_name_to_collection(
+            current_item_change.serialization_result.entity_name
+        )
         return ItemVersionRecord(
             id=str(metadata_object.item_id),
             date_created=cast_away_optional(
@@ -243,7 +244,7 @@ class ItemChangeMetadataConverter(DataStoreAccessConverter):
         vector_clock = self.vector_clock_converter.to_metadata(
             record=record["vector_clock"]
         )
-        serialized_item = self.item_serializer.serialize_item(
+        serialization_result = self.item_serializer.serialize_item(
             item=record["serialized_item"]
         )
         metadata_object = ItemChange(
@@ -252,7 +253,6 @@ class ItemChangeMetadataConverter(DataStoreAccessConverter):
                 self.date_converter.deserialize_date(record["date_created"])
             ),
             operation=Operation[record["operation"]],
-            item_id=record["item_id"],
             provider_timestamp=cast_away_optional(
                 self.date_converter.deserialize_date(record["provider_timestamp"])
             ),
@@ -263,7 +263,7 @@ class ItemChangeMetadataConverter(DataStoreAccessConverter):
                 )
             ),
             insert_provider_id=record["insert_provider_id"],
-            serialized_item=serialized_item,
+            serialization_result=serialization_result,
             should_ignore=record["should_ignore"],
             is_applied=record["is_applied"],
             vector_clock=vector_clock,
@@ -274,9 +274,11 @@ class ItemChangeMetadataConverter(DataStoreAccessConverter):
         vector_clock = self.vector_clock_converter.to_record(
             metadata_object=metadata_object.vector_clock
         )
-        collection_name = get_collection_name(metadata_object.serialized_item)
+        collection_name = entity_name_to_collection(
+            metadata_object.serialization_result.entity_name
+        )
         deserialized_item = self.item_serializer.deserialize_item(
-            serialized_item=metadata_object.serialized_item
+            serialization_result=metadata_object.serialization_result
         )
         return ItemChangeRecord(
             id=str(metadata_object.id),
@@ -284,7 +286,7 @@ class ItemChangeMetadataConverter(DataStoreAccessConverter):
                 self.date_converter.serialize_date(metadata_object.date_created)
             ),
             operation=metadata_object.operation.value,
-            item_id=str(metadata_object.item_id),
+            item_id=str(metadata_object.serialization_result.item_id),
             collection_name=collection_name,
             provider_timestamp=cast_away_optional(
                 self.date_converter.serialize_date(metadata_object.provider_timestamp)
