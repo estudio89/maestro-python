@@ -8,6 +8,7 @@ from maestro.backends.mongo import (
     ConflictLogMetadataConverter,
     VectorClockMetadataConverter,
 )
+from maestro.backends.base_nosql.converters import TrackedQueryMetadataConverter
 from example.base_nosql.api_serializer import NoSQLAPISerializer
 from example.base_nosql.factory import NoSQLExampleSerializer
 from example.events import DebugEventsManager
@@ -34,6 +35,7 @@ def create_provider(local_provider_id: "str"):
 
     # Dependency injection
     item_serializer = NoSQLExampleSerializer()
+    tracked_query_metadata_converter = TrackedQueryMetadataConverter()
     sync_session_metadata_converter = SyncSessionMetadataConverter()
     conflict_log_metadata_converter = ConflictLogMetadataConverter()
     vector_clock_metadata_converter = VectorClockMetadataConverter()
@@ -52,6 +54,7 @@ def create_provider(local_provider_id: "str"):
         item_change_metadata_converter=item_change_metadata_converter,
         conflict_log_metadata_converter=conflict_log_metadata_converter,
         vector_clock_metadata_converter=vector_clock_metadata_converter,
+        tracked_query_metadata_converter=tracked_query_metadata_converter,
         item_serializer=item_serializer,
         db=db,
         client=client,

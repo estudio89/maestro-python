@@ -1,32 +1,38 @@
 from maestro.core.serializer import BaseItemSerializer
+from maestro.core.metadata import SerializationResult
 from maestro.core.utils import parse_datetime
+from maestro.backends.base_nosql.utils import entity_name_to_collection
 from example.base_nosql.collections import TodoRecord
 import json
 
+
 class NoSQLExampleSerializer(BaseItemSerializer):
-    def serialize_item(self, item: "TodoRecord") -> "str":
+    def serialize_item(self, item: "TodoRecord") -> "SerializationResult":
 
         serialized = {
-            "fields": {
-                "date_created": item["date_created"].isoformat(),
-                "done": item["done"],
-                "text": item["text"],
-            },
-            "pk": item["id"],
-            "entity_name": "todos_todo",
+            "date_created": item["date_created"].isoformat(),
+            "done": item["done"],
+            "text": item["text"],
         }
 
-        serialized = dict(sorted(serialized.items()))
-        return json.dumps(serialized)
+        serialized_item = json.dumps(dict(sorted(serialized.items())))
+        return SerializationResult(
+            item_id=item["id"],
+            entity_name="todos_todo",
+            serialized_item=serialized_item,
+        )
 
-    def deserialize_item(self, serialized_item: "str") -> "TodoRecord":
-        data = json.loads(serialized_item)
+    def deserialize_item(
+        self, serialization_result: "SerializationResult"
+    ) -> "TodoRecord":
+        data = json.loads(serialization_result.serialized_item)
+        collection_name = entity_name_to_collection(serialization_result.entity_name)
         deserialized = {
-            "id": data["pk"],
-            "text": data["fields"]["text"],
-            "done": data["fields"]["done"],
-            "date_created": parse_datetime(value=data["fields"]["date_created"]),
-            "collection_name": "todos_todo",
+            "id": serialization_result.item_id,
+            "text": data["text"],
+            "done": data["done"],
+            "date_created": parse_datetime(value=data["date_created"]),
+            "collection_name": collection_name,
         }
 
         return deserialized

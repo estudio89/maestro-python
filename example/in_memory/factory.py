@@ -5,7 +5,7 @@ from maestro.core.metadata import (
     ConflictLog,
     VectorClock,
 )
-from maestro.core.serializer import BaseItemSerializer
+from maestro.core.serializer import BaseItemSerializer, SerializationResult
 from maestro.core.execution import ChangesExecutor, ConflictResolver
 from example.events import DebugEventsManager
 from maestro.backends.in_memory import (
@@ -15,33 +15,36 @@ from maestro.backends.in_memory import (
 )
 from .types import TodoType
 from .api_serializer import InMemoryAPISerializer
-from typing import List
 import json
 
 
 class InMemoryExampleSerializer(BaseItemSerializer):
-    def serialize_item(self, item: "TodoType") -> "str":
+    def serialize_item(self, item: "TodoType") -> "SerializationResult":
 
-        serialized = {
-            "fields": {
+        serialized = (
+            {
                 "date_created": item["date_created"],
                 "done": item["done"],
                 "text": item["text"],
             },
-            "pk": item["id"],
-            "entity_name": "todos_todo",
-        }
+        )
 
         serialized = dict(sorted(serialized.items()))
-        return json.dumps(serialized)
+        result = SerializationResult(
+            item_id=item["id"],
+            entity_name="todos_todo",
+            serialized_item=json.dumps(serialized),
+        )
 
-    def deserialize_item(self, serialized_item: "str") -> "TodoType":
-        data = json.loads(serialized_item)
+        return result
+
+    def deserialize_item(self, serialization_result: "SerializationResult") -> "TodoType":
+        data = json.loads(serialization_result.serialized_item)
         deserialized = {
-            "id": data["pk"],
-            "text": data["fields"]["text"],
-            "done": data["fields"]["done"],
-            "date_created": data["fields"]["date_created"],
+            "id": serialization_result.item_id,
+            "text": data["text"],
+            "done": data["done"],
+            "date_created": data["date_created"],
         }
 
         return deserialized
