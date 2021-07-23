@@ -54,7 +54,7 @@ class BackendTestMixin:
     def _serialize_item(
         self, id: "str", name: "str", version: "str"
     ) -> "str":
-        return '{"name": "%s", "version": "%s"}' % (name, version)
+        return '{"id": "%s", "name": "%s", "version": "%s"}' % (id, name, version)
 
     def _create_sync_lock(self) -> "BaseSyncLock":  # pragma: no cover
         raise NotImplementedError()

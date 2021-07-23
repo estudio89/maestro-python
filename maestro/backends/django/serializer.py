@@ -18,6 +18,7 @@ class DjangoItemSerializer(BaseItemSerializer):
         entity_name = app_model_to_entity_name(app_model)
         fields = serialized_item.pop("fields")
         pk = serialized_item.pop("pk")
+        fields["id"] = pk
         serialized_item = dict(sorted(fields.items()))
         serialized_item_str = json.dumps(serialized_item)
         result = SerializationResult(

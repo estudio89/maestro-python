@@ -34,7 +34,7 @@ export class FirestoreAppItemSerializer implements BaseItemSerializer<AppItem> {
         const collectionName = item.collectionName;
         const fields: { [key: string]: any } = {};
         for (let key in item) {
-            if (["id", "collectionName"].indexOf(key) !== -1) {
+            if (["collectionName"].indexOf(key) !== -1) {
                 continue;
             }
 

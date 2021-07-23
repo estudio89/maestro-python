@@ -12,7 +12,7 @@ import datetime as dt
 
 class NoSQLItemSerializer(BaseItemSerializer):
     def get_skip_fields(self) -> "List[str]":
-        return ["id", "collection_name"]
+        return ["collection_name"]
 
     def serialize_field_value(
         self, collection_name: "str", item: "Dict[str, Any]", key="str"
