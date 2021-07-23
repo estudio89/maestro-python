@@ -3,6 +3,7 @@ from maestro.core.exceptions import ItemNotFoundException
 from maestro.core.query.metadata import Query
 from maestro.core.metadata import (
     VectorClock,
+    VectorClockItem,
     ItemVersion,
     ItemChange,
     ItemChangeBatch,
@@ -204,8 +205,10 @@ class FirestoreDataStore(NoSQLDataStore):
             self._usage.register_read(collection_name=collection_name, document_id="")
         for doc in docs:
             instance = self._document_to_raw_instance(doc)
-            vector_clock.update_vector_clock_item(
-                provider_id=instance["id"], timestamp=instance["timestamp"]
+            vector_clock.update(
+                VectorClockItem(
+                    provider_id=instance["id"], timestamp=instance["timestamp"]
+                )
             )
         return vector_clock
 

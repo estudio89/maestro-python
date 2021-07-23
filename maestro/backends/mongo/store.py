@@ -6,10 +6,11 @@ from maestro.backends.base_nosql.store import NoSQLDataStore
 from maestro.backends.mongo.converters import DateConverter
 from maestro.backends.mongo.utils import convert_to_mongo_filter, convert_to_mongo_sort
 from maestro.core.exceptions import ItemNotFoundException
-from maestro.core.query.metadata import Query, TrackedQuery, Filter
+from maestro.core.query.metadata import Query, TrackedQuery
 from maestro.core.query.store import TrackQueriesStoreMixin
 from maestro.core.metadata import (
     VectorClock,
+    VectorClockItem,
     ItemVersion,
     ItemChange,
     ItemChangeBatch,
@@ -196,8 +197,10 @@ class MongoDataStore(TrackQueriesStoreMixin, NoSQLDataStore):
             timestamp = self.date_converter.deserialize_date(
                 value=instance["timestamp"]
             )
-            vector_clock.update_vector_clock_item(
-                provider_id=instance["id"], timestamp=timestamp
+            vector_clock.update(
+                VectorClockItem(
+                    provider_id=instance["id"], timestamp=timestamp
+                )
             )
         return vector_clock
 

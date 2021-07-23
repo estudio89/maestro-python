@@ -4,6 +4,7 @@ from maestro.core.query.metadata import Query
 from maestro.core.exceptions import ItemNotFoundException
 from maestro.core.metadata import (
     VectorClock,
+    VectorClockItem,
     ItemVersion,
     ItemChange,
     ItemChangeBatch,
@@ -51,8 +52,11 @@ class DjangoDataStore(BaseDataStore):
                 provider_id=provider_id
             ).aggregate(max_timestamp=models.Max("provider_timestamp"))
             if max_timestamp["max_timestamp"]:
-                vector_clock.update_vector_clock_item(
-                    provider_id=provider_id, timestamp=max_timestamp["max_timestamp"]
+                vector_clock.update(
+                    VectorClockItem(
+                        provider_id=provider_id,
+                        timestamp=max_timestamp["max_timestamp"],
+                    )
                 )
         return vector_clock
 

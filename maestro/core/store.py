@@ -139,8 +139,8 @@ class BaseDataStore(ABC):
 
         local_vector_clock = copy.deepcopy(old_version.vector_clock)
         now_utc = get_now_utc()
-        local_vector_clock.update_vector_clock_item(
-            provider_id=self.local_provider_id, timestamp=now_utc
+        local_vector_clock.update(
+            VectorClockItem(provider_id=self.local_provider_id, timestamp=now_utc)
         )
 
         change_vector_clock_item = VectorClockItem(

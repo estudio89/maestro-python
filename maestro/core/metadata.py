@@ -146,27 +146,18 @@ class VectorClock:
         return vector_clock_item
 
     def update(self, vector_clock_item: "VectorClockItem"):
+        """Updates the corresponding VectorClockItem with the new timestamp only if the new
+        timestamp is greater than the current one.
+
+        Args:
+            vector_clock_item (VectorClockItem): The VectorClockItem that should be updated.
+        """
+
         old_vector_clock_item = self.get_vector_clock_item(
             vector_clock_item.provider_id
         )
         if old_vector_clock_item < vector_clock_item:
             old_vector_clock_item.timestamp = vector_clock_item.timestamp
-
-    def update_vector_clock_item(
-        self, provider_id: "str", timestamp: "dt.datetime"
-    ) -> "VectorClockItem":
-        """Updates the given provider's timestamp with the new timestamp only if the given timestamp is greater than the current one.
-
-        Args:
-            provider_id (str): Provider identifier.
-            timestamp (dt.datetime): New timestamp.
-        """
-
-        vector_clock_item = self.get_vector_clock_item(provider_id)
-        if vector_clock_item.timestamp < timestamp:
-            vector_clock_item.timestamp = timestamp
-
-        return vector_clock_item
 
 
 class Operation(Enum):
