@@ -237,33 +237,6 @@ class InMemoryDataStore(TrackQueriesStoreMixin, BaseDataStore):
         )
         self._save(item=sync_session_record, key="sync_sessions")
 
-    def _get_previous_item_change(
-        self, item_id: "str", provider_id: "str", timestamp: "dt.datetime"
-    ) -> "Optional[ItemChange]":
-        max_item_change = None
-        max_vector_clock_item = None
-
-        for item_change in self.get_item_changes():
-            # NOT SURE IF THE COMPARISON BELOW MAKES SENSE
-            # I think it will be necessary to implement comparison between VectorClocks
-            vector_clock_item = item_change.vector_clock.get_vector_clock_item(
-                provider_id=provider_id
-            )
-            if (
-                item_change.serialization_result.item_id == item_id
-                and item_change.is_applied
-                and not item_change.should_ignore
-                and vector_clock_item.timestamp < timestamp
-            ):
-                if (
-                    max_vector_clock_item is None
-                    or vector_clock_item > max_vector_clock_item
-                ):
-                    max_vector_clock_item = vector_clock_item
-                    max_item_change = item_change
-
-        return max_item_change
-
     def query_items(
         self, query: "Query", vector_clock: "Optional[VectorClock]"
     ) -> "List[Any]":
