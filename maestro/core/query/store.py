@@ -55,7 +55,8 @@ class TrackQueriesStoreMixin:
     def query_items(
         self, query: "Query", vector_clock: "Optional[VectorClock]"
     ) -> "List[Any]":
-        """Returns a list of the item ids that satisfy a query.
+        """Returns a list of the item ids that satisfy a query. By default,
+        items are ordered by their date of insertion.
 
         Args:
             query (Query): The query being tested
@@ -95,7 +96,7 @@ class TrackQueriesStoreMixin:
         return tracked_query
 
     def update_query_vector_clock(self, query: "Query", item_change: "ItemChange"):
-        """Updates the vector clock for the given query.
+        """Updates the vector clock for the given query (if it's being tracked).
 
         Args:
             query (Query): The query
@@ -104,7 +105,7 @@ class TrackQueriesStoreMixin:
         tracked_query = self.get_tracked_query(query=query)
 
         if not tracked_query:
-            tracked_query = self.start_tracking_query(query=query)
+            return
 
         vector_clock = copy.deepcopy(tracked_query.vector_clock)
         vector_clock.update(vector_clock_item=item_change.change_vector_clock_item)

@@ -80,3 +80,11 @@ class MongoFullSyncTest(
 
         with self.assertRaises(ItemNotFoundException):
             self.data_store2.get_item_by_id(id=self.item2_id)
+
+
+class MongoQueryFullSyncTest(
+    tests.mongo.base.MongoBackendTestMixin,
+    tests.base_full_sync.QueryFullSyncTest,
+    tests.mongo.base.MongoTestCase,
+):
+    pass

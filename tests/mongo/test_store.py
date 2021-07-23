@@ -13,6 +13,7 @@ class MongoStoreTest(
 ):
     pass
 
+
 class MongoQueriesTest(
     tests.mongo.base.MongoBackendTestMixin,
     tests.base_store.BaseQueriesTest,
@@ -194,7 +195,7 @@ class MongoQueriesTest(
             SortOrder(field_name="field1"),
             SortOrder(field_name="field2", descending=True),
         ]
-        mongo_ordering = convert_to_mongo_sort(ordering=ordering)
+        mongo_ordering = convert_to_mongo_sort(ordering=ordering, field_prefix="")
 
         self.assertEqual(
             mongo_ordering, {"field1": pymongo.ASCENDING, "field2": pymongo.DESCENDING}

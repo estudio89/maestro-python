@@ -247,8 +247,14 @@ class InMemoryDataStore(TrackQueriesStoreMixin, BaseDataStore):
         )
         item_ids_set: "Set[str]" = set()
         items = []
-        for item_change in self.get_item_changes():
-            if item_change.serialization_result.item_id not in item_ids_set:
+        item_changes = self.get_item_changes()
+        item_changes.reverse() # Reverse so that last changes are first
+        for item_change in item_changes:
+            serialization_result = item_change.serialization_result
+            if (
+                serialization_result.entity_name == query.entity_name
+                and serialization_result.item_id not in item_ids_set
+            ):
                 if (
                     vector_clock
                     and vector_clock.get_vector_clock_item(
@@ -257,12 +263,19 @@ class InMemoryDataStore(TrackQueriesStoreMixin, BaseDataStore):
                     < item_change.change_vector_clock_item
                 ):
                     continue
-                item = self.deserialize_item(item_change.serialization_result)
+
+                item_ids_set.add(serialization_result.item_id)
+                item = self.deserialize_item(serialization_result)
                 in_query = filter_lambda(item)
                 if in_query:
+                    item["inserted_timestamp"] = item_change.insert_vector_clock_item.timestamp
                     items.append(item)
 
         # Sorting
+        items.sort(key=lambda item: item["inserted_timestamp"])
+        for item in items:
+            item.pop("inserted_timestamp")
+
         for sort_order in cast("List[SortOrder]", reversed(query.ordering)):
             sort_func = lambda item: item[sort_order.field_name]
             items.sort(
@@ -331,18 +344,11 @@ class InMemoryDataStore(TrackQueriesStoreMixin, BaseDataStore):
 
         return cast("List", list_obj)
 
-    def _save_to_list(self, list_obj: "List", item: "Any", id_attr: "str"):
+    def _save_to_list(self, list_obj: "List", item: "Dict", id_attr: "str"):
         item_idx = None
         for idx, old_item in enumerate(list_obj):
-            if isinstance(item, dict):
-                new_item_id = item[id_attr]
-            else:
-                new_item_id = getattr(item, id_attr)
-
-            if isinstance(old_item, dict):
-                old_item_id = old_item[id_attr]
-            else:
-                old_item_id = getattr(old_item, id_attr)
+            new_item_id = item[id_attr]
+            old_item_id = old_item[id_attr]
 
             if str(old_item_id) == str(new_item_id):
                 item_idx = idx
@@ -353,7 +359,7 @@ class InMemoryDataStore(TrackQueriesStoreMixin, BaseDataStore):
         else:
             list_obj.append(copy.deepcopy(item))
 
-    def _save(self, item: "Any", key: "str", id_attr: "str" = "id"):
+    def _save(self, item: "Dict", key: "str", id_attr: "str" = "id"):
         list_obj = self._get_nested_list(key=key)
         self._save_to_list(list_obj=cast("List", list_obj), item=item, id_attr=id_attr)
 

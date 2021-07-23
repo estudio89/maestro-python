@@ -64,10 +64,10 @@ def convert_to_mongo_filter(filter: "Filter", field_prefix: "str") -> "Dict":
     return mongo_filter
 
 
-def convert_to_mongo_sort(ordering: "List[SortOrder]") -> "Dict[str,int]":
+def convert_to_mongo_sort(ordering: "List[SortOrder]", field_prefix: "str") -> "Dict[str,int]":
     mongo_sort: "Dict[str,int]" = {}
     for sort_order in ordering:
-        mongo_sort[sort_order.field_name] = (
+        mongo_sort[field_prefix + sort_order.field_name] = (
             pymongo.DESCENDING if sort_order.descending else pymongo.ASCENDING
         )
 

@@ -96,8 +96,6 @@ class MongoDataStore(TrackQueriesStoreMixin, NoSQLDataStore):
 
         collection_name = entity_name_to_collection(query.entity_name)
         mongo_filter: "Dict" = {
-            "is_applied": {"$eq": True},
-            "should_ignore": {"$eq": False,},
             "collection_name": {"$eq": collection_name},
         }
         item_mongo_filter = convert_to_mongo_filter(
@@ -124,7 +122,7 @@ class MongoDataStore(TrackQueriesStoreMixin, NoSQLDataStore):
                         ]
                     }
                 )
-            or_expressions.append({"provider_id": {"$nin": provider_ids}})
+            or_expressions.append({"change_vector_clock_item.provider_id": {"$nin": provider_ids}})
 
             mongo_filter["$or"] = or_expressions
 
@@ -141,14 +139,23 @@ class MongoDataStore(TrackQueriesStoreMixin, NoSQLDataStore):
                 "$group": {
                     "_id": "$item_id",
                     "item": {"$first": "$$ROOT.serialized_item"},
+                    'inserted_timestamp': {
+                        '$first': '$$ROOT.insert_vector_clock_item.timestamp'
+                    },
                 },
             },
-            {"$replaceRoot": {"newRoot": "$item"},},
         ]
 
+        mongo_sort = {}
+
         if query.ordering:
-            mongo_sort = convert_to_mongo_sort(ordering=query.ordering)
-            pipeline.append({"$sort": mongo_sort})
+            mongo_sort_ordering = convert_to_mongo_sort(ordering=query.ordering, field_prefix="item.")
+            mongo_sort.update(mongo_sort_ordering)
+
+        mongo_sort.update({"inserted_timestamp": pymongo.ASCENDING})
+
+        pipeline.append({"$sort": mongo_sort})
+        pipeline.append({"$replaceRoot": {"newRoot": "$item"},},)
 
         if query.offset:
             pipeline.append({"$skip": query.offset})
