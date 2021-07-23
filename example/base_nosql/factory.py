@@ -7,7 +7,9 @@ import json
 
 
 class NoSQLExampleSerializer(BaseItemSerializer):
-    def serialize_item(self, item: "TodoRecord") -> "SerializationResult":
+    def serialize_item(
+        self, item: "TodoRecord", entity_name: "str"
+    ) -> "SerializationResult":
 
         serialized = {
             "date_created": item["date_created"].isoformat(),
@@ -18,7 +20,7 @@ class NoSQLExampleSerializer(BaseItemSerializer):
         serialized_item = json.dumps(dict(sorted(serialized.items())))
         return SerializationResult(
             item_id=item["id"],
-            entity_name="todos_todo",
+            entity_name=entity_name,
             serialized_item=serialized_item,
         )
 

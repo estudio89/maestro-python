@@ -1,6 +1,7 @@
 from django.db import models
 from django.core.exceptions import MiddlewareNotUsed
 from maestro.backends.django.contrib.factory import create_django_data_store
+from maestro.backends.django.utils import model_to_entity_name
 from maestro.core.metadata import Operation
 from maestro.backends.django.settings import maestro_settings
 from typing import NamedTuple, Callable, TYPE_CHECKING
@@ -22,8 +23,10 @@ def _add_operation_to_queue(operation: "Operation", item: "models.Model"):
 def _commit_queued_operations():
     data_store: "DjangoDataStore" = create_django_data_store()
     for queued_operation in _operations_queue.items:
+        entity_name = model_to_entity_name(queued_operation.item)
         data_store.commit_item_change(
             operation=queued_operation.operation,
+            entity_name=entity_name,
             item_id=str(queued_operation.item.pk),
             item=queued_operation.item,
             execute_operation=False,

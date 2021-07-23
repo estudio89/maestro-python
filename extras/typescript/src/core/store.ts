@@ -26,7 +26,12 @@ export abstract class BaseDataStore<T> {
         protected itemSerializer: BaseItemSerializer<T>
     ) {}
 
-    async commitItemChange(operation: Operation, itemId: string, item: T) {
+    async commitItemChange(
+        operation: Operation,
+        entityName: string,
+        itemId: string,
+        item: T
+    ) {
         let oldVersion = await this.getLocalVersion(itemId);
         let localVectorClock = oldVersion.vectorClock.clone();
         let nowUTC = getNowUTC();
@@ -40,7 +45,7 @@ export abstract class BaseDataStore<T> {
         let itemChange = new ItemChange(
             uuid(),
             operation,
-            this.serializeItem(item),
+            this.serializeItem(item, entityName),
             changeVectorClockItem,
             oldVersion.currentItemChange?.insertVectorClockItem ??
                 changeVectorClockItem,
@@ -87,8 +92,8 @@ export abstract class BaseDataStore<T> {
         return localVersion.clone();
     }
 
-    serializeItem(item: T): SerializationResult {
-        return this.itemSerializer.serializeItem(item);
+    serializeItem(item: T, entityName: string): SerializationResult {
+        return this.itemSerializer.serializeItem(item, entityName);
     }
     abstract async getItemVersion(
         itemId: string

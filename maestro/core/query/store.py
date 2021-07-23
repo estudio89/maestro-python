@@ -17,6 +17,7 @@ class TrackQueriesStoreMixin:
     def commit_item_change(
         self,
         operation: "Operation",
+        entity_name: "str",
         item_id: "str",
         item: "Any",
         execute_operation: "bool" = True,
@@ -29,6 +30,7 @@ class TrackQueriesStoreMixin:
         item_change = BaseDataStore.commit_item_change(
             cast("BaseDataStore", self),
             operation=operation,
+            entity_name=entity_name,
             item_id=item_id,
             item=item,
             execute_operation=execute_operation,
@@ -113,9 +115,12 @@ class TrackQueriesStoreMixin:
         self.save_tracked_query(tracked_query=updated_tracked_query)
 
     def check_impacts_query(
-        self, item: "Any", query: "Query", vector_clock: "Optional[VectorClock]"
+        self,
+        item_change: "ItemChange",
+        query: "Query",
+        vector_clock: "Optional[VectorClock]",
     ) -> "bool":
-        """Checks whether a given item is part of a query.
+        """Checks whether an ItemChange is part of a query.
 
         Args:
             item (Any): The item being checked
@@ -127,7 +132,14 @@ class TrackQueriesStoreMixin:
         filter_check = query_filter_to_lambda(
             filter=query.filter, item_field_getter=self.item_field_getter  # type: ignore
         )
-        if filter_check(item):
+        item = cast("BaseDataStore", self).item_serializer.deserialize_item(
+            item_change.serialization_result
+        )
+
+        if (
+            item_change.serialization_result.entity_name == query.entity_name
+            and filter_check(item)
+        ):
             query_items = self.query_items(query=query, vector_clock=vector_clock)
             item_ids = {
                 self.item_field_getter(query_item, "id") for query_item in query_items  # type: ignore
@@ -148,12 +160,8 @@ class TrackQueriesStoreMixin:
 
         Args:
             new_item_change (ItemChange): The new change
+            old_item_change (ItemChange): The previous change associated with the same item
         """
-        item = cast("BaseDataStore", self).item_serializer.deserialize_item(
-            new_item_change.serialization_result
-        )
-        old_item: "Optional[Any]" = None
-
         if not old_item_change and not ignore_old_change_if_none:
             item_version = cast("BaseDataStore", self).get_item_version(
                 item_id=new_item_change.serialization_result.item_id
@@ -162,20 +170,17 @@ class TrackQueriesStoreMixin:
             if item_version:
                 old_item_change = item_version.current_item_change
 
-        if old_item_change:
-            old_item = cast("BaseDataStore", self).deserialize_item(
-                old_item_change.serialization_result
-            )
-
         for tracked_query in self.get_tracked_queries():
             if self.check_impacts_query(
-                item=item, query=tracked_query.query, vector_clock=None
+                item_change=new_item_change,
+                query=tracked_query.query,
+                vector_clock=None,
             ):
                 self.update_query_vector_clock(
                     query=tracked_query.query, item_change=new_item_change
                 )
-            elif old_item and self.check_impacts_query(
-                item=old_item,
+            elif old_item_change and self.check_impacts_query(
+                item_change=old_item_change,
                 query=tracked_query.query,
                 vector_clock=tracked_query.vector_clock,
             ):

@@ -194,6 +194,7 @@ class DjangoDataStore(BaseDataStore):
     def commit_item_change(
         self,
         operation: "Operation",
+        entity_name: "str",
         item_id: "str",
         item: "Any",
         execute_operation: "bool" = True,
@@ -205,6 +206,7 @@ class DjangoDataStore(BaseDataStore):
             with temporarily_disable_signals(model=model):
                 return super().commit_item_change(
                     operation=operation,
+                    entity_name=entity_name,
                     item_id=item_id,
                     item=item,
                     execute_operation=execute_operation,
@@ -212,6 +214,7 @@ class DjangoDataStore(BaseDataStore):
         else:
             return super().commit_item_change(
                 operation=operation,
+                entity_name=entity_name,
                 item_id=item_id,
                 item=item,
                 execute_operation=execute_operation,

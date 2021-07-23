@@ -12,12 +12,13 @@ if TYPE_CHECKING:
     from maestro.core.store import BaseDataStore
     from maestro.core.metadata import SerializationResult
 
+
 class BaseItemSerializer(ABC):
 
     """Abstract class that serializes items to string and back."""
 
     @abstractmethod
-    def serialize_item(self, item: "Any") -> "SerializationResult":
+    def serialize_item(self, item: "Any", entity_name: "str") -> "SerializationResult":
         """Serializes the item, converting it to a string.
 
         Args:
@@ -143,7 +144,8 @@ class RawDataStoreJSONSerializer:
 
         serialized_db = self.metadata_serializer.serialize(metadata_object=raw_db)
         serialized_items = [
-            data_store.item_serializer.serialize_item(item=item) for item in items
+            data_store.item_serializer.serialize_item(item=item, entity_name="")
+            for item in items
         ]
         serialized_db["items"] = serialized_items
         return json.dumps(serialized_db, indent=self.indent)

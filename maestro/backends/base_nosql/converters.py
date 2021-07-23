@@ -269,8 +269,9 @@ class ItemChangeMetadataConverter(DataStoreAccessConverter):
         vector_clock = self.vector_clock_converter.to_metadata(
             record=record["vector_clock"]
         )
+        entity_name = collection_to_entity_name(record["collection_name"])
         serialization_result = self.item_serializer.serialize_item(
-            item=record["serialized_item"]
+            item=record["serialized_item"], entity_name=entity_name
         )
         change_vector_clock_item = self.vector_clock_item_converter.to_metadata(
             record=record["change_vector_clock_item"]

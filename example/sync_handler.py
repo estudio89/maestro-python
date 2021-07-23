@@ -63,7 +63,10 @@ class SyncHandler:
         item = provider.api_serializer.from_dict(data=raw_item)
 
         provider.data_store.commit_item_change(
-            operation=Operation.UPDATE, item_id=item_id, item=item
+            operation=Operation.UPDATE,
+            item_id=item_id,
+            item=item,
+            entity_name="todos_todo",
         )
 
     def delete_item(self, provider_id: "str", item_id: "str", raw_item: "Dict"):
@@ -71,7 +74,10 @@ class SyncHandler:
 
         item = provider.api_serializer.from_dict(data=raw_item)
         provider.data_store.commit_item_change(
-            operation=Operation.DELETE, item_id=uuid.UUID(item_id), item=item,
+            operation=Operation.DELETE,
+            item_id=uuid.UUID(item_id),
+            item=item,
+            entity_name="todos_todo",
         )
 
     def create_item(self, provider_id: "str", item_id: "str", raw_item: "Dict"):
@@ -80,7 +86,10 @@ class SyncHandler:
 
         item = provider.api_serializer.from_dict(data=raw_item)
         provider.data_store.commit_item_change(
-            operation=Operation.INSERT, item_id=uuid.UUID(item_id), item=item
+            operation=Operation.INSERT,
+            item_id=uuid.UUID(item_id),
+            item=item,
+            entity_name="todos_todo",
         )
 
     def synchronize(self, initial_source_provider_id: "str"):

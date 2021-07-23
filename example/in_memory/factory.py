@@ -19,7 +19,9 @@ import json
 
 
 class InMemoryExampleSerializer(BaseItemSerializer):
-    def serialize_item(self, item: "TodoType") -> "SerializationResult":
+    def serialize_item(
+        self, item: "TodoType", entity_name: "str"
+    ) -> "SerializationResult":
 
         serialized = (
             {
@@ -32,13 +34,15 @@ class InMemoryExampleSerializer(BaseItemSerializer):
         serialized = dict(sorted(serialized.items()))
         result = SerializationResult(
             item_id=item["id"],
-            entity_name="todos_todo",
+            entity_name=entity_name,
             serialized_item=json.dumps(serialized),
         )
 
         return result
 
-    def deserialize_item(self, serialization_result: "SerializationResult") -> "TodoType":
+    def deserialize_item(
+        self, serialization_result: "SerializationResult"
+    ) -> "TodoType":
         data = json.loads(serialization_result.serialized_item)
         deserialized = {
             "id": serialization_result.item_id,

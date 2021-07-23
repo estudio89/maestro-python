@@ -122,6 +122,7 @@ class BaseDataStore(ABC):
     def commit_item_change(
         self,
         operation: "Operation",
+        entity_name: "str",
         item_id: "str",
         item: "Any",
         execute_operation: "bool" = True,
@@ -154,7 +155,9 @@ class BaseDataStore(ABC):
             insert_vector_clock_item=old_version.current_item_change.insert_vector_clock_item
             if old_version.current_item_change
             else change_vector_clock_item,
-            serialization_result=self.serialize_item(item),
+            serialization_result=self.serialize_item(
+                item=item, entity_name=entity_name
+            ),
             should_ignore=False,
             is_applied=True,
             vector_clock=local_vector_clock,
@@ -176,13 +179,15 @@ class BaseDataStore(ABC):
         self.save_item_version(item_version=new_version)
         return item_change
 
-    def serialize_item(self, item: "Any") -> "SerializationResult":
+    def serialize_item(self, item: "Any", entity_name: "str") -> "SerializationResult":
         """Serializes the given item.
 
         Args:
             item (Any): Item to be serialized.
         """
-        return self.item_serializer.serialize_item(item=copy.deepcopy(item))
+        return self.item_serializer.serialize_item(
+            item=copy.deepcopy(item), entity_name=entity_name
+        )
 
     def deserialize_item(self, serialization_result: "SerializationResult") -> "Any":
         """Deserializes an item.

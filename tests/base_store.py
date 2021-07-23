@@ -442,7 +442,9 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
         item = self.data_store._create_item(
             id="2d24691e-7958-4ed9-830d-1afe7f5157e0", name="my item", version="1",
         )
-        serialization_result = self.data_store.serialize_item(item=item)
+        serialization_result = self.data_store.serialize_item(
+            item=item, entity_name="my_app_item"
+        )
         manually_serialized = self._serialize_item(
             id="2d24691e-7958-4ed9-830d-1afe7f5157e0", name="my item", version="1"
         )
@@ -2352,6 +2354,7 @@ class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
         # Adding 3 changes to an object
         item_change1 = self.data_store.commit_item_change(
             operation=Operation.INSERT,
+            entity_name="my_app_item",
             item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
             item=self.data_store._create_item(
                 id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="1",
@@ -2360,6 +2363,7 @@ class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
 
         item_change2 = self.data_store.commit_item_change(
             operation=Operation.UPDATE,
+            entity_name="my_app_item",
             item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
             item=self.data_store._create_item(
                 id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="2",
@@ -2368,6 +2372,7 @@ class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
 
         item_change3 = self.data_store.commit_item_change(
             operation=Operation.UPDATE,
+            entity_name="my_app_item",
             item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
             item=self.data_store._create_item(
                 id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="2.1",
@@ -2377,6 +2382,7 @@ class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
         # Adding a change to another object
         item_change4 = self.data_store.commit_item_change(
             operation=Operation.UPDATE,
+            entity_name="my_app_item",
             item_id="915a67f9-e597-491a-a28f-cf0fda241b68",
             item=self.data_store._create_item(
                 id="915a67f9-e597-491a-a28f-cf0fda241b68", name="item_2", version="1",
@@ -5142,4 +5148,3 @@ class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
         self.assertEqual(
             result.item_changes, [item_change3, item_change5],
         )
-

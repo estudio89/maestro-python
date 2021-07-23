@@ -89,7 +89,12 @@ class FirestoreDataStoreTest {
             hello: "world",
         };
 
-        await dataStore.commitItemChange(Operation.INSERT, itemId, item);
+        await dataStore.commitItemChange(
+            Operation.INSERT,
+            "my_collection",
+            itemId,
+            item
+        );
 
         assert.equal(savedItemChanges.length, 1);
         assert.equal(savedItemVersions.length, 1);
@@ -123,7 +128,10 @@ class FirestoreDataStoreTest {
             savedItemChanges[0].insert_vector_clock_item.provider_id,
             "provider1"
         );
-        assert.equal(savedItemChanges[0].serialized_item, '{"hello":"world"}');
+        assert.equal(
+            savedItemChanges[0].serialized_item,
+            `{"id":"${itemId}","hello":"world"}`
+        );
         assert.isFalse(savedItemChanges[0].should_ignore);
         assert.isTrue(savedItemChanges[0].is_applied);
         assert.equal(savedItemChanges[0].vector_clock.length, 1);
@@ -278,7 +286,12 @@ class FirestoreDataStoreTest {
         );
         itemVersionMetadataConverter.dataStore = dataStore;
 
-        await dataStore.commitItemChange(Operation.UPDATE, itemId, item);
+        await dataStore.commitItemChange(
+            Operation.UPDATE,
+            "my_collection",
+            itemId,
+            item
+        );
 
         assert.equal(savedItemChanges.length, 1);
         assert.equal(savedItemVersions.length, 1);
@@ -312,7 +325,10 @@ class FirestoreDataStoreTest {
             savedItemChanges[0].insert_vector_clock_item.provider_id,
             "provider2"
         );
-        assert.equal(savedItemChanges[0].serialized_item, '{"hello":"world"}');
+        assert.equal(
+            savedItemChanges[0].serialized_item,
+            `{"id":"${itemId}","hello":"world"}`
+        );
         assert.isFalse(savedItemChanges[0].should_ignore);
         assert.isTrue(savedItemChanges[0].is_applied);
 

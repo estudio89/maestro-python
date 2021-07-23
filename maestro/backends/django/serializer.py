@@ -10,7 +10,7 @@ from maestro.backends.django.utils import (
 
 
 class DjangoItemSerializer(BaseItemSerializer):
-    def serialize_item(self, item: "models.Model") -> "SerializationResult":
+    def serialize_item(self, item: "models.Model", entity_name: "str") -> "SerializationResult":
         serialized_item = serializers.serialize("json", [item])
         serialized_item = json.loads(serialized_item)
         serialized_item = serialized_item[0]

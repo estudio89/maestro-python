@@ -4,7 +4,6 @@ from maestro.core.metadata import SerializationResult
 import json
 from typing import Dict, Any, List
 from maestro.backends.base_nosql.utils import (
-    collection_to_entity_name,
     entity_name_to_collection,
 )
 import datetime as dt
@@ -22,9 +21,9 @@ class NoSQLItemSerializer(BaseItemSerializer):
             value = value.isoformat()
         return value
 
-    def serialize_item(self, item: "Dict[str, Any]") -> "SerializationResult":
+    def serialize_item(self, item: "Dict[str, Any]", entity_name: "str") -> "SerializationResult":
         pk = item["id"]
-        collection_name = item["collection_name"]
+        collection_name = entity_name_to_collection(entity_name)
 
         fields = {}
         for key in item:
@@ -36,7 +35,6 @@ class NoSQLItemSerializer(BaseItemSerializer):
             )
             fields[key] = value
 
-        entity_name = collection_to_entity_name(collection=collection_name)
         sorted_fields = dict(sorted(fields.items()))
         serialized_item = json.dumps(sorted_fields)
         result = SerializationResult(

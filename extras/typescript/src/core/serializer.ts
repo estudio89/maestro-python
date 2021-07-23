@@ -1,5 +1,5 @@
 import { SerializationResult } from "./metadata";
 
 export interface BaseItemSerializer<T> {
-    serializeItem(item: T): SerializationResult;
+    serializeItem(item: T, entityName: string): SerializationResult;
 }

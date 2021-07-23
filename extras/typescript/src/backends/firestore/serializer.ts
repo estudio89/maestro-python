@@ -1,7 +1,6 @@
 import * as admin from "firebase-admin";
 import { BaseItemSerializer } from "../../core/serializer";
 import { AppItem } from "./collections";
-import { collectionToEntityName } from "./utils";
 import { SerializationResult } from "../../core/metadata";
 
 /**
@@ -29,7 +28,7 @@ export class FirestoreAppItemSerializer implements BaseItemSerializer<AppItem> {
     /**
      * Converts item to a string.
      */
-    serializeItem(item: AppItem): SerializationResult {
+    serializeItem(item: AppItem, entityName: string): SerializationResult {
         const pk = item.id;
         const collectionName = item.collectionName;
         const fields: { [key: string]: any } = {};
@@ -41,7 +40,6 @@ export class FirestoreAppItemSerializer implements BaseItemSerializer<AppItem> {
             const value = this.serializeField(collectionName, item, key);
             fields[key] = value;
         }
-        const entityName = collectionToEntityName(collectionName);
         const serializedItem = JSON.stringify(fields);
 
         return new SerializationResult(pk, entityName, serializedItem);

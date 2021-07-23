@@ -101,6 +101,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
 
         self.data_store1.commit_item_change(
             operation=Operation.INSERT,
+            entity_name="my_app_item",
             item_id=self.item1_id,
             item=self.data_store1._create_item(
                 id=self.item1_id, name="I1", version="1"
@@ -109,6 +110,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         for i in range(2, 6):
             last_item_change = self.data_store1.commit_item_change(
                 operation=Operation.UPDATE,
+                entity_name="my_app_item",
                 item_id=self.item1_id,
                 item=self.data_store1._create_item(
                     id=self.item1_id, name="I1", version=str(i)
@@ -149,6 +151,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         self.item2_id = str(uuid.uuid4())
         self.data_store1.commit_item_change(
             operation=Operation.INSERT,
+            entity_name="my_app_item",
             item_id=self.item2_id,
             item=self.data_store1._create_item(
                 id=self.item2_id, name="I2", version="1"
@@ -157,6 +160,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         for i in range(2, 4):
             last_item_change = self.data_store1.commit_item_change(
                 operation=Operation.UPDATE,
+                entity_name="my_app_item",
                 item_id=self.item2_id,
                 item=self.data_store1._create_item(
                     id=self.item2_id, name="I2", version=str(i)
@@ -195,6 +199,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         self.item3_id = str(uuid.uuid4())
         self.data_store1.commit_item_change(
             operation=Operation.INSERT,
+            entity_name="my_app_item",
             item_id=self.item3_id,
             item=self.data_store1._create_item(
                 id=self.item3_id, name="I3", version="1"
@@ -203,6 +208,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         for i in range(2, 5):
             last_item_change = self.data_store1.commit_item_change(
                 operation=Operation.UPDATE,
+                entity_name="my_app_item",
                 item_id=self.item3_id,
                 item=self.data_store1._create_item(
                     id=self.item3_id, name="I3", version=str(i)
@@ -243,6 +249,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
 
         self.data_store2.commit_item_change(
             operation=Operation.INSERT,
+            entity_name="my_app_item",
             item_id=self.item104_id,
             item=self.data_store2._create_item(
                 id=self.item104_id, name="I104", version="1"
@@ -251,6 +258,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         for i in range(2, 3):
             last_item_change = self.data_store2.commit_item_change(
                 operation=Operation.UPDATE,
+                entity_name="my_app_item",
                 item_id=self.item104_id,
                 item=self.data_store2._create_item(
                     id=self.item104_id, name="I104", version=str(i)
@@ -288,6 +296,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         self.item105_id = str(uuid.uuid4())
         self.data_store2.commit_item_change(
             operation=Operation.INSERT,
+            entity_name="my_app_item",
             item_id=self.item105_id,
             item=self.data_store2._create_item(
                 id=self.item105_id, name="I105", version="1"
@@ -296,6 +305,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         for i in range(2, 5):
             last_item_change = self.data_store2.commit_item_change(
                 operation=Operation.UPDATE,
+                entity_name="my_app_item",
                 item_id=self.item105_id,
                 item=self.data_store2._create_item(
                     id=self.item105_id, name="I105", version=str(i)
@@ -589,6 +599,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         # Item I2 is updated by data store 1 (other_provider)
         other_provider_change = self.data_store1.commit_item_change(
             operation=Operation.UPDATE,
+            entity_name="my_app_item",
             item_id=self.item2_id,
             item=self.data_store1._create_item(
                 id=str(self.item2_id), name="I2", version="other_provider_version",
@@ -598,6 +609,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         # Same item I2 is updated by data store 2 (provider_in_test)
         provider_in_test_change = self.data_store2.commit_item_change(
             operation=Operation.UPDATE,
+            entity_name="my_app_item",
             item_id=self.item2_id,
             item=self.data_store2._create_item(
                 id=str(self.item2_id), name="I2", version="provider_in_test_version",
@@ -709,6 +721,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         # Item I2 is updated by data_store1 (other_provider)
         other_provider_change = self.data_store1.commit_item_change(
             operation=Operation.UPDATE,
+            entity_name="my_app_item",
             item_id=self.item2_id,
             item=self.data_store1._create_item(
                 id=str(self.item2_id), name="I2", version="other_provider_version",
@@ -718,6 +731,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         # Same item I2 is deleted by data_store2 (provider_in_test)
         provider_in_test_change = self.data_store2.commit_item_change(
             operation=Operation.DELETE,
+            entity_name="my_app_item",
             item_id=self.item2_id,
             item=self.data_store2._create_item(
                 id=str(self.item2_id), name="I2", version="3"
@@ -823,6 +837,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         # Item I2 is deleted by data_store1 (other_provider)
         other_provider_change = self.data_store1.commit_item_change(
             operation=Operation.DELETE,
+            entity_name="my_app_item",
             item_id=self.item2_id,
             item=self.data_store1._create_item(
                 id=str(self.item2_id), name="I2", version="3"
@@ -832,6 +847,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         # Same item I2 is also deleted by data_store2 (provider_in_test)
         provider_in_test_change = self.data_store2.commit_item_change(
             operation=Operation.DELETE,
+            entity_name="my_app_item",
             item_id=self.item2_id,
             item=self.data_store2._create_item(
                 id=str(self.item2_id), name="I2", version="3"
@@ -953,6 +969,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         # Items I2 e I3 are updated by data_store1
         other_provider_change_i2 = self.data_store1.commit_item_change(
             operation=Operation.UPDATE,
+            entity_name="my_app_item",
             item_id=self.item2_id,
             item=self.data_store1._create_item(
                 id=str(self.item2_id), name="I2", version="other_provider_version_i2",
@@ -961,6 +978,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
 
         other_provider_change_i3 = self.data_store1.commit_item_change(
             operation=Operation.UPDATE,
+            entity_name="my_app_item",
             item_id=self.item3_id,
             item=self.data_store1._create_item(
                 id=str(self.item3_id), name="I3", version="other_provider_version_i3",
@@ -1191,6 +1209,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         # other_provider >> Deletes item I2
         other_provider_delete_i2 = self.data_store1.commit_item_change(
             operation=Operation.DELETE,
+            entity_name="my_app_item",
             item_id=self.item2_id,
             item=self.data_store1._create_item(
                 id=str(self.item2_id), name=None, version=None
@@ -1200,6 +1219,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         # provider_in_test >> Updates item I2
         provider_in_test_update_i2_1 = self.data_store2.commit_item_change(
             operation=Operation.UPDATE,
+            entity_name="my_app_item",
             item_id=self.item2_id,
             item=self.data_store2._create_item(
                 id=str(self.item2_id),
@@ -1211,6 +1231,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         # provider_in_test >> Updates item I2
         provider_in_test_update_i2_2 = self.data_store2.commit_item_change(
             operation=Operation.UPDATE,
+            entity_name="my_app_item",
             item_id=self.item2_id,
             item=self.data_store2._create_item(
                 id=str(self.item2_id),
@@ -1222,6 +1243,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         # other_provider >> Updates item I3
         other_provider_change_i3 = self.data_store1.commit_item_change(
             operation=Operation.UPDATE,
+            entity_name="my_app_item",
             item_id=self.item3_id,
             item=self.data_store1._create_item(
                 id=str(self.item3_id), name="I3", version="other_provider_update_i3_1",
@@ -1374,6 +1396,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         # provider_in_test >> Updates item I2
         provider_in_test_update_i2_3 = self.data_store2.commit_item_change(
             operation=Operation.UPDATE,
+            entity_name="my_app_item",
             item_id=self.item2_id,
             item=self.data_store2._create_item(
                 id=str(self.item2_id),
@@ -1497,6 +1520,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         # other_provider >> Updates item I2
         other_provider_update_i2_1 = self.data_store1.commit_item_change(
             operation=Operation.UPDATE,
+            entity_name="my_app_item",
             item_id=self.item2_id,
             item=self.data_store1._create_item(
                 id=str(self.item2_id), name="I2", version="other_provider_update_i2_1",
@@ -1506,6 +1530,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         # provider_in_test >> Deletes item I2
         provider_in_test_delete_i2 = self.data_store2.commit_item_change(
             operation=Operation.DELETE,
+            entity_name="my_app_item",
             item_id=self.item2_id,
             item=self.data_store2._create_item(
                 id=str(self.item2_id), name=None, version=None
@@ -1515,6 +1540,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         # other_provider >> Updates item I2
         other_provider_update_i2_2 = self.data_store1.commit_item_change(
             operation=Operation.UPDATE,
+            entity_name="my_app_item",
             item_id=self.item2_id,
             item=self.data_store1._create_item(
                 id=str(self.item2_id), name="I2", version="other_provider_update_i2_2",
@@ -1653,6 +1679,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         # other_provider >> Updates item I2
         other_provider_update_i2_3 = self.data_store1.commit_item_change(
             operation=Operation.UPDATE,
+            entity_name="my_app_item",
             item_id=self.item2_id,
             item=self.data_store1._create_item(
                 id=str(self.item2_id), name="I2", version="other_provider_update_i2_3",
@@ -1932,6 +1959,7 @@ class QueryFullSyncTest(BackendTestMixin, unittest.TestCase):
         )
         item1_change1 = cast("BaseDataStore", source_data_store).commit_item_change(
             operation=Operation.INSERT,
+            entity_name="my_app_item",
             item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
             item=item1,
         )
@@ -1941,6 +1969,7 @@ class QueryFullSyncTest(BackendTestMixin, unittest.TestCase):
         )
         item2_change1 = cast("BaseDataStore", source_data_store).commit_item_change(
             operation=Operation.INSERT,
+            entity_name="my_app_item",
             item_id="6ec0755a-2ca9-407e-87fa-0bd73db8c29f",
             item=item2,
         )
@@ -1950,6 +1979,7 @@ class QueryFullSyncTest(BackendTestMixin, unittest.TestCase):
         )
         item3_change1 = cast("BaseDataStore", source_data_store).commit_item_change(
             operation=Operation.INSERT,
+            entity_name="my_app_item",
             item_id="b45d1471-819b-4048-b888-ddfefde02485",
             item=item3,
         )
@@ -1959,6 +1989,7 @@ class QueryFullSyncTest(BackendTestMixin, unittest.TestCase):
         )
         item4_change1 = cast("BaseDataStore", source_data_store).commit_item_change(
             operation=Operation.INSERT,
+            entity_name="my_app_item",
             item_id="72e754b6-6f75-4999-bc1d-5709e244a52e",
             item=item4,
         )
@@ -1968,6 +1999,7 @@ class QueryFullSyncTest(BackendTestMixin, unittest.TestCase):
         )
         item5_change1 = cast("BaseDataStore", source_data_store).commit_item_change(
             operation=Operation.INSERT,
+            entity_name="my_app_item",
             item_id="18e13474-d6a5-4d1c-8624-38cb45add4d6",
             item=item5,
         )
@@ -2029,6 +2061,7 @@ class QueryFullSyncTest(BackendTestMixin, unittest.TestCase):
         )
         item6_change1 = cast("BaseDataStore", source_data_store).commit_item_change(
             operation=Operation.INSERT,
+            entity_name="my_app_item",
             item_id="18e13474-d6a5-4d1c-8624-38cb45add4d6",
             item=item6,
         )
@@ -2038,6 +2071,7 @@ class QueryFullSyncTest(BackendTestMixin, unittest.TestCase):
         )
         item2_change2 = cast("BaseDataStore", source_data_store).commit_item_change(
             operation=Operation.UPDATE,
+            entity_name="my_app_item",
             item_id="6ec0755a-2ca9-407e-87fa-0bd73db8c29f",
             item=item2,
         )
@@ -2085,6 +2119,7 @@ class QueryFullSyncTest(BackendTestMixin, unittest.TestCase):
         # c)
         item3_change2 = cast("BaseDataStore", source_data_store).commit_item_change(
             operation=Operation.DELETE,
+            entity_name="my_app_item",
             item_id="b45d1471-819b-4048-b888-ddfefde02485",
             item=item3,
         )
@@ -2095,6 +2130,7 @@ class QueryFullSyncTest(BackendTestMixin, unittest.TestCase):
         )
         item6_change2 = cast("BaseDataStore", source_data_store).commit_item_change(
             operation=Operation.UPDATE,
+            entity_name="my_app_item",
             item_id="18e13474-d6a5-4d1c-8624-38cb45add4d6",
             item=item6,
         )
@@ -2220,6 +2256,7 @@ class QueryFullSyncTest(BackendTestMixin, unittest.TestCase):
 
         item6_change3 = target_data_store.commit_item_change(
             operation=Operation.UPDATE,
+            entity_name="my_app_item",
             item_id="75fdef62-6302-429a-9973-4f7f4d6a0e8f",
             item=item6,
         )

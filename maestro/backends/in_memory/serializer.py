@@ -5,10 +5,11 @@ import json
 
 
 class JSONSerializer(BaseItemSerializer):
-    def serialize_item(self, item: "Dict") -> "SerializationResult":
+    def serialize_item(self, item: "Dict", entity_name: "str") -> "SerializationResult":
+        item.pop("entity_name")
         result = SerializationResult(
             item_id=item["id"],
-            entity_name=item.pop("entity_name"),
+            entity_name=entity_name,
             serialized_item=json.dumps(item),
         )
         return result

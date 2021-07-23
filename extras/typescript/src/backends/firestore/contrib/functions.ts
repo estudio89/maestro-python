@@ -1,7 +1,7 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import { QueuedOperation, CollectionType } from "../collections";
-import { typeToCollection } from "../utils";
+import { typeToCollection, collectionToEntityName } from "../utils";
 import { FirestoreDataStore } from "../store";
 import {
     ItemVersionMetadataConverter,
@@ -15,7 +15,6 @@ export function setupCommitQueue(
     onChangeCommited: () => void,
     providerId: string = "firestore"
 ): functions.CloudFunction<functions.firestore.QueryDocumentSnapshot> {
-
     const queueCollectionName = typeToCollection(CollectionType.COMMIT_QUEUE);
 
     const commitChange = functions.firestore
@@ -32,7 +31,8 @@ export function setupCommitQueue(
                 db
             );
             itemVersionMetadataConverter.dataStore = dataStore;
-            const queuedOperation: QueuedOperation = snapshot.data() as QueuedOperation;
+            const queuedOperation: QueuedOperation =
+                snapshot.data() as QueuedOperation;
 
             console.log(
                 "Processing commit operation",
@@ -41,8 +41,7 @@ export function setupCommitQueue(
             );
             let item = queuedOperation.data;
             item.id = queuedOperation.item_id;
-            item.collectionName = queuedOperation.collection_name;
-            if (!item.collectionName) {
+            if (!queuedOperation.collection_name) {
                 throw Error(
                     "A change was committed to the queue without a 'collection_name' field."
                 );
@@ -63,9 +62,12 @@ export function setupCommitQueue(
                     `A change was committed to the queue using an invalid operation: ${queuedOperation.operation}`
                 );
             }
-
+            const entityName = collectionToEntityName(
+                queuedOperation.collection_name
+            );
             await dataStore.commitItemChange(
                 queuedOperation.operation as Operation,
+                entityName,
                 queuedOperation.item_id,
                 item
             );
