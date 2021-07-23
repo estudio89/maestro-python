@@ -11,6 +11,13 @@ class MongoStoreTest(
     tests.base_store.BaseStoreTest,
     tests.mongo.base.MongoTestCase,
 ):
+    pass
+
+class MongoQueriesTest(
+    tests.mongo.base.MongoBackendTestMixin,
+    tests.base_store.BaseQueriesTest,
+    tests.mongo.base.MongoTestCase,
+):
     def test_filter_conversion(self):
         """Tests the conversion of filter metadata to mongo filters"""
 

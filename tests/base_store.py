@@ -29,7 +29,6 @@ from .base import BackendTestMixin
 
 class BaseStoreTest(BackendTestMixin, unittest.TestCase):
     maxDiff = None
-    supports_queries = True
 
     def setUp(self):
         self.data_store = self._create_data_store(local_provider_id="provider_in_test",)
@@ -748,66 +747,6 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
             ),
         )
 
-    def test_get_local_vector_clock_query(self):
-        if not self.supports_queries:
-            return
-
-        # Start tracking a query
-        query1 = Query(
-            entity_name="my_app_item",
-            filter=Filter(
-                children=[
-                    Comparison(
-                        field_name="name", comparator=Comparator.EQUALS, value="item_2",
-                    )
-                ]
-            ),
-            ordering=[],
-            limit=None,
-            offset=None,
-        )
-        self.data_store.start_tracking_query(query=query1)
-
-        # Adding 3 changes to an object
-        item_change1 = self.data_store.commit_item_change(
-            operation=Operation.INSERT,
-            item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
-            item=self.data_store._create_item(
-                id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="1",
-            ),
-        )
-
-        item_change2 = self.data_store.commit_item_change(
-            operation=Operation.UPDATE,
-            item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
-            item=self.data_store._create_item(
-                id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="2",
-            ),
-        )
-
-        item_change3 = self.data_store.commit_item_change(
-            operation=Operation.UPDATE,
-            item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
-            item=self.data_store._create_item(
-                id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="2.1",
-            ),
-        )
-
-        # Adding a change to another object
-        item_change4 = self.data_store.commit_item_change(
-            operation=Operation.UPDATE,
-            item_id="915a67f9-e597-491a-a28f-cf0fda241b68",
-            item=self.data_store._create_item(
-                id="915a67f9-e597-491a-a28f-cf0fda241b68", name="item_2", version="1",
-            ),
-        )
-
-        # Filtering with a query
-        result = self.data_store.get_local_vector_clock(query=query1)
-        self.assertEqual(
-            result, VectorClock(item_change4.change_vector_clock_item),
-        )
-
     def test_get_item_change_by_id(self):
         item = self.data_store._create_item(
             id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="2.1",
@@ -1249,782 +1188,6 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
             self.assertEqual(
                 result, ItemChangeBatch(item_changes=[], is_last_batch=True,),
             )
-
-    def test_select_changes_query_1(self):
-        """Simulates the situation where changes are selected and a query is used to filter the results.
-
-            Situation 1:
-                - There 2 items, one with version 2.1 that has 3 changes and
-                one with version 3 that has only one change
-                - An empty vector clock is used for selecting the changes
-                - A query filtering only items with version 3 is used
-
-                Expected results:
-                    - Only the change related to item 2 is returned
-        """
-        if not self.supports_queries:
-            return
-
-        # Adding 3 changes to an object
-        item = self.data_store._create_item(
-            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="1",
-        )
-        self.data_store._add_item(item=item)
-
-        item_change1 = ItemChange(
-            id=uuid.UUID("54423877-370a-4936-b362-419cc86abbb8"),
-            date_created=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
-            ),
-            operation=Operation.INSERT,
-            serialization_result=SerializationResult(
-                item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
-                entity_name="my_app_item",
-                serialized_item=self._serialize_item(
-                    id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
-                    name="item_1",
-                    version="1",
-                ),
-            ),
-            change_vector_clock_item=VectorClockItem(
-                timestamp=dt.datetime(
-                    year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
-                ),
-                provider_id="provider_in_test",
-            ),
-            insert_vector_clock_item=VectorClockItem(
-                timestamp=dt.datetime(
-                    year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
-                ),
-                provider_id="provider_in_test",
-            ),
-            should_ignore=False,
-            is_applied=True,
-            vector_clock=VectorClock(
-                VectorClockItem(
-                    provider_id="provider_in_test",
-                    timestamp=dt.datetime(
-                        year=2021,
-                        month=6,
-                        day=26,
-                        hour=7,
-                        minute=2,
-                        tzinfo=dt.timezone.utc,
-                    ),
-                ),
-                VectorClockItem(
-                    provider_id="other_provider",
-                    timestamp=dt.datetime(
-                        day=15,
-                        month=6,
-                        year=2021,
-                        hour=15,
-                        minute=40,
-                        tzinfo=dt.timezone.utc,
-                    ),
-                ),
-            ),
-        )
-
-        self.data_store._add_item_change(item_change=item_change1)
-
-        item_change2 = ItemChange(
-            id=uuid.UUID("3a5e71c9-da5c-461a-ae84-9001fd962925"),
-            date_created=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=9, tzinfo=dt.timezone.utc
-            ),
-            operation=Operation.UPDATE,
-            serialization_result=SerializationResult(
-                item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
-                entity_name="my_app_item",
-                serialized_item=self._serialize_item(
-                    id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
-                    name="item_1",
-                    version="2",
-                ),
-            ),
-            change_vector_clock_item=VectorClockItem(
-                timestamp=dt.datetime(
-                    year=2021, month=6, day=26, hour=7, minute=9, tzinfo=dt.timezone.utc
-                ),
-                provider_id="provider_in_test",
-            ),
-            insert_vector_clock_item=VectorClockItem(
-                timestamp=dt.datetime(
-                    year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
-                ),
-                provider_id="provider_in_test",
-            ),
-            should_ignore=True,
-            is_applied=True,
-            vector_clock=VectorClock(
-                VectorClockItem(
-                    provider_id="provider_in_test",
-                    timestamp=dt.datetime(
-                        year=2021,
-                        month=6,
-                        day=26,
-                        hour=7,
-                        minute=9,
-                        tzinfo=dt.timezone.utc,
-                    ),
-                ),
-                VectorClockItem(
-                    provider_id="other_provider",
-                    timestamp=dt.datetime(
-                        day=15,
-                        month=6,
-                        year=2021,
-                        hour=15,
-                        minute=40,
-                        tzinfo=dt.timezone.utc,
-                    ),
-                ),
-            ),
-        )
-        self.data_store._add_item_change(item_change=item_change2)
-
-        item_change3 = ItemChange(
-            id=uuid.UUID("54417070-60f1-47e7-a2f3-7755dfafb194"),
-            date_created=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=11, tzinfo=dt.timezone.utc
-            ),
-            operation=Operation.UPDATE,
-            serialization_result=SerializationResult(
-                item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
-                entity_name="my_app_item",
-                serialized_item=self._serialize_item(
-                    id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
-                    name="item_1",
-                    version="2.1",
-                ),
-            ),
-            change_vector_clock_item=VectorClockItem(
-                timestamp=dt.datetime(
-                    year=2021,
-                    month=6,
-                    day=26,
-                    hour=7,
-                    minute=11,
-                    tzinfo=dt.timezone.utc,
-                ),
-                provider_id="other_provider",
-            ),
-            insert_vector_clock_item=VectorClockItem(
-                timestamp=dt.datetime(
-                    year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
-                ),
-                provider_id="provider_in_test",
-            ),
-            should_ignore=False,
-            is_applied=False,
-            vector_clock=VectorClock(
-                *[
-                    VectorClockItem(
-                        provider_id="provider_in_test",
-                        timestamp=dt.datetime(
-                            year=2021,
-                            month=6,
-                            day=26,
-                            hour=7,
-                            minute=2,
-                            tzinfo=dt.timezone.utc,
-                        ),
-                    ),
-                    VectorClockItem(
-                        provider_id="other_provider",
-                        timestamp=dt.datetime(
-                            year=2021,
-                            month=6,
-                            day=26,
-                            hour=7,
-                            minute=11,
-                            tzinfo=dt.timezone.utc,
-                        ),
-                    ),
-                ]
-            ),
-        )
-        self.data_store._add_item_change(item_change=item_change3)
-
-        item_version1 = ItemVersion(
-            current_item_change=item_change3,
-            item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
-            date_created=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=11, tzinfo=dt.timezone.utc
-            ),
-        )
-        self.data_store._add_item_version(item_version=item_version1)
-
-        # Adding a change to another object
-        item = self.data_store._create_item(
-            id="915a67f9-e597-491a-a28f-cf0fda241b68", name="item_2", version="3",
-        )
-        self.data_store._add_item(item=item)
-
-        item_change4 = ItemChange(
-            id=uuid.UUID("c56c1211-6599-481f-9d47-71d3aafaf46d"),
-            date_created=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
-            ),
-            operation=Operation.INSERT,
-            serialization_result=SerializationResult(
-                item_id="915a67f9-e597-491a-a28f-cf0fda241b68",
-                entity_name="my_app_item",
-                serialized_item=self._serialize_item(
-                    id="915a67f9-e597-491a-a28f-cf0fda241b68",
-                    name="item_2",
-                    version="3",
-                ),
-            ),
-            change_vector_clock_item=VectorClockItem(
-                timestamp=dt.datetime(
-                    year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
-                ),
-                provider_id="provider_in_test",
-            ),
-            insert_vector_clock_item=VectorClockItem(
-                timestamp=dt.datetime(
-                    year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
-                ),
-                provider_id="provider_in_test",
-            ),
-            should_ignore=False,
-            is_applied=True,
-            vector_clock=VectorClock(
-                VectorClockItem(
-                    provider_id="provider_in_test",
-                    timestamp=dt.datetime(
-                        year=2021,
-                        month=6,
-                        day=26,
-                        hour=7,
-                        minute=2,
-                        tzinfo=dt.timezone.utc,
-                    ),
-                ),
-                VectorClockItem(
-                    provider_id="other_provider",
-                    timestamp=dt.datetime(
-                        day=15,
-                        month=6,
-                        year=2021,
-                        hour=15,
-                        minute=40,
-                        tzinfo=dt.timezone.utc,
-                    ),
-                ),
-            ),
-        )
-
-        self.data_store._add_item_change(item_change=item_change4)
-
-        item_version2 = ItemVersion(
-            current_item_change=item_change4,
-            item_id="915a67f9-e597-491a-a28f-cf0fda241b68",
-            date_created=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
-            ),
-        )
-        self.data_store._add_item_version(item_version=item_version2)
-
-        # Situation 1 - empty vector clock
-        query1 = Query(
-            entity_name="my_app_item",
-            filter=Filter(
-                children=[
-                    Comparison(
-                        field_name="version", comparator=Comparator.EQUALS, value="3",
-                    )
-                ]
-            ),
-            ordering=[],
-            limit=None,
-            offset=None,
-        )
-
-        vector_clock1 = VectorClock.create_empty(
-            provider_ids=["provider_in_test", "other_provider"]
-        )
-
-        result = self.data_store.select_changes(
-            vector_clock=vector_clock1, max_num=10, query=query1
-        )
-
-        self.assertEqual(
-            result.item_changes, [item_change4],
-        )
-
-    def test_select_changes_query_2(self):
-        """Simulates the situation where changes are selected and a query is used to filter the results.
-
-            Situation 2:
-                - There 3 items, one with version 2.1 (that used to be version 2) that has 3 changes,
-                one with version 2 that has two changes and one with version 1 that has 1 change
-                - A vector clock is used for selecting the changes. The vector clock is posterior
-                to the second change of item 1 and first change of item 2. It is inferior
-                to the change of item 1
-                - A query filtering only items with version 2 is used
-
-                Expected results:
-                    - The third change related to item 1 is returned (item_change3) as well as
-                    the second change related to item 2 (item_change5)
-        """
-        if not self.supports_queries:
-            return
-
-        # Adding 3 changes to an object
-        item = self.data_store._create_item(
-            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="2.1",
-        )
-        self.data_store._add_item(item=item)
-
-        item_change1 = ItemChange(
-            id=uuid.UUID("54423877-370a-4936-b362-419cc86abbb8"),
-            date_created=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
-            ),
-            operation=Operation.INSERT,
-            serialization_result=SerializationResult(
-                item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
-                entity_name="my_app_item",
-                serialized_item=self._serialize_item(
-                    id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
-                    name="item_1",
-                    version="1",
-                ),
-            ),
-            change_vector_clock_item=VectorClockItem(
-                timestamp=dt.datetime(
-                    year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
-                ),
-                provider_id="provider_in_test",
-            ),
-            insert_vector_clock_item=VectorClockItem(
-                timestamp=dt.datetime(
-                    year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
-                ),
-                provider_id="provider_in_test",
-            ),
-            should_ignore=False,
-            is_applied=True,
-            vector_clock=VectorClock(
-                VectorClockItem(
-                    provider_id="provider_in_test",
-                    timestamp=dt.datetime(
-                        year=2021,
-                        month=6,
-                        day=26,
-                        hour=7,
-                        minute=0,
-                        tzinfo=dt.timezone.utc,
-                    ),
-                ),
-                VectorClockItem(
-                    provider_id="other_provider",
-                    timestamp=dt.datetime(
-                        day=15,
-                        month=6,
-                        year=2021,
-                        hour=15,
-                        minute=40,
-                        tzinfo=dt.timezone.utc,
-                    ),
-                ),
-            ),
-        )
-
-        self.data_store._add_item_change(item_change=item_change1)
-
-        item_change2 = ItemChange(
-            id=uuid.UUID("3a5e71c9-da5c-461a-ae84-9001fd962925"),
-            date_created=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=9, tzinfo=dt.timezone.utc
-            ),
-            operation=Operation.UPDATE,
-            serialization_result=SerializationResult(
-                item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
-                entity_name="my_app_item",
-                serialized_item=self._serialize_item(
-                    id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
-                    name="item_1",
-                    version="2",
-                ),
-            ),
-            change_vector_clock_item=VectorClockItem(
-                timestamp=dt.datetime(
-                    year=2021, month=6, day=26, hour=7, minute=9, tzinfo=dt.timezone.utc
-                ),
-                provider_id="provider_in_test",
-            ),
-            insert_vector_clock_item=VectorClockItem(
-                timestamp=dt.datetime(
-                    year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
-                ),
-                provider_id="provider_in_test",
-            ),
-            should_ignore=False,
-            is_applied=True,
-            vector_clock=VectorClock(
-                VectorClockItem(
-                    provider_id="provider_in_test",
-                    timestamp=dt.datetime(
-                        year=2021,
-                        month=6,
-                        day=26,
-                        hour=7,
-                        minute=2,
-                        tzinfo=dt.timezone.utc,
-                    ),
-                ),
-                VectorClockItem(
-                    provider_id="other_provider",
-                    timestamp=dt.datetime(
-                        day=15,
-                        month=6,
-                        year=2021,
-                        hour=15,
-                        minute=40,
-                        tzinfo=dt.timezone.utc,
-                    ),
-                ),
-            ),
-        )
-        self.data_store._add_item_change(item_change=item_change2)
-
-        item_change3 = ItemChange(
-            id=uuid.UUID("54417070-60f1-47e7-a2f3-7755dfafb194"),
-            date_created=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=11, tzinfo=dt.timezone.utc
-            ),
-            operation=Operation.UPDATE,
-            serialization_result=SerializationResult(
-                item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
-                entity_name="my_app_item",
-                serialized_item=self._serialize_item(
-                    id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
-                    name="item_1",
-                    version="2.1",
-                ),
-            ),
-            change_vector_clock_item=VectorClockItem(
-                timestamp=dt.datetime(
-                    year=2021,
-                    month=6,
-                    day=26,
-                    hour=7,
-                    minute=11,
-                    tzinfo=dt.timezone.utc,
-                ),
-                provider_id="provider_in_test",
-            ),
-            insert_vector_clock_item=VectorClockItem(
-                timestamp=dt.datetime(
-                    year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
-                ),
-                provider_id="provider_in_test",
-            ),
-            should_ignore=False,
-            is_applied=False,
-            vector_clock=VectorClock(
-                VectorClockItem(
-                    provider_id="provider_in_test",
-                    timestamp=dt.datetime(
-                        year=2021,
-                        month=6,
-                        day=26,
-                        hour=7,
-                        minute=3,
-                        tzinfo=dt.timezone.utc,
-                    ),
-                ),
-                VectorClockItem(
-                    provider_id="other_provider",
-                    timestamp=dt.datetime(
-                        year=2021,
-                        month=6,
-                        day=15,
-                        hour=15,
-                        minute=40,
-                        tzinfo=dt.timezone.utc,
-                    ),
-                ),
-            ),
-        )
-        self.data_store._add_item_change(item_change=item_change3)
-
-        item_version1 = ItemVersion(
-            current_item_change=item_change3,
-            item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
-            date_created=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=11, tzinfo=dt.timezone.utc
-            ),
-        )
-        self.data_store._add_item_version(item_version=item_version1)
-
-        # Adding a change to another object
-        item = self.data_store._create_item(
-            id="915a67f9-e597-491a-a28f-cf0fda241b68", name="item_2", version="2",
-        )
-        self.data_store._add_item(item=item)
-
-        item_change4 = ItemChange(
-            id=uuid.UUID("c56c1211-6599-481f-9d47-71d3aafaf46d"),
-            date_created=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
-            ),
-            operation=Operation.INSERT,
-            serialization_result=SerializationResult(
-                item_id="915a67f9-e597-491a-a28f-cf0fda241b68",
-                entity_name="my_app_item",
-                serialized_item=self._serialize_item(
-                    id="915a67f9-e597-491a-a28f-cf0fda241b68",
-                    name="item_2",
-                    version="1",
-                ),
-            ),
-            change_vector_clock_item=VectorClockItem(
-                timestamp=dt.datetime(
-                    year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
-                ),
-                provider_id="provider_in_test",
-            ),
-            insert_vector_clock_item=VectorClockItem(
-                timestamp=dt.datetime(
-                    year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
-                ),
-                provider_id="provider_in_test",
-            ),
-            should_ignore=False,
-            is_applied=True,
-            vector_clock=VectorClock(
-                VectorClockItem(
-                    provider_id="provider_in_test",
-                    timestamp=dt.datetime(
-                        year=2021,
-                        month=6,
-                        day=26,
-                        hour=7,
-                        minute=2,
-                        tzinfo=dt.timezone.utc,
-                    ),
-                ),
-                VectorClockItem(
-                    provider_id="other_provider",
-                    timestamp=dt.datetime(
-                        day=15,
-                        month=6,
-                        year=2021,
-                        hour=15,
-                        minute=40,
-                        tzinfo=dt.timezone.utc,
-                    ),
-                ),
-            ),
-        )
-
-        self.data_store._add_item_change(item_change=item_change4)
-
-        item_change5 = ItemChange(
-            id=uuid.UUID("c74db017-5510-4f26-ae11-93e0abc337ff"),
-            date_created=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=11, tzinfo=dt.timezone.utc
-            ),
-            operation=Operation.UPDATE,
-            serialization_result=SerializationResult(
-                item_id="915a67f9-e597-491a-a28f-cf0fda241b68",
-                entity_name="my_app_item",
-                serialized_item=self._serialize_item(
-                    id="915a67f9-e597-491a-a28f-cf0fda241b68",
-                    name="item_2",
-                    version="2",
-                ),
-            ),
-            change_vector_clock_item=VectorClockItem(
-                timestamp=dt.datetime(
-                    year=2021,
-                    month=6,
-                    day=26,
-                    hour=7,
-                    minute=11,
-                    tzinfo=dt.timezone.utc,
-                ),
-                provider_id="provider_in_test",
-            ),
-            insert_vector_clock_item=VectorClockItem(
-                timestamp=dt.datetime(
-                    year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
-                ),
-                provider_id="provider_in_test",
-            ),
-            should_ignore=False,
-            is_applied=True,
-            vector_clock=VectorClock(
-                VectorClockItem(
-                    provider_id="provider_in_test",
-                    timestamp=dt.datetime(
-                        year=2021,
-                        month=6,
-                        day=26,
-                        hour=7,
-                        minute=11,
-                        tzinfo=dt.timezone.utc,
-                    ),
-                ),
-                VectorClockItem(
-                    provider_id="other_provider",
-                    timestamp=dt.datetime(
-                        day=15,
-                        month=6,
-                        year=2021,
-                        hour=15,
-                        minute=40,
-                        tzinfo=dt.timezone.utc,
-                    ),
-                ),
-            ),
-        )
-
-        self.data_store._add_item_change(item_change=item_change5)
-
-        item_version2 = ItemVersion(
-            current_item_change=item_change5,
-            item_id="915a67f9-e597-491a-a28f-cf0fda241b68",
-            date_created=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=11, tzinfo=dt.timezone.utc
-            ),
-        )
-        self.data_store._add_item_version(item_version=item_version2)
-
-        # Adding a third item
-        item = self.data_store._create_item(
-            id="559168e5-a155-49eb-be16-5161f7c29e55", name="item_3", version="1",
-        )
-        self.data_store._add_item(item=item)
-
-        item_change6 = ItemChange(
-            id=uuid.UUID("3b97d25a-be26-4ab8-b4fa-b6abb6769c33"),
-            date_created=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=12, tzinfo=dt.timezone.utc
-            ),
-            operation=Operation.INSERT,
-            serialization_result=SerializationResult(
-                item_id="559168e5-a155-49eb-be16-5161f7c29e55",
-                entity_name="my_app_item",
-                serialized_item=self._serialize_item(
-                    id="559168e5-a155-49eb-be16-5161f7c29e55",
-                    name="item_3",
-                    version="1",
-                ),
-            ),
-            change_vector_clock_item=VectorClockItem(
-                timestamp=dt.datetime(
-                    year=2021,
-                    month=6,
-                    day=26,
-                    hour=7,
-                    minute=12,
-                    tzinfo=dt.timezone.utc,
-                ),
-                provider_id="provider_in_test",
-            ),
-            insert_vector_clock_item=VectorClockItem(
-                timestamp=dt.datetime(
-                    year=2021,
-                    month=6,
-                    day=26,
-                    hour=7,
-                    minute=12,
-                    tzinfo=dt.timezone.utc,
-                ),
-                provider_id="provider_in_test",
-            ),
-            should_ignore=False,
-            is_applied=True,
-            vector_clock=VectorClock(
-                VectorClockItem(
-                    provider_id="provider_in_test",
-                    timestamp=dt.datetime(
-                        year=2021,
-                        month=6,
-                        day=26,
-                        hour=7,
-                        minute=12,
-                        tzinfo=dt.timezone.utc,
-                    ),
-                ),
-                VectorClockItem(
-                    provider_id="other_provider",
-                    timestamp=dt.datetime(
-                        day=15,
-                        month=6,
-                        year=2021,
-                        hour=15,
-                        minute=40,
-                        tzinfo=dt.timezone.utc,
-                    ),
-                ),
-            ),
-        )
-
-        self.data_store._add_item_change(item_change=item_change6)
-
-        item_version3 = ItemVersion(
-            current_item_change=item_change6,
-            item_id="559168e5-a155-49eb-be16-5161f7c29e55",
-            date_created=dt.datetime(
-                year=2021, month=6, day=26, hour=7, minute=11, tzinfo=dt.timezone.utc
-            ),
-        )
-        self.data_store._add_item_version(item_version=item_version3)
-
-        # Situation 2
-        query1 = Query(
-            entity_name="my_app_item",
-            filter=Filter(
-                children=[
-                    Comparison(
-                        field_name="version", comparator=Comparator.EQUALS, value="2",
-                    )
-                ]
-            ),
-            ordering=[],
-            limit=None,
-            offset=None,
-        )
-
-        vector_clock1 = VectorClock(
-            VectorClockItem(
-                provider_id="provider_in_test",
-                timestamp=dt.datetime(
-                    year=2021,
-                    month=6,
-                    day=26,
-                    hour=7,
-                    minute=10,
-                    tzinfo=dt.timezone.utc,
-                ),
-            ),
-            VectorClockItem(
-                provider_id="other_provider",
-                timestamp=dt.datetime(
-                    year=2021,
-                    month=6,
-                    day=15,
-                    hour=15,
-                    minute=40,
-                    tzinfo=dt.timezone.utc,
-                ),
-            ),
-        )
-
-        result = self.data_store.select_changes(
-            vector_clock=vector_clock1, max_num=10, query=query1
-        )
-
-        self.assertEqual(
-            result.item_changes, [item_change3, item_change5],
-        )
 
     def test_select_deferred_changes(self):
         # Adding a change to an object
@@ -3167,3 +2330,839 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
         sync_sessions = self.data_store.get_sync_sessions()
 
         self.assertEqual(sync_sessions, [sync_session])
+
+
+class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
+
+    def setUp(self):
+        self.data_store = self._create_data_store(local_provider_id="provider_in_test",)
+
+    def test_get_local_vector_clock_query(self):
+
+        # Start tracking a query
+        query1 = Query(
+            entity_name="my_app_item",
+            filter=Filter(
+                children=[
+                    Comparison(
+                        field_name="name", comparator=Comparator.EQUALS, value="item_2",
+                    )
+                ]
+            ),
+            ordering=[],
+            limit=None,
+            offset=None,
+        )
+        self.data_store.start_tracking_query(query=query1)
+
+        # Adding 3 changes to an object
+        item_change1 = self.data_store.commit_item_change(
+            operation=Operation.INSERT,
+            item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+            item=self.data_store._create_item(
+                id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="1",
+            ),
+        )
+
+        item_change2 = self.data_store.commit_item_change(
+            operation=Operation.UPDATE,
+            item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+            item=self.data_store._create_item(
+                id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="2",
+            ),
+        )
+
+        item_change3 = self.data_store.commit_item_change(
+            operation=Operation.UPDATE,
+            item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+            item=self.data_store._create_item(
+                id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="2.1",
+            ),
+        )
+
+        # Adding a change to another object
+        item_change4 = self.data_store.commit_item_change(
+            operation=Operation.UPDATE,
+            item_id="915a67f9-e597-491a-a28f-cf0fda241b68",
+            item=self.data_store._create_item(
+                id="915a67f9-e597-491a-a28f-cf0fda241b68", name="item_2", version="1",
+            ),
+        )
+
+        # Filtering with a query
+        result = self.data_store.get_local_vector_clock(query=query1)
+        self.assertEqual(
+            result, VectorClock(item_change4.change_vector_clock_item),
+        )
+
+    def test_select_changes_query_1(self):
+        """Simulates the situation where changes are selected and a query is used to filter the results.
+
+            Situation 1:
+                - There 2 items, one with version 2.1 that has 3 changes and
+                one with version 3 that has only one change
+                - An empty vector clock is used for selecting the changes
+                - A query filtering only items with version 3 is used
+
+                Expected results:
+                    - Only the change related to item 2 is returned
+        """
+
+        # Adding 3 changes to an object
+        item = self.data_store._create_item(
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="1",
+        )
+        self.data_store._add_item(item=item)
+
+        item_change1 = ItemChange(
+            id=uuid.UUID("54423877-370a-4936-b362-419cc86abbb8"),
+            date_created=dt.datetime(
+                year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+            ),
+            operation=Operation.INSERT,
+            serialization_result=SerializationResult(
+                item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+                entity_name="my_app_item",
+                serialized_item=self._serialize_item(
+                    id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+                    name="item_1",
+                    version="1",
+                ),
+            ),
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
+            ),
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
+            ),
+            should_ignore=False,
+            is_applied=True,
+            vector_clock=VectorClock(
+                VectorClockItem(
+                    provider_id="provider_in_test",
+                    timestamp=dt.datetime(
+                        year=2021,
+                        month=6,
+                        day=26,
+                        hour=7,
+                        minute=2,
+                        tzinfo=dt.timezone.utc,
+                    ),
+                ),
+                VectorClockItem(
+                    provider_id="other_provider",
+                    timestamp=dt.datetime(
+                        day=15,
+                        month=6,
+                        year=2021,
+                        hour=15,
+                        minute=40,
+                        tzinfo=dt.timezone.utc,
+                    ),
+                ),
+            ),
+        )
+
+        self.data_store._add_item_change(item_change=item_change1)
+
+        item_change2 = ItemChange(
+            id=uuid.UUID("3a5e71c9-da5c-461a-ae84-9001fd962925"),
+            date_created=dt.datetime(
+                year=2021, month=6, day=26, hour=7, minute=9, tzinfo=dt.timezone.utc
+            ),
+            operation=Operation.UPDATE,
+            serialization_result=SerializationResult(
+                item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+                entity_name="my_app_item",
+                serialized_item=self._serialize_item(
+                    id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+                    name="item_1",
+                    version="2",
+                ),
+            ),
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=9, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
+            ),
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
+            ),
+            should_ignore=True,
+            is_applied=True,
+            vector_clock=VectorClock(
+                VectorClockItem(
+                    provider_id="provider_in_test",
+                    timestamp=dt.datetime(
+                        year=2021,
+                        month=6,
+                        day=26,
+                        hour=7,
+                        minute=9,
+                        tzinfo=dt.timezone.utc,
+                    ),
+                ),
+                VectorClockItem(
+                    provider_id="other_provider",
+                    timestamp=dt.datetime(
+                        day=15,
+                        month=6,
+                        year=2021,
+                        hour=15,
+                        minute=40,
+                        tzinfo=dt.timezone.utc,
+                    ),
+                ),
+            ),
+        )
+        self.data_store._add_item_change(item_change=item_change2)
+
+        item_change3 = ItemChange(
+            id=uuid.UUID("54417070-60f1-47e7-a2f3-7755dfafb194"),
+            date_created=dt.datetime(
+                year=2021, month=6, day=26, hour=7, minute=11, tzinfo=dt.timezone.utc
+            ),
+            operation=Operation.UPDATE,
+            serialization_result=SerializationResult(
+                item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+                entity_name="my_app_item",
+                serialized_item=self._serialize_item(
+                    id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+                    name="item_1",
+                    version="2.1",
+                ),
+            ),
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021,
+                    month=6,
+                    day=26,
+                    hour=7,
+                    minute=11,
+                    tzinfo=dt.timezone.utc,
+                ),
+                provider_id="other_provider",
+            ),
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
+            ),
+            should_ignore=False,
+            is_applied=False,
+            vector_clock=VectorClock(
+                *[
+                    VectorClockItem(
+                        provider_id="provider_in_test",
+                        timestamp=dt.datetime(
+                            year=2021,
+                            month=6,
+                            day=26,
+                            hour=7,
+                            minute=2,
+                            tzinfo=dt.timezone.utc,
+                        ),
+                    ),
+                    VectorClockItem(
+                        provider_id="other_provider",
+                        timestamp=dt.datetime(
+                            year=2021,
+                            month=6,
+                            day=26,
+                            hour=7,
+                            minute=11,
+                            tzinfo=dt.timezone.utc,
+                        ),
+                    ),
+                ]
+            ),
+        )
+        self.data_store._add_item_change(item_change=item_change3)
+
+        item_version1 = ItemVersion(
+            current_item_change=item_change3,
+            item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+            date_created=dt.datetime(
+                year=2021, month=6, day=26, hour=7, minute=11, tzinfo=dt.timezone.utc
+            ),
+        )
+        self.data_store._add_item_version(item_version=item_version1)
+
+        # Adding a change to another object
+        item = self.data_store._create_item(
+            id="915a67f9-e597-491a-a28f-cf0fda241b68", name="item_2", version="3",
+        )
+        self.data_store._add_item(item=item)
+
+        item_change4 = ItemChange(
+            id=uuid.UUID("c56c1211-6599-481f-9d47-71d3aafaf46d"),
+            date_created=dt.datetime(
+                year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+            ),
+            operation=Operation.INSERT,
+            serialization_result=SerializationResult(
+                item_id="915a67f9-e597-491a-a28f-cf0fda241b68",
+                entity_name="my_app_item",
+                serialized_item=self._serialize_item(
+                    id="915a67f9-e597-491a-a28f-cf0fda241b68",
+                    name="item_2",
+                    version="3",
+                ),
+            ),
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
+            ),
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
+            ),
+            should_ignore=False,
+            is_applied=True,
+            vector_clock=VectorClock(
+                VectorClockItem(
+                    provider_id="provider_in_test",
+                    timestamp=dt.datetime(
+                        year=2021,
+                        month=6,
+                        day=26,
+                        hour=7,
+                        minute=2,
+                        tzinfo=dt.timezone.utc,
+                    ),
+                ),
+                VectorClockItem(
+                    provider_id="other_provider",
+                    timestamp=dt.datetime(
+                        day=15,
+                        month=6,
+                        year=2021,
+                        hour=15,
+                        minute=40,
+                        tzinfo=dt.timezone.utc,
+                    ),
+                ),
+            ),
+        )
+
+        self.data_store._add_item_change(item_change=item_change4)
+
+        item_version2 = ItemVersion(
+            current_item_change=item_change4,
+            item_id="915a67f9-e597-491a-a28f-cf0fda241b68",
+            date_created=dt.datetime(
+                year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+            ),
+        )
+        self.data_store._add_item_version(item_version=item_version2)
+
+        # Situation 1 - empty vector clock
+        query1 = Query(
+            entity_name="my_app_item",
+            filter=Filter(
+                children=[
+                    Comparison(
+                        field_name="version", comparator=Comparator.EQUALS, value="3",
+                    )
+                ]
+            ),
+            ordering=[],
+            limit=None,
+            offset=None,
+        )
+
+        vector_clock1 = VectorClock.create_empty(
+            provider_ids=["provider_in_test", "other_provider"]
+        )
+
+        result = self.data_store.select_changes(
+            vector_clock=vector_clock1, max_num=10, query=query1
+        )
+
+        self.assertEqual(
+            result.item_changes, [item_change4],
+        )
+
+    def test_select_changes_query_2(self):
+        """Simulates the situation where changes are selected and a query is used to filter the results.
+
+            Situation 2:
+                - There 3 items, one with version 2.1 (that used to be version 2) that has 3 changes,
+                one with version 2 that has two changes and one with version 1 that has 1 change
+                - A vector clock is used for selecting the changes. The vector clock is posterior
+                to the second change of item 1 and first change of item 2. It is inferior
+                to the change of item 1
+                - A query filtering only items with version 2 is used
+
+                Expected results:
+                    - The third change related to item 1 is returned (item_change3) as well as
+                    the second change related to item 2 (item_change5)
+        """
+
+        # Adding 3 changes to an object
+        item = self.data_store._create_item(
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="2.1",
+        )
+        self.data_store._add_item(item=item)
+
+        item_change1 = ItemChange(
+            id=uuid.UUID("54423877-370a-4936-b362-419cc86abbb8"),
+            date_created=dt.datetime(
+                year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+            ),
+            operation=Operation.INSERT,
+            serialization_result=SerializationResult(
+                item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+                entity_name="my_app_item",
+                serialized_item=self._serialize_item(
+                    id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+                    name="item_1",
+                    version="1",
+                ),
+            ),
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
+            ),
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
+            ),
+            should_ignore=False,
+            is_applied=True,
+            vector_clock=VectorClock(
+                VectorClockItem(
+                    provider_id="provider_in_test",
+                    timestamp=dt.datetime(
+                        year=2021,
+                        month=6,
+                        day=26,
+                        hour=7,
+                        minute=0,
+                        tzinfo=dt.timezone.utc,
+                    ),
+                ),
+                VectorClockItem(
+                    provider_id="other_provider",
+                    timestamp=dt.datetime(
+                        day=15,
+                        month=6,
+                        year=2021,
+                        hour=15,
+                        minute=40,
+                        tzinfo=dt.timezone.utc,
+                    ),
+                ),
+            ),
+        )
+
+        self.data_store._add_item_change(item_change=item_change1)
+
+        item_change2 = ItemChange(
+            id=uuid.UUID("3a5e71c9-da5c-461a-ae84-9001fd962925"),
+            date_created=dt.datetime(
+                year=2021, month=6, day=26, hour=7, minute=9, tzinfo=dt.timezone.utc
+            ),
+            operation=Operation.UPDATE,
+            serialization_result=SerializationResult(
+                item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+                entity_name="my_app_item",
+                serialized_item=self._serialize_item(
+                    id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+                    name="item_1",
+                    version="2",
+                ),
+            ),
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=9, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
+            ),
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
+            ),
+            should_ignore=False,
+            is_applied=True,
+            vector_clock=VectorClock(
+                VectorClockItem(
+                    provider_id="provider_in_test",
+                    timestamp=dt.datetime(
+                        year=2021,
+                        month=6,
+                        day=26,
+                        hour=7,
+                        minute=2,
+                        tzinfo=dt.timezone.utc,
+                    ),
+                ),
+                VectorClockItem(
+                    provider_id="other_provider",
+                    timestamp=dt.datetime(
+                        day=15,
+                        month=6,
+                        year=2021,
+                        hour=15,
+                        minute=40,
+                        tzinfo=dt.timezone.utc,
+                    ),
+                ),
+            ),
+        )
+        self.data_store._add_item_change(item_change=item_change2)
+
+        item_change3 = ItemChange(
+            id=uuid.UUID("54417070-60f1-47e7-a2f3-7755dfafb194"),
+            date_created=dt.datetime(
+                year=2021, month=6, day=26, hour=7, minute=11, tzinfo=dt.timezone.utc
+            ),
+            operation=Operation.UPDATE,
+            serialization_result=SerializationResult(
+                item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+                entity_name="my_app_item",
+                serialized_item=self._serialize_item(
+                    id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+                    name="item_1",
+                    version="2.1",
+                ),
+            ),
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021,
+                    month=6,
+                    day=26,
+                    hour=7,
+                    minute=11,
+                    tzinfo=dt.timezone.utc,
+                ),
+                provider_id="provider_in_test",
+            ),
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=0, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
+            ),
+            should_ignore=False,
+            is_applied=False,
+            vector_clock=VectorClock(
+                VectorClockItem(
+                    provider_id="provider_in_test",
+                    timestamp=dt.datetime(
+                        year=2021,
+                        month=6,
+                        day=26,
+                        hour=7,
+                        minute=3,
+                        tzinfo=dt.timezone.utc,
+                    ),
+                ),
+                VectorClockItem(
+                    provider_id="other_provider",
+                    timestamp=dt.datetime(
+                        year=2021,
+                        month=6,
+                        day=15,
+                        hour=15,
+                        minute=40,
+                        tzinfo=dt.timezone.utc,
+                    ),
+                ),
+            ),
+        )
+        self.data_store._add_item_change(item_change=item_change3)
+
+        item_version1 = ItemVersion(
+            current_item_change=item_change3,
+            item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+            date_created=dt.datetime(
+                year=2021, month=6, day=26, hour=7, minute=11, tzinfo=dt.timezone.utc
+            ),
+        )
+        self.data_store._add_item_version(item_version=item_version1)
+
+        # Adding a change to another object
+        item = self.data_store._create_item(
+            id="915a67f9-e597-491a-a28f-cf0fda241b68", name="item_2", version="2",
+        )
+        self.data_store._add_item(item=item)
+
+        item_change4 = ItemChange(
+            id=uuid.UUID("c56c1211-6599-481f-9d47-71d3aafaf46d"),
+            date_created=dt.datetime(
+                year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+            ),
+            operation=Operation.INSERT,
+            serialization_result=SerializationResult(
+                item_id="915a67f9-e597-491a-a28f-cf0fda241b68",
+                entity_name="my_app_item",
+                serialized_item=self._serialize_item(
+                    id="915a67f9-e597-491a-a28f-cf0fda241b68",
+                    name="item_2",
+                    version="1",
+                ),
+            ),
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
+            ),
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
+            ),
+            should_ignore=False,
+            is_applied=True,
+            vector_clock=VectorClock(
+                VectorClockItem(
+                    provider_id="provider_in_test",
+                    timestamp=dt.datetime(
+                        year=2021,
+                        month=6,
+                        day=26,
+                        hour=7,
+                        minute=2,
+                        tzinfo=dt.timezone.utc,
+                    ),
+                ),
+                VectorClockItem(
+                    provider_id="other_provider",
+                    timestamp=dt.datetime(
+                        day=15,
+                        month=6,
+                        year=2021,
+                        hour=15,
+                        minute=40,
+                        tzinfo=dt.timezone.utc,
+                    ),
+                ),
+            ),
+        )
+
+        self.data_store._add_item_change(item_change=item_change4)
+
+        item_change5 = ItemChange(
+            id=uuid.UUID("c74db017-5510-4f26-ae11-93e0abc337ff"),
+            date_created=dt.datetime(
+                year=2021, month=6, day=26, hour=7, minute=11, tzinfo=dt.timezone.utc
+            ),
+            operation=Operation.UPDATE,
+            serialization_result=SerializationResult(
+                item_id="915a67f9-e597-491a-a28f-cf0fda241b68",
+                entity_name="my_app_item",
+                serialized_item=self._serialize_item(
+                    id="915a67f9-e597-491a-a28f-cf0fda241b68",
+                    name="item_2",
+                    version="2",
+                ),
+            ),
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021,
+                    month=6,
+                    day=26,
+                    hour=7,
+                    minute=11,
+                    tzinfo=dt.timezone.utc,
+                ),
+                provider_id="provider_in_test",
+            ),
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021, month=6, day=26, hour=7, minute=2, tzinfo=dt.timezone.utc
+                ),
+                provider_id="provider_in_test",
+            ),
+            should_ignore=False,
+            is_applied=True,
+            vector_clock=VectorClock(
+                VectorClockItem(
+                    provider_id="provider_in_test",
+                    timestamp=dt.datetime(
+                        year=2021,
+                        month=6,
+                        day=26,
+                        hour=7,
+                        minute=11,
+                        tzinfo=dt.timezone.utc,
+                    ),
+                ),
+                VectorClockItem(
+                    provider_id="other_provider",
+                    timestamp=dt.datetime(
+                        day=15,
+                        month=6,
+                        year=2021,
+                        hour=15,
+                        minute=40,
+                        tzinfo=dt.timezone.utc,
+                    ),
+                ),
+            ),
+        )
+
+        self.data_store._add_item_change(item_change=item_change5)
+
+        item_version2 = ItemVersion(
+            current_item_change=item_change5,
+            item_id="915a67f9-e597-491a-a28f-cf0fda241b68",
+            date_created=dt.datetime(
+                year=2021, month=6, day=26, hour=7, minute=11, tzinfo=dt.timezone.utc
+            ),
+        )
+        self.data_store._add_item_version(item_version=item_version2)
+
+        # Adding a third item
+        item = self.data_store._create_item(
+            id="559168e5-a155-49eb-be16-5161f7c29e55", name="item_3", version="1",
+        )
+        self.data_store._add_item(item=item)
+
+        item_change6 = ItemChange(
+            id=uuid.UUID("3b97d25a-be26-4ab8-b4fa-b6abb6769c33"),
+            date_created=dt.datetime(
+                year=2021, month=6, day=26, hour=7, minute=12, tzinfo=dt.timezone.utc
+            ),
+            operation=Operation.INSERT,
+            serialization_result=SerializationResult(
+                item_id="559168e5-a155-49eb-be16-5161f7c29e55",
+                entity_name="my_app_item",
+                serialized_item=self._serialize_item(
+                    id="559168e5-a155-49eb-be16-5161f7c29e55",
+                    name="item_3",
+                    version="1",
+                ),
+            ),
+            change_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021,
+                    month=6,
+                    day=26,
+                    hour=7,
+                    minute=12,
+                    tzinfo=dt.timezone.utc,
+                ),
+                provider_id="provider_in_test",
+            ),
+            insert_vector_clock_item=VectorClockItem(
+                timestamp=dt.datetime(
+                    year=2021,
+                    month=6,
+                    day=26,
+                    hour=7,
+                    minute=12,
+                    tzinfo=dt.timezone.utc,
+                ),
+                provider_id="provider_in_test",
+            ),
+            should_ignore=False,
+            is_applied=True,
+            vector_clock=VectorClock(
+                VectorClockItem(
+                    provider_id="provider_in_test",
+                    timestamp=dt.datetime(
+                        year=2021,
+                        month=6,
+                        day=26,
+                        hour=7,
+                        minute=12,
+                        tzinfo=dt.timezone.utc,
+                    ),
+                ),
+                VectorClockItem(
+                    provider_id="other_provider",
+                    timestamp=dt.datetime(
+                        day=15,
+                        month=6,
+                        year=2021,
+                        hour=15,
+                        minute=40,
+                        tzinfo=dt.timezone.utc,
+                    ),
+                ),
+            ),
+        )
+
+        self.data_store._add_item_change(item_change=item_change6)
+
+        item_version3 = ItemVersion(
+            current_item_change=item_change6,
+            item_id="559168e5-a155-49eb-be16-5161f7c29e55",
+            date_created=dt.datetime(
+                year=2021, month=6, day=26, hour=7, minute=11, tzinfo=dt.timezone.utc
+            ),
+        )
+        self.data_store._add_item_version(item_version=item_version3)
+
+        # Situation 2
+        query1 = Query(
+            entity_name="my_app_item",
+            filter=Filter(
+                children=[
+                    Comparison(
+                        field_name="version", comparator=Comparator.EQUALS, value="2",
+                    )
+                ]
+            ),
+            ordering=[],
+            limit=None,
+            offset=None,
+        )
+
+        vector_clock1 = VectorClock(
+            VectorClockItem(
+                provider_id="provider_in_test",
+                timestamp=dt.datetime(
+                    year=2021,
+                    month=6,
+                    day=26,
+                    hour=7,
+                    minute=10,
+                    tzinfo=dt.timezone.utc,
+                ),
+            ),
+            VectorClockItem(
+                provider_id="other_provider",
+                timestamp=dt.datetime(
+                    year=2021,
+                    month=6,
+                    day=15,
+                    hour=15,
+                    minute=40,
+                    tzinfo=dt.timezone.utc,
+                ),
+            ),
+        )
+
+        result = self.data_store.select_changes(
+            vector_clock=vector_clock1, max_num=10, query=query1
+        )
+
+        self.assertEqual(
+            result.item_changes, [item_change3, item_change5],
+        )

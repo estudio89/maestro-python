@@ -151,7 +151,7 @@ class VectorClockTest(unittest.TestCase):
 
     def test_update(self):
         new_timestamp = dt.datetime(day=17, month=6, year=2021, hour=15, minute=47)
-        self.vector_clock.update_vector_clock_item("provider1", new_timestamp)
+        self.vector_clock.update(VectorClockItem("provider1", new_timestamp))
 
         self.assertEqual(
             self.vector_clock.get_vector_clock_item("provider1").timestamp,
