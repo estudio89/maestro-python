@@ -27,7 +27,7 @@ export interface ItemChangeRecord extends FirestoreItem {
     date_created: admin.firestore.Timestamp;
     change_vector_clock_item: VectorClockItemRecord;
     insert_vector_clock_item: VectorClockItemRecord;
-    serialized_item: string;
+    serialized_item: AppItem;
     should_ignore: boolean;
     is_applied: boolean;
     vector_clock: VectorClockItemRecord[];

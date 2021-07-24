@@ -5,7 +5,6 @@ import {
     VectorClock,
     VectorClockItem,
     Operation,
-    SerializationResult,
 } from "../../core/metadata";
 import {
     ItemChangeRecord,
@@ -15,6 +14,7 @@ import {
 import { FirestoreDataStore } from "./store";
 import { entityNameToCollection, collectionToEntityName } from "./utils";
 import * as admin from "firebase-admin";
+import { FirestoreAppItemSerializer } from "./serializer";
 
 abstract class FirestoreConverter<M, R> implements BaseMetadataConverter<M, R> {
     abstract toMetadata(record: R): Promise<M>;
@@ -88,6 +88,7 @@ export class VectorClockMetadataConverter
 export class ItemChangeMetadataConverter
     implements BaseMetadataConverter<ItemChange, ItemChangeRecord>
 {
+    constructor(public itemSerializer: FirestoreAppItemSerializer) {}
     async toMetadata(record: ItemChangeRecord): Promise<ItemChange> {
         const vectorClockConverter = new VectorClockMetadataConverter();
         const vectorClockItemConverter = new VectorClockItemMetadataConverter();
@@ -101,14 +102,14 @@ export class ItemChangeMetadataConverter
             record.insert_vector_clock_item
         );
         const entityName = collectionToEntityName(record.collection_name);
+        const serializationResult = this.itemSerializer.serializeItem(
+            record.serialized_item,
+            entityName
+        );
         const metadataObject = new ItemChange(
             record.id,
             record.operation as Operation,
-            new SerializationResult(
-                record.item_id,
-                entityName,
-                record.serialized_item
-            ),
+            serializationResult,
             changeVectorClockItem,
             insertVectorClockItem,
             record.should_ignore,
@@ -127,6 +128,8 @@ export class ItemChangeMetadataConverter
         const collectionName = entityNameToCollection(
             metadataObject.serializationResult.entityName
         );
+        const deserializedItem =
+            this.itemSerializer.deserializeItem(metadataObject.serializationResult);
         return {
             id: metadataObject.id,
             date_created: admin.firestore.Timestamp.fromDate(
@@ -147,7 +150,7 @@ export class ItemChangeMetadataConverter
                     metadataObject.insertVectorClockItem.timestamp
                 ),
             },
-            serialized_item: metadataObject.serializationResult.serializedItem,
+            serialized_item: deserializedItem,
             should_ignore: metadataObject.shouldIgnore,
             is_applied: metadataObject.isApplied,
             vector_clock: vectorClockRecord,

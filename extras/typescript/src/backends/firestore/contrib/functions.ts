@@ -12,21 +12,21 @@ import { Operation } from "../../../core/metadata";
 
 export function setupCommitQueue(
     appItemSerializer: FirestoreAppItemSerializer,
-    onChangeCommited: () => void,
-    providerId: string = "firestore"
+    onChangeCommited: () => Promise<any>,
+    providerId: string = "firestore",
+    db: admin.firestore.Firestore
 ): functions.CloudFunction<functions.firestore.QueryDocumentSnapshot> {
     const queueCollectionName = typeToCollection(CollectionType.COMMIT_QUEUE);
 
     const commitChange = functions.firestore
         .document(queueCollectionName + "/{documentId}")
         .onCreate(async (snapshot, context) => {
-            const db = admin.firestore();
             const itemVersionMetadataConverter =
                 new ItemVersionMetadataConverter();
             const dataStore = new FirestoreDataStore(
                 providerId,
                 itemVersionMetadataConverter,
-                new ItemChangeMetadataConverter(),
+                new ItemChangeMetadataConverter(appItemSerializer),
                 appItemSerializer,
                 db
             );
