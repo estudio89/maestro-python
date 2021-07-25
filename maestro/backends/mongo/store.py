@@ -122,7 +122,9 @@ class MongoDataStore(TrackQueriesStoreMixin, NoSQLDataStore):
                         ]
                     }
                 )
-            or_expressions.append({"change_vector_clock_item.provider_id": {"$nin": provider_ids}})
+            or_expressions.append(
+                {"change_vector_clock_item.provider_id": {"$nin": provider_ids}}
+            )
 
             mongo_filter["$or"] = or_expressions
 
@@ -139,8 +141,8 @@ class MongoDataStore(TrackQueriesStoreMixin, NoSQLDataStore):
                 "$group": {
                     "_id": "$item_id",
                     "item": {"$first": "$$ROOT.serialized_item"},
-                    'inserted_timestamp': {
-                        '$first': '$$ROOT.insert_vector_clock_item.timestamp'
+                    "inserted_timestamp": {
+                        "$first": "$$ROOT.insert_vector_clock_item.timestamp"
                     },
                 },
             },
@@ -149,7 +151,9 @@ class MongoDataStore(TrackQueriesStoreMixin, NoSQLDataStore):
         mongo_sort = {}
 
         if query.ordering:
-            mongo_sort_ordering = convert_to_mongo_sort(ordering=query.ordering, field_prefix="item.")
+            mongo_sort_ordering = convert_to_mongo_sort(
+                ordering=query.ordering, field_prefix="item."
+            )
             mongo_sort.update(mongo_sort_ordering)
 
         mongo_sort.update({"inserted_timestamp": pymongo.ASCENDING})
@@ -205,9 +209,7 @@ class MongoDataStore(TrackQueriesStoreMixin, NoSQLDataStore):
                 value=instance["timestamp"]
             )
             vector_clock.update(
-                VectorClockItem(
-                    provider_id=instance["id"], timestamp=timestamp
-                )
+                VectorClockItem(provider_id=instance["id"], timestamp=timestamp)
             )
         return vector_clock
 
@@ -387,12 +389,21 @@ class MongoDataStore(TrackQueriesStoreMixin, NoSQLDataStore):
         return metadata_objects
 
     def save_item_change(
-        self, item_change: "ItemChange", is_creating: "bool" = False
+        self,
+        item_change: "ItemChange",
+        is_creating: "bool" = False,
+        query: "Optional[Query]" = None,
     ) -> "ItemChange":
 
-        super().save_item_change(item_change=item_change, is_creating=is_creating)
-        if is_creating:
-            self.check_tracked_query_vector_clocks(new_item_change=item_change)
+        super().save_item_change(
+            item_change=item_change, is_creating=is_creating, query=query
+        )
+        if is_creating and query is not None:
+            tracked_query = self.get_tracked_query(query=query)
+            if tracked_query is not None:
+                self.update_query_vector_clock(
+                    tracked_query=tracked_query, item_change=item_change
+                )
         return item_change
 
     def get_item_changes(self) -> "List[ItemChange]":

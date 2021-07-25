@@ -102,7 +102,9 @@ class BaseDataStore(ABC):
 
         return copy.deepcopy(local_version)
 
-    def get_or_create_item_change(self, item_change: "ItemChange") -> "ItemChange":
+    def get_or_create_item_change(
+        self, item_change: "ItemChange", query: "Optional[Query]"
+    ) -> "ItemChange":
         """Looks for the ItemChange in the data store and if it's not found, saves it to the data store.
 
         Args:
@@ -116,7 +118,9 @@ class BaseDataStore(ABC):
             if not item_change.date_created:
                 now_utc = get_now_utc()
                 item_change.date_created = now_utc
-            self.save_item_change(item_change=item_change, is_creating=True)
+            self.save_item_change(
+                item_change=item_change, is_creating=True, query=query
+            )
             return copy.deepcopy(item_change)
 
     def commit_item_change(
@@ -263,12 +267,18 @@ class BaseDataStore(ABC):
 
     @abstractmethod
     def save_item_change(
-        self, item_change: "ItemChange", is_creating: "bool" = False
+        self,
+        item_change: "ItemChange",
+        is_creating: "bool" = False,
+        query: "Optional[Query]" = None,
     ) -> "ItemChange":  # pragma: no cover
         """Saves the ItemChange to the data store.
 
         Args:
             item_change (ItemChange): Change to be saved.
+            is_creating (bool, optional): Whether this is a new change being inserted into the data store
+            or an existing one being updated.
+            query (Optional[Query], optional): The query that is being synced.
         """
 
     @abstractmethod

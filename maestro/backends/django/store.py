@@ -160,8 +160,15 @@ class DjangoDataStore(BaseDataStore):
         return item_change_batch
 
     def save_item_change(
-        self, item_change: "ItemChange", is_creating: "bool" = False
+        self,
+        item_change: "ItemChange",
+        is_creating: "bool" = False,
+        query: "Optional[Query]" = None,
     ) -> "ItemChange":
+
+        if query is not None:
+            raise ValueError("This backend doesn't support queries!")
+
         item_change_record = self.item_change_metadata_converter.to_record(
             metadata_object=item_change
         )

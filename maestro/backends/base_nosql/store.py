@@ -1,4 +1,5 @@
 from maestro.core.store import BaseDataStore
+from maestro.core.query.metadata import Query
 from maestro.core.metadata import (
     ItemChange,
     ConflictLog,
@@ -8,7 +9,7 @@ from maestro.core.metadata import (
 )
 from maestro.backends.base_nosql.collections import CollectionType
 from maestro.backends.base_nosql.utils import type_to_collection
-from typing import List, Dict, Any, cast
+from typing import List, Dict, Any, cast, Optional
 from abc import abstractmethod
 import copy
 
@@ -73,7 +74,10 @@ class NoSQLDataStore(BaseDataStore):
         self._delete(instance=copied, collection=copied.pop("collection_name"))
 
     def save_item_change(
-        self, item_change: "ItemChange", is_creating: "bool" = False
+        self,
+        item_change: "ItemChange",
+        is_creating: "bool" = False,
+        query: "Optional[Query]" = None,
     ) -> "ItemChange":
         item_change_record = self.item_change_metadata_converter.to_record(
             metadata_object=item_change

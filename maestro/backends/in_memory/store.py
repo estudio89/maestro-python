@@ -167,14 +167,21 @@ class InMemoryDataStore(TrackQueriesStoreMixin, BaseDataStore):
         self._save(item=instance, key="tracked_queries")
 
     def save_item_change(
-        self, item_change: "ItemChange", is_creating: "bool" = False
+        self,
+        item_change: "ItemChange",
+        is_creating: "bool" = False,
+        query: "Optional[Query]" = None,
     ) -> "ItemChange":
         item_change_record = self.item_change_metadata_converter.to_record(
             metadata_object=item_change
         )
         self._save(item=item_change_record, key="item_changes")
-        if is_creating:
-            self.check_tracked_query_vector_clocks(new_item_change=item_change)
+        if is_creating and query is not None:
+            tracked_query = self.get_tracked_query(query=query)
+            if tracked_query is not None:
+                self.update_query_vector_clock(
+                    tracked_query=tracked_query, item_change=item_change
+                )
         return item_change
 
     def run_in_transaction(self, item_change: "ItemChange", callback: "Callable"):
@@ -248,7 +255,7 @@ class InMemoryDataStore(TrackQueriesStoreMixin, BaseDataStore):
         item_ids_set: "Set[str]" = set()
         items = []
         item_changes = self.get_item_changes()
-        item_changes.reverse() # Reverse so that last changes are first
+        item_changes.reverse()  # Reverse so that last changes are first
         for item_change in item_changes:
             serialization_result = item_change.serialization_result
             if (
@@ -268,7 +275,9 @@ class InMemoryDataStore(TrackQueriesStoreMixin, BaseDataStore):
                 item = self.deserialize_item(serialization_result)
                 in_query = filter_lambda(item)
                 if in_query:
-                    item["inserted_timestamp"] = item_change.insert_vector_clock_item.timestamp
+                    item[
+                        "inserted_timestamp"
+                    ] = item_change.insert_vector_clock_item.timestamp
                     items.append(item)
 
         # Sorting

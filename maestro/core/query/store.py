@@ -97,21 +97,21 @@ class TrackQueriesStoreMixin:
         self.save_tracked_query(tracked_query=tracked_query)
         return tracked_query
 
-    def update_query_vector_clock(self, query: "Query", item_change: "ItemChange"):
-        """Updates the vector clock for the given query (if it's being tracked).
+    def update_query_vector_clock(
+        self, tracked_query: "TrackedQuery", item_change: "ItemChange"
+    ):
+        """Updates the vector clock for the given query.
 
         Args:
-            query (Query): The query
+            tracked_query (TrackedQuery): The query being tracked
             item_change_record (ItemChangeRecord): The record that caused the update
         """
-        tracked_query = self.get_tracked_query(query=query)
-
-        if not tracked_query:
-            return
 
         vector_clock = copy.deepcopy(tracked_query.vector_clock)
         vector_clock.update(vector_clock_item=item_change.change_vector_clock_item)
-        updated_tracked_query = TrackedQuery(query=query, vector_clock=vector_clock)
+        updated_tracked_query = TrackedQuery(
+            query=tracked_query.query, vector_clock=vector_clock
+        )
         self.save_tracked_query(tracked_query=updated_tracked_query)
 
     def check_impacts_query(
@@ -177,7 +177,7 @@ class TrackQueriesStoreMixin:
                 vector_clock=None,
             ):
                 self.update_query_vector_clock(
-                    query=tracked_query.query, item_change=new_item_change
+                    tracked_query=tracked_query, item_change=new_item_change
                 )
             elif old_item_change and self.check_impacts_query(
                 item_change=old_item_change,
@@ -185,5 +185,5 @@ class TrackQueriesStoreMixin:
                 vector_clock=tracked_query.vector_clock,
             ):
                 self.update_query_vector_clock(
-                    query=tracked_query.query, item_change=new_item_change
+                    tracked_query=tracked_query, item_change=new_item_change
                 )

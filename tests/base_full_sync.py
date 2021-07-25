@@ -1918,7 +1918,7 @@ class QueryFullSyncTest(BackendTestMixin, unittest.TestCase):
     ):
         """Simulates the situation where changes are selected and a query is used to filter the results.
 
-            Situation 3:
+            The timeline is:
                 a)
                     - There are 5 items, 3 of them with versions less than 5 (2,3,4) and
                     2 with versions more or equal to 5 (5, 6)
@@ -2278,6 +2278,248 @@ class QueryFullSyncTest(BackendTestMixin, unittest.TestCase):
             item6_change3.change_vector_clock_item,
         )
 
+    def _test_overlapping_queries(
+        self, source_provider: "BaseSyncProvider", target_provider: "BaseSyncProvider"
+    ):
+        """Simulates the situation where two overlapping queries are being tracked.
+
+        The timeline is:
+            a)
+                - There are 2 items, one with version 3 and the other with version 5
+                - The target data store starts tracking to queries, one that selects
+                all items with version less or equal to 3 (query1) and one that selects all
+                items with version less or equal to 6 (query2)
+                - The target data store syncs both queries once
+
+            b)
+                - The item with version 5 is updated (but its version stays the same)
+                - The item with version 3 is updated (but its version stays the same)
+                - The target data store syncs query1
+                    - The change to item with version 3 is returned
+
+                - The target data store syncs query2
+                    - Both the changes to items with versions 3 and 5 are returned
+
+        """
+
+        source_data_store = source_provider.data_store
+        target_data_store = target_provider.data_store
+
+        # a)
+
+        item1 = cast("TestDataStoreMixin", source_data_store)._create_item(
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="3",
+        )
+        item1_change1 = cast("BaseDataStore", source_data_store).commit_item_change(
+            operation=Operation.INSERT,
+            entity_name="my_app_item",
+            item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+            item=item1,
+        )
+
+        item2 = cast("TestDataStoreMixin", source_data_store)._create_item(
+            id="6ec0755a-2ca9-407e-87fa-0bd73db8c29f", name="item_2", version="5",
+        )
+        item2_change1 = cast("BaseDataStore", source_data_store).commit_item_change(
+            operation=Operation.INSERT,
+            entity_name="my_app_item",
+            item_id="6ec0755a-2ca9-407e-87fa-0bd73db8c29f",
+            item=item2,
+        )
+
+        query1 = Query(
+            entity_name="my_app_item",
+            filter=Filter(
+                children=[
+                    Comparison(
+                        field_name="version",
+                        comparator=Comparator.LESS_THAN_OR_EQUALS,
+                        value="3",
+                    )
+                ]
+            ),
+            ordering=[SortOrder(field_name="version")],
+            limit=2,
+            offset=None,
+        )
+        cast("TrackQueriesStoreMixin", target_data_store).start_tracking_query(query1)
+
+        query2 = Query(
+            entity_name="my_app_item",
+            filter=Filter(
+                children=[
+                    Comparison(
+                        field_name="version",
+                        comparator=Comparator.LESS_THAN_OR_EQUALS,
+                        value="6",
+                    )
+                ]
+            ),
+            ordering=[SortOrder(field_name="version")],
+            limit=2,
+            offset=None,
+        )
+        cast("TrackQueriesStoreMixin", target_data_store).start_tracking_query(query2)
+
+        item_changes = target_data_store.get_item_changes()
+        items = target_data_store.get_items()
+        num_changes_target = len(item_changes)
+        num_items_target = len(items)
+
+        self.orchestrator.synchronize_providers(
+            source_provider_id=source_provider.provider_id,
+            target_provider_id=target_provider.provider_id,
+            query=query1,
+        )
+
+        item_changes = target_data_store.get_item_changes()
+        items = target_data_store.get_items()
+        self.assertEqual(num_changes_target + 1, len(item_changes))
+        self.assertEqual(num_items_target + 1, len(items))
+        self.assertEqual(item_changes, [item1_change1])
+        self.assertEqual(
+            make_hashable(items),
+            make_hashable(
+                [
+                    cast("TestDataStoreMixin", target_data_store)._create_item(
+                        id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+                        name="item_1",
+                        version="3",
+                    )
+                ]
+            ),
+        )
+
+        item_changes = target_data_store.get_item_changes()
+        items = target_data_store.get_items()
+        num_changes_target = len(item_changes)
+        num_items_target = len(items)
+
+        self.orchestrator.synchronize_providers(
+            source_provider_id=source_provider.provider_id,
+            target_provider_id=target_provider.provider_id,
+            query=query2,
+        )
+
+        item_changes = target_data_store.get_item_changes()
+        items = target_data_store.get_items()
+
+        self.assertEqual(num_changes_target + 1, len(item_changes))
+        self.assertEqual(num_items_target + 1, len(items))
+        self.assertEqual(item_changes, [item1_change1, item2_change1])
+        self.assertEqual(
+            make_hashable(items),
+            make_hashable(
+                [
+                    cast("TestDataStoreMixin", target_data_store)._create_item(
+                        id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+                        name="item_1",
+                        version="3",
+                    ),
+                    cast("TestDataStoreMixin", target_data_store)._create_item(
+                        id="6ec0755a-2ca9-407e-87fa-0bd73db8c29f",
+                        name="item_2",
+                        version="5",
+                    ),
+                ]
+            ),
+        )
+
+        # b)
+        item2_updated = cast("TestDataStoreMixin", source_data_store)._create_item(
+            id="6ec0755a-2ca9-407e-87fa-0bd73db8c29f",
+            name="item_2_updated",
+            version="5",
+        )
+        item2_change2 = cast("BaseDataStore", source_data_store).commit_item_change(
+            operation=Operation.UPDATE,
+            entity_name="my_app_item",
+            item_id="6ec0755a-2ca9-407e-87fa-0bd73db8c29f",
+            item=item2_updated,
+        )
+
+        item1_updated = cast("TestDataStoreMixin", source_data_store)._create_item(
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+            name="item_1_update",
+            version="3",
+        )
+        item1_change2 = cast("BaseDataStore", source_data_store).commit_item_change(
+            operation=Operation.UPDATE,
+            entity_name="my_app_item",
+            item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+            item=item1_updated,
+        )
+
+        item_changes = target_data_store.get_item_changes()
+        items = target_data_store.get_items()
+        num_changes_target = len(item_changes)
+        num_items_target = len(items)
+
+        self.orchestrator.synchronize_providers(
+            source_provider_id=source_provider.provider_id,
+            target_provider_id=target_provider.provider_id,
+            query=query1,
+        )
+
+        item_changes = target_data_store.get_item_changes()
+        items = target_data_store.get_items()
+        self.assertEqual(num_changes_target + 1, len(item_changes))
+        self.assertEqual(num_items_target, len(items))
+        self.assertEqual(item_changes, [item1_change1, item2_change1, item1_change2])
+        self.assertEqual(
+            make_hashable(items),
+            make_hashable(
+                [
+                    cast("TestDataStoreMixin", target_data_store)._create_item(
+                        id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+                        name="item_1_update",
+                        version="3",
+                    ),
+                    cast("TestDataStoreMixin", target_data_store)._create_item(
+                        id="6ec0755a-2ca9-407e-87fa-0bd73db8c29f",
+                        name="item_2",
+                        version="5",
+                    ),
+                ]
+            ),
+        )
+
+        item_changes = target_data_store.get_item_changes()
+        items = target_data_store.get_items()
+        num_changes_target = len(item_changes)
+        num_items_target = len(items)
+
+        self.orchestrator.synchronize_providers(
+            source_provider_id=source_provider.provider_id,
+            target_provider_id=target_provider.provider_id,
+            query=query2,
+        )
+
+        item_changes = target_data_store.get_item_changes()
+        items = target_data_store.get_items()
+        self.assertEqual(num_changes_target + 1, len(item_changes))
+        self.assertEqual(num_items_target, len(items))
+        self.assertEqual(
+            item_changes, [item1_change1, item2_change1, item1_change2, item2_change2]
+        )
+        self.assertEqual(
+            make_hashable(items),
+            make_hashable(
+                [
+                    cast("TestDataStoreMixin", target_data_store)._create_item(
+                        id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+                        name="item_1_update",
+                        version="3",
+                    ),
+                    cast("TestDataStoreMixin", target_data_store)._create_item(
+                        id="6ec0755a-2ca9-407e-87fa-0bd73db8c29f",
+                        name="item_2_updated",
+                        version="5",
+                    ),
+                ]
+            ),
+        )
+
     def test_sync_query_source(self):
         self._test_sync_query(
             source_provider=self.provider_in_test, target_provider=self.other_provider
@@ -2286,4 +2528,9 @@ class QueryFullSyncTest(BackendTestMixin, unittest.TestCase):
     def test_sync_query_target(self):
         self._test_sync_query(
             source_provider=self.other_provider, target_provider=self.provider_in_test
+        )
+
+    def test_overlapping_queries_source(self):
+        self._test_overlapping_queries(
+            source_provider=self.provider_in_test, target_provider=self.other_provider
         )

@@ -73,14 +73,19 @@ class BaseSyncProvider(ABC):
         item_change_batch.reset_status()
         return item_change_batch
 
-    def upload_changes(self, item_change_batch: "ItemChangeBatch"):
+    def upload_changes(
+        self, item_change_batch: "ItemChangeBatch", query: "Optional[Query]"
+    ):
         """Applies changes obtained from a remote provider to the data store.
 
         Args:
             item_change_batch (ItemChangeBatch): The batch of changes to be applied.
+            query (Optional[Query]): The query that's being synced.
         """
 
-        self.changes_executor.run(item_changes=item_change_batch.item_changes)
+        self.changes_executor.run(
+            item_changes=item_change_batch.item_changes, query=query
+        )
 
     def get_deferred_changes(
         self, vector_clock: "VectorClock", query: "Optional[Query]" = None

@@ -273,8 +273,18 @@ class FirestoreDataStore(NoSQLDataStore):
             )
             docs = (
                 self._get_collection_query(CollectionType.ITEM_CHANGES)
-                .where("change_vector_clock_item.provider_id", "==", vector_clock_item.provider_id)
-                .where("change_vector_clock_item.timestamp", ">", DatetimeWithNanoseconds.fromisoformat(vector_clock_item.timestamp.isoformat()))
+                .where(
+                    "change_vector_clock_item.provider_id",
+                    "==",
+                    vector_clock_item.provider_id,
+                )
+                .where(
+                    "change_vector_clock_item.timestamp",
+                    ">",
+                    DatetimeWithNanoseconds.fromisoformat(
+                        vector_clock_item.timestamp.isoformat()
+                    ),
+                )
                 .order_by("change_vector_clock_item.timestamp")
                 .limit(max_num)
                 .get()
@@ -350,6 +360,19 @@ class FirestoreDataStore(NoSQLDataStore):
         )
 
         return item_change_batch
+
+    def save_item_change(
+        self,
+        item_change: "ItemChange",
+        is_creating: "bool" = False,
+        query: "Optional[Query]" = None,
+    ) -> "ItemChange":
+        if query is not None:
+            raise ValueError("This backend doesn't support queries!")
+
+        return super().save_item_change(
+            item_change=item_change, is_creating=is_creating, query=query
+        )
 
     def run_in_transaction(self, item_change: "ItemChange", callback: "Callable"):
         self.current_transaction = self.db.transaction()

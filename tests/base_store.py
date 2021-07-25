@@ -419,17 +419,17 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
         # Testing
         item_change = self.data_store.get_or_create_item_change(
-            item_change=item_change1_reset
+            item_change=item_change1_reset, query=None
         )
         self.assertEqual(item_change, item_change1)
 
         item_change = self.data_store.get_or_create_item_change(
-            item_change=item_change2_reset
+            item_change=item_change2_reset, query=None
         )
         self.assertEqual(item_change, item_change2)
 
         item_change = self.data_store.get_or_create_item_change(
-            item_change=item_change3
+            item_change=item_change3, query=None
         )
         self.assertEqual(item_change, item_change3)
 

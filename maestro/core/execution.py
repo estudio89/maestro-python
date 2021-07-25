@@ -1,4 +1,5 @@
 from typing import TYPE_CHECKING, List, Callable, NamedTuple, Optional
+from maestro.core.query.metadata import Query
 from maestro.core.metadata import (
     ItemChange,
     ConflictType,
@@ -93,16 +94,16 @@ class ChangesExecutor:
         self.events_manager = events_manager
         self.conflict_resolver = conflict_resolver
 
-    def run(self, item_changes: "List[ItemChange]"):
+    def run(self, item_changes: "List[ItemChange]", query:"Optional[Query]"):
         """Iterates the changes and applies each one.
 
         Args:
             item_changes (List[ItemChange]): list of changes to be processed.
         """
         for item_change in item_changes:
-            self.process_remote_change(item_change=item_change)
+            self.process_remote_change(item_change=item_change, query=query)
 
-    def process_remote_change(self, item_change: "ItemChange"):
+    def process_remote_change(self, item_change: "ItemChange", query:"Optional[Query]"):
         """Processes a change received from a remote provider. Processing means:
 
             - Checking if it needs to be applied
@@ -114,7 +115,7 @@ class ChangesExecutor:
         Args:
             item_change (ItemChange): The change to be processed
         """
-        item_change = self.data_store.get_or_create_item_change(item_change=item_change)
+        item_change = self.data_store.get_or_create_item_change(item_change=item_change, query=query)
         self.events_manager.on_item_change_processed(item_change=item_change)
         if item_change.is_applied:
             return

@@ -84,7 +84,9 @@ class SyncOrchestrator:
                 item_change_batch = target_provider.get_deferred_changes(
                     vector_clock=deferred_vector_clock, query=query
                 )
-                target_provider.upload_changes(item_change_batch)
+                target_provider.upload_changes(
+                    item_change_batch=item_change_batch, query=query
+                )
 
                 new_deferred_vector_clock = item_change_batch.get_vector_clock_after_done(
                     initial_vector_clock=deferred_vector_clock
@@ -107,7 +109,9 @@ class SyncOrchestrator:
                     vector_clock=target_vector_clock, query=query
                 )
 
-                target_provider.upload_changes(item_change_batch=item_change_batch)
+                target_provider.upload_changes(
+                    item_change_batch=item_change_batch, query=query
+                )
 
                 source_provider.events_manager.on_item_changes_sent(
                     item_changes=item_change_batch.item_changes
