@@ -270,7 +270,7 @@ class MongoDataStore(TrackQueriesStoreMixin, NoSQLDataStore):
                 },
             }
 
-            if filtered_item_ids:
+            if filtered_item_ids is not None:
                 mongo_filter["item_id"] = {"$in": list(filtered_item_ids)}
 
             docs = self._get_collection_query(CollectionType.ITEM_CHANGES).find(

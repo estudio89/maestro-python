@@ -94,7 +94,7 @@ class InMemoryDataStore(TrackQueriesStoreMixin, BaseDataStore):
                 provider_id=item_change.change_vector_clock_item.provider_id
             )
             if item_change.change_vector_clock_item > vector_clock_item:
-                if filtered_item_ids:
+                if filtered_item_ids is not None:
                     if (
                         item_change.serialization_result.item_id
                         not in filtered_item_ids
