@@ -58,6 +58,7 @@ class SyncSessionRecord(TypedDict):
     target_provider_id: "str"
     source_provider_id: "str"
     item_change_ids: "List[str]"
+    query_id: "Optional[str]"
 
 class ComparisonRecord(TypedDict):
     type: "Literal['comparison']"

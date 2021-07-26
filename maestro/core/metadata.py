@@ -517,6 +517,7 @@ class SyncSession:
         source_provider_id (str): The source provider's identifier.
         target_provider_id (str): The target provider's identifier.
         item_changes (List[ItemChange]): The list of changes that were exchanged in this session (either sent or received).
+        query_id (Optional[str]): The ID of the query that synced in this session.
 
     """
 
@@ -527,6 +528,7 @@ class SyncSession:
     source_provider_id: "str"
     target_provider_id: "str"
     item_changes: "List[ItemChange]"
+    query_id: "Optional[str]"
 
     def __init__(
         self,
@@ -537,6 +539,7 @@ class SyncSession:
         source_provider_id: "str",
         target_provider_id: "str",
         item_changes: "List[ItemChange]",
+        query_id: "Optional[str]" = None,
     ):
         """
         Args:
@@ -547,6 +550,7 @@ class SyncSession:
             source_provider_id (str): The source provider's identifier.
             target_provider_id (str): The target provider's identifier.
             item_changes (List[ItemChange]): The list of changes that were exchanged in this session (either sent or received).
+            query_id (Optional[str]): The ID of the query that synced in this session.
         """
         self.id = id
         self.started_at = started_at
@@ -555,9 +559,10 @@ class SyncSession:
         self.source_provider_id = source_provider_id
         self.target_provider_id = target_provider_id
         self.item_changes = item_changes
+        self.query_id = query_id
 
     def __repr__(self):  # pragma: no cover
-        return f"SyncSession(id='{self.id}', started_at='{self.started_at}', ended_at='{self.ended_at}', status={self.status}, source_provider_id={self.source_provider_id}, target_provider_id={self.target_provider_id}, item_changes=[...{len(self.item_changes)} changes]"
+        return f"SyncSession(id='{self.id}', started_at='{self.started_at}', ended_at='{self.ended_at}', status={self.status}, source_provider_id={self.source_provider_id}, target_provider_id={self.target_provider_id}, item_changes=[...{len(self.item_changes)} changes], query_id={self.query_id})"
 
     def __eq__(self, other: "object"):
         assert isinstance(other, SyncSession)
@@ -570,6 +575,7 @@ class SyncSession:
             "source_provider_id",
             "target_provider_id",
             "item_changes",
+            "query_id",
         ]:
             if not getattr(self, param) == getattr(other, param):
                 return False

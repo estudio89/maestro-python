@@ -63,10 +63,14 @@ class SyncOrchestrator:
 
         # Start event
         target_provider.events_manager.on_start_sync_session(
-            source_provider_id=source_provider_id, target_provider_id=target_provider_id
+            source_provider_id=source_provider_id,
+            target_provider_id=target_provider_id,
+            query=query,
         )
         source_provider.events_manager.on_start_sync_session(
-            source_provider_id=source_provider_id, target_provider_id=target_provider_id
+            source_provider_id=source_provider_id,
+            target_provider_id=target_provider_id,
+            query=query,
         )
         sync_timer = SyncTimer(timeout_seconds=self.maximum_duration_seconds)
 

@@ -81,6 +81,7 @@ class SyncSessionMetadataConverter(DataStoreAccessConverter):
             source_provider_id=record["source_provider_id"],
             target_provider_id=record["target_provider_id"],
             item_changes=item_changes,
+            query_id=record["query_id"],
         )
 
     def to_record(self, metadata_object: "SyncSession") -> "SyncSessionRecord":
@@ -97,6 +98,7 @@ class SyncSessionMetadataConverter(DataStoreAccessConverter):
             source_provider_id=metadata_object.source_provider_id,
             target_provider_id=metadata_object.target_provider_id,
             item_change_ids=item_change_ids,
+            query_id=metadata_object.query_id,
         )
         return sync_session_record
 
