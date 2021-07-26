@@ -9,6 +9,7 @@ from maestro.backends.mongo import (
     MongoDataStore,
     MongoItemSerializer,
     MongoSyncProvider,
+    TrackedQueryMetadataConverter
 )
 from pymongo import MongoClient
 import datetime as dt

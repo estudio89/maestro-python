@@ -72,3 +72,19 @@ class ItemChangeMetadataConverter(
             vector_clock_item_converter=vector_clock_item_converter,
             vector_clock_converter=vector_clock_converter,
         )
+
+
+class TrackedQueryMetadataConverter(
+    maestro.backends.base_nosql.converters.TrackedQueryMetadataConverter
+):
+    date_converter_class = DateConverter
+
+    def __init__(
+        self,
+        vector_clock_converter: "VectorClockMetadataConverter" = VectorClockMetadataConverter(),
+        query_converter: "maestro.backends.base_nosql.converters.QueryMetadataConverter" = maestro.backends.base_nosql.converters.QueryMetadataConverter(),
+    ):
+        super().__init__(
+            vector_clock_converter=vector_clock_converter,
+            query_converter=query_converter,
+        )
