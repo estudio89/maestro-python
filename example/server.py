@@ -42,6 +42,7 @@ class PollingManager:
         self.has_data[identifier] = False
 
     def notify(self, identifier: "str"):
+        time.sleep(0.1)
         self.has_data[identifier] = True
 
     def handle(self, identifier: "str"):
