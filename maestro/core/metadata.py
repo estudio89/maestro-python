@@ -17,7 +17,7 @@ class VectorClockItem:
         self.timestamp = timestamp
 
     def __repr__(self):  # pragma: no cover
-        return f"VectorClockItem(provider_id='{self.provider_id}', timestamp={self.timestamp})"
+        return f"VectorClockItem(provider_id='{self.provider_id}', timestamp={repr(self.timestamp)})"
 
     def __lt__(self, other: "VectorClockItem"):
         assert isinstance(other, VectorClockItem)
