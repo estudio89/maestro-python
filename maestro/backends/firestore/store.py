@@ -179,6 +179,10 @@ class FirestoreDataStore(NoSQLDataStore):
             self._usage.register_read(
                 collection_name=collection_name, document_id=provider_id
             )
+
+        if self.local_provider_id not in provider_ids:
+            provider_ids.append(self.local_provider_id)
+
         return provider_ids
 
     def _save(self, instance: "Dict", collection: "str"):

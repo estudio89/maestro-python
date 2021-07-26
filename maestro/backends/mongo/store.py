@@ -60,6 +60,10 @@ class MongoDataStore(TrackQueriesStoreMixin, NoSQLDataStore):
         collection_name = type_to_collection(key=CollectionType.PROVIDER_IDS)
         docs = self.db[collection_name].find()
         provider_ids = [doc["_id"] for doc in docs]
+
+        if self.local_provider_id not in provider_ids:
+            provider_ids.append(self.local_provider_id)
+
         return provider_ids
 
     def get_tracked_query(self, query: "Query") -> "Optional[TrackedQuery]":
