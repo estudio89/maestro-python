@@ -1,6 +1,7 @@
 from typing import ContextManager
 from maestro.core.utils import BaseSyncLock
 
+
 class InMemoryContextManager:
     lock: "InMemorySyncLock"
 

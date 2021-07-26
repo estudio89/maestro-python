@@ -4,6 +4,7 @@ import {
     ItemChange,
     Operation,
     ItemVersion,
+    SerializationResult,
 } from "../src/core/metadata";
 import { assert } from "chai";
 import { suite, test } from "@testdeck/mocha";
@@ -38,7 +39,10 @@ class VectorClockTest {
         let vectorClock = VectorClock.createEmpty(["provider1"]);
         assert.isFalse(this.vectorClock.equals(vectorClock));
         assert.isFalse(vectorClock.equals(this.vectorClock));
-        assert.equal(vectorClock.getVectorClockItem("provider1").timestamp.getTime(), new Date(0).getTime());
+        assert.equal(
+            vectorClock.getVectorClockItem("provider1").timestamp.getTime(),
+            new Date(0).getTime()
+        );
     }
 
     @test
@@ -161,12 +165,9 @@ class ItemChangeTest {
         const itemChange1 = new ItemChange(
             uuid(),
             Operation.INSERT,
-            "123",
-            date,
-            "provider1",
-            "provider2",
-            date,
-            '{"entity_name":"my_table", "pk":"123", "fields":{"hello":"world"}}',
+            new SerializationResult("123", "my_table", '{"hello":"world"}'),
+            new VectorClockItem("provider1", date),
+            new VectorClockItem("provider2", date),
             false,
             false,
             vectorClock,
@@ -198,12 +199,9 @@ class ItemVersionTest {
         const itemChange1 = new ItemChange(
             uuid(),
             Operation.INSERT,
-            "123",
-            date,
-            "provider1",
-            "provider2",
-            date,
-            '{"entity_name":"my_table", "pk":"123", "fields":{"hello":"world"}}',
+            new SerializationResult("123", "my_table", '{"hello":"world"}'),
+            new VectorClockItem("provider1", date),
+            new VectorClockItem("provider2", date),
             false,
             false,
             vectorClock1,
@@ -235,12 +233,9 @@ class ItemVersionTest {
         const itemChange1 = new ItemChange(
             uuid(),
             Operation.INSERT,
-            "123",
-            date,
-            "provider1",
-            "provider2",
-            date,
-            '{"entity_name":"my_table", "pk":"123", "fields":{"hello":"world"}}',
+            new SerializationResult("123", "my_table", '{"hello":"world"}'),
+            new VectorClockItem("provider1", date),
+            new VectorClockItem("provider2", date),
             false,
             false,
             vectorClock,

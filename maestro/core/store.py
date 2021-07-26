@@ -2,14 +2,17 @@ from typing import List, Any, Optional, Callable, Dict
 from abc import ABC, abstractmethod
 from .metadata import (
     VectorClock,
+    VectorClockItem,
     ItemChange,
     ItemVersion,
     ItemChangeBatch,
     ConflictLog,
     Operation,
     SyncSession,
+    SerializationResult,
 )
-from .utils import BaseMetadataConverter, get_now_utc
+from .query.metadata import Query
+from .utils import BaseMetadataConverter, get_now_utc, make_hashable
 from .serializer import BaseItemSerializer
 from .exceptions import ItemNotFoundException
 import copy
@@ -61,6 +64,19 @@ class BaseDataStore(ABC):
             f"{self.__class__.__name__}(local_provider_id='{self.local_provider_id}')"
         )
 
+    def query_items(
+        self, query: "Query", vector_clock: "Optional[VectorClock]"
+    ) -> "List[Any]":
+        """Returns a list of the item ids that satisfy a query.
+
+        Args:
+            query (Query): The query being tested
+            vector_clock (Optional[VectorClock]): A VectorClock that if provided, returns the items that would have
+            matched the query at the time indicated by the clock, enabling time-travel through the data. The items
+            are returned in the same state they were at the time of the clock.
+        """
+        raise NotImplementedError("This backend doesn't support queries!")
+
     def get_local_version(self, item_id: "str",) -> "ItemVersion":
         """Retrieves the current version of the item with the given id.
 
@@ -86,7 +102,9 @@ class BaseDataStore(ABC):
 
         return copy.deepcopy(local_version)
 
-    def get_or_create_item_change(self, item_change: "ItemChange") -> "ItemChange":
+    def get_or_create_item_change(
+        self, item_change: "ItemChange", query: "Optional[Query]"
+    ) -> "ItemChange":
         """Looks for the ItemChange in the data store and if it's not found, saves it to the data store.
 
         Args:
@@ -100,12 +118,15 @@ class BaseDataStore(ABC):
             if not item_change.date_created:
                 now_utc = get_now_utc()
                 item_change.date_created = now_utc
-            self.save_item_change(item_change=item_change, is_creating=True)
+            self.save_item_change(
+                item_change=item_change, is_creating=True, query=query
+            )
             return copy.deepcopy(item_change)
 
     def commit_item_change(
         self,
         operation: "Operation",
+        entity_name: "str",
         item_id: "str",
         item: "Any",
         execute_operation: "bool" = True,
@@ -123,23 +144,24 @@ class BaseDataStore(ABC):
 
         local_vector_clock = copy.deepcopy(old_version.vector_clock)
         now_utc = get_now_utc()
-        local_vector_clock.update_vector_clock_item(
-            provider_id=self.local_provider_id, timestamp=now_utc
+        local_vector_clock.update(
+            VectorClockItem(provider_id=self.local_provider_id, timestamp=now_utc)
+        )
+
+        change_vector_clock_item = VectorClockItem(
+            provider_id=self.local_provider_id, timestamp=now_utc,
         )
 
         item_change = ItemChange(
             id=uuid.uuid4(),
             operation=operation,
-            item_id=item_id,
-            provider_timestamp=now_utc,
-            provider_id=self.local_provider_id,
-            insert_provider_timestamp=old_version.current_item_change.insert_provider_timestamp
+            change_vector_clock_item=change_vector_clock_item,
+            insert_vector_clock_item=old_version.current_item_change.insert_vector_clock_item
             if old_version.current_item_change
-            else now_utc,
-            insert_provider_id=old_version.current_item_change.insert_provider_id
-            if old_version.current_item_change
-            else self.local_provider_id,
-            serialized_item=self.serialize_item(item),
+            else change_vector_clock_item,
+            serialization_result=self.serialize_item(
+                item=item, entity_name=entity_name
+            ),
             should_ignore=False,
             is_applied=True,
             vector_clock=local_vector_clock,
@@ -161,25 +183,35 @@ class BaseDataStore(ABC):
         self.save_item_version(item_version=new_version)
         return item_change
 
-    def serialize_item(self, item: "Any") -> "str":
-        """Serializes the given item to a string.
+    def serialize_item(self, item: "Any", entity_name: "str") -> "SerializationResult":
+        """Serializes the given item.
 
         Args:
             item (Any): Item to be serialized.
         """
-        return self.item_serializer.serialize_item(item=item)
+        return self.item_serializer.serialize_item(
+            item=copy.deepcopy(item), entity_name=entity_name
+        )
 
-    def deserialize_item(self, serialized_item: "str") -> "Any":
-        """Deserializes a string back to an item.
+    def deserialize_item(self, serialization_result: "SerializationResult") -> "Any":
+        """Deserializes an item.
 
         Args:
-            serialized_item (str): Serialized item string.
+            serialization_result (SerializationResult): The result of the item serialization.
         """
-        return self.item_serializer.deserialize_item(serialized_item=serialized_item)
+        return self.item_serializer.deserialize_item(
+            serialization_result=serialization_result
+        )
 
     @abstractmethod
-    def get_local_vector_clock(self) -> "VectorClock":  # pragma: no cover
+    def get_local_vector_clock(
+        self, query: "Optional[Query]" = None
+    ) -> "VectorClock":  # pragma: no cover
         """Returns the VectorClock calculated from the changes currently in the data store.
+
+        Args:
+            query (Optional[Query]): The query that must be performed to select the item's whose VectorClocks must be considered in the calculation,
+
         """
 
     @abstractmethod
@@ -202,7 +234,10 @@ class BaseDataStore(ABC):
 
     @abstractmethod
     def select_changes(
-        self, vector_clock: "VectorClock", max_num: "int"
+        self,
+        vector_clock: "VectorClock",
+        max_num: "int",
+        query: "Optional[Query]" = None,
     ) -> "ItemChangeBatch":  # pragma: no cover
         """Selects all changes commited after the VectorClock.
         The ItemChanges are returned in the same order as they were saved to the data store.
@@ -210,11 +245,15 @@ class BaseDataStore(ABC):
         Args:
             vector_clock (VectorClock): VectorClock that represents the state of the last sync pass.
             max_num (int): Maximum number of changes to be added to the ItemChangeBatch.
+            query(Optional[Query]): The query that must be performed to select the item's whose changes must be returned.
         """
 
     @abstractmethod
     def select_deferred_changes(
-        self, vector_clock: "VectorClock", max_num: "int"
+        self,
+        vector_clock: "VectorClock",
+        max_num: "int",
+        query: "Optional[Query]" = None,
     ) -> "ItemChangeBatch":  # pragma: no cover
         """Selects all the changes that were not applied in the last sync session due to an exception having occurred.
         The ItemChanges are returned in the same order as they were saved to the data store.
@@ -223,16 +262,23 @@ class BaseDataStore(ABC):
         Args:
             vector_clock (VectorClock): VectorClock that represents the state of the last sync pass.
             max_num (int): Maximum number of changes to be added to the ItemChangeBatch.
+            query(Optional[Query]): The query that must be performed to select the item's whose changes must be returned.
         """
 
     @abstractmethod
     def save_item_change(
-        self, item_change: "ItemChange", is_creating: "bool" = False
+        self,
+        item_change: "ItemChange",
+        is_creating: "bool" = False,
+        query: "Optional[Query]" = None,
     ) -> "ItemChange":  # pragma: no cover
         """Saves the ItemChange to the data store.
 
         Args:
             item_change (ItemChange): Change to be saved.
+            is_creating (bool, optional): Whether this is a new change being inserted into the data store
+            or an existing one being updated.
+            query (Optional[Query], optional): The query that is being synced.
         """
 
     @abstractmethod
@@ -358,17 +404,6 @@ class BaseDataStore(ABC):
             List[ConflictLog]: Conflict logs in the data store.
         """
 
-    @abstractmethod
-    def _get_hashable_item(self, item: "Any") -> "Any":
-        """Returns a hashable representation of an item.
-
-        Args:
-            item (Any): The item that needs hashing.
-
-        Returns:
-            Any: Hashable object.
-        """
-
     def _get_raw_db(self) -> "Dict":
         """Returns a dictionary containing all the data in the data store. DO NOT use in production, used only in tests.
 
@@ -385,10 +420,14 @@ class BaseDataStore(ABC):
             "conflict_logs": conflict_logs,
             "item_changes": item_changes,
             "item_versions": item_versions,
-            "items": items,
+            "items": [self.item_to_dict(item) for item in items],
             "sync_sessions": sync_sessions,
         }
         return db
+
+    @abstractmethod
+    def item_to_dict(self, item: "Any") -> "Dict":
+        """Converts an item to a dictionary. This is used only in tests"""
 
     def show(self, items_only=False):  # pragma: no cover
         """Prints all the data in the store. DO NOT use in production, used only in tests.
@@ -412,19 +451,20 @@ class BaseDataStore(ABC):
             if key in ["sync_sessions", "conflict_logs"]:
                 continue
             if key == "items":
-                vals = set(self._get_hashable_item(item) for item in self_db[key])
+                vals = set(
+                    make_hashable(dict(sorted(item.items()))) for item in self_db[key]
+                )
                 other_vals = set(
-                    other._get_hashable_item(item) for item in other_db[key]
+                    make_hashable(dict(sorted(item.items()))) for item in other_db[key]
                 )
             elif key == "item_changes":
 
                 attrs = [
                     "id",
                     "operation",
-                    "item_id",
-                    "provider_timestamp",
-                    "provider_id",
-                    "serialized_item",
+                    "change_vector_clock_item",
+                    "insert_vector_clock_item",
+                    "serialization_result",
                     "vector_clock",
                 ]
                 vals = set()

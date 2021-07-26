@@ -1,4 +1,5 @@
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Optional
+from .query.metadata import Query
 from .metadata import (
     ItemChange,
     ConflictType,
@@ -26,7 +27,10 @@ class EventsManager:
         self.data_store = data_store
 
     def on_start_sync_session(
-        self, source_provider_id: "str", target_provider_id: "str"
+        self,
+        source_provider_id: "str",
+        target_provider_id: "str",
+        query: "Optional[Query]",
     ):
         """This is called at the start of a sync session. It creates a sync session and saves it to the data store.
 
@@ -43,6 +47,7 @@ class EventsManager:
             source_provider_id=source_provider_id,
             target_provider_id=target_provider_id,
             item_changes=[],
+            query_id=query.get_id() if query else None,
         )
         self.data_store.save_sync_session(sync_session=sync_session)
         self.current_sync_session = sync_session

@@ -1,8 +1,10 @@
 from django.db import models, transaction
 from maestro.core.store import BaseDataStore
+from maestro.core.query.metadata import Query
 from maestro.core.exceptions import ItemNotFoundException
 from maestro.core.metadata import (
     VectorClock,
+    VectorClockItem,
     ItemVersion,
     ItemChange,
     ItemChangeBatch,
@@ -20,10 +22,10 @@ from .converters import (
     VectorClockMetadataConverter,
 )
 from .serializer import DjangoItemSerializer
-from .contrib.signals import temporarily_disable_signals
-from typing import Optional, Any, Callable, List
+from typing import Optional, Any, Callable, List, Dict
 import uuid
 import operator
+from itertools import chain
 from functools import reduce
 
 
@@ -35,7 +37,10 @@ class DjangoDataStore(BaseDataStore):
     vector_clock_metadata_converter: "VectorClockMetadataConverter"
     item_serializer: "DjangoItemSerializer"
 
-    def get_local_vector_clock(self) -> "VectorClock":
+    def get_local_vector_clock(self, query: "Optional[Query]" = None) -> "VectorClock":
+        if query is not None:
+            raise ValueError("This backend doesn't support queries!")
+
         vector_clock = VectorClock.create_empty(provider_ids=[self.local_provider_id])
         ItemChangeRecord = apps.get_model("maestro", "ItemChangeRecord")
         provider_ids = ItemChangeRecord.objects.values_list(
@@ -47,8 +52,11 @@ class DjangoDataStore(BaseDataStore):
                 provider_id=provider_id
             ).aggregate(max_timestamp=models.Max("provider_timestamp"))
             if max_timestamp["max_timestamp"]:
-                vector_clock.update_vector_clock_item(
-                    provider_id=provider_id, timestamp=max_timestamp["max_timestamp"]
+                vector_clock.update(
+                    VectorClockItem(
+                        provider_id=provider_id,
+                        timestamp=max_timestamp["max_timestamp"],
+                    )
                 )
         return vector_clock
 
@@ -94,7 +102,10 @@ class DjangoDataStore(BaseDataStore):
         return item_change_batch
 
     def select_changes(
-        self, vector_clock: "VectorClock", max_num: "int"
+        self,
+        vector_clock: "VectorClock",
+        max_num: "int",
+        query: "Optional[Query]" = None,
     ) -> "ItemChangeBatch":
         ItemChangeRecord = apps.get_model("maestro", "ItemChangeRecord")
         provider_ids = ItemChangeRecord.objects.values_list(
@@ -124,7 +135,10 @@ class DjangoDataStore(BaseDataStore):
         return item_change_batch
 
     def select_deferred_changes(
-        self, vector_clock: "VectorClock", max_num: "int"
+        self,
+        vector_clock: "VectorClock",
+        max_num: "int",
+        query: "Optional[Query]" = None,
     ) -> "ItemChangeBatch":
         fkwargs = []
         for vector_clock_item in vector_clock:
@@ -146,8 +160,15 @@ class DjangoDataStore(BaseDataStore):
         return item_change_batch
 
     def save_item_change(
-        self, item_change: "ItemChange", is_creating: "bool" = False
+        self,
+        item_change: "ItemChange",
+        is_creating: "bool" = False,
+        query: "Optional[Query]" = None,
     ) -> "ItemChange":
+
+        if query is not None:
+            raise ValueError("This backend doesn't support queries!")
+
         item_change_record = self.item_change_metadata_converter.to_record(
             metadata_object=item_change
         )
@@ -162,7 +183,9 @@ class DjangoDataStore(BaseDataStore):
         item.delete()
 
     def run_in_transaction(self, item_change: "ItemChange", callback: "Callable"):
-        item = self.deserialize_item(serialized_item=item_change.serialized_item)
+        item = self.deserialize_item(
+            serialization_result=item_change.serialization_result
+        )
         Model = item._meta.model
 
         with transaction.atomic():
@@ -178,15 +201,19 @@ class DjangoDataStore(BaseDataStore):
     def commit_item_change(
         self,
         operation: "Operation",
+        entity_name: "str",
         item_id: "str",
         item: "Any",
         execute_operation: "bool" = True,
     ) -> "ItemChange":
+        from .contrib.signals import temporarily_disable_signals
+
         model = item._meta.model
         if execute_operation:
             with temporarily_disable_signals(model=model):
                 return super().commit_item_change(
                     operation=operation,
+                    entity_name=entity_name,
                     item_id=item_id,
                     item=item,
                     execute_operation=execute_operation,
@@ -194,13 +221,18 @@ class DjangoDataStore(BaseDataStore):
         else:
             return super().commit_item_change(
                 operation=operation,
+                entity_name=entity_name,
                 item_id=item_id,
                 item=item,
                 execute_operation=execute_operation,
             )
 
     def execute_item_change(self, item_change: "ItemChange"):
-        item = self.deserialize_item(serialized_item=item_change.serialized_item)
+        from .contrib.signals import temporarily_disable_signals
+
+        item = self.deserialize_item(
+            serialization_result=item_change.serialization_result
+        )
         model = item._meta.model
 
         with temporarily_disable_signals(model=model):
@@ -255,9 +287,6 @@ class DjangoDataStore(BaseDataStore):
 
         sync_session_record.item_changes.add(*sync_session_record._item_changes)
 
-    def _get_hashable_item(self, item: "Any"):
-        return item
-
     def get_item_changes(self):
         ItemChangeRecord = apps.get_model("maestro", "ItemChangeRecord")
         records = list(ItemChangeRecord.objects.order_by("date_created"))
@@ -297,3 +326,14 @@ class DjangoDataStore(BaseDataStore):
             metadata_object = converter.to_metadata(record)
             metadata_objects.append(metadata_object)
         return metadata_objects
+
+    def item_to_dict(self, item: "Any") -> "Dict":
+        opts = item._meta
+        data = {}
+        for f in chain(opts.concrete_fields, opts.private_fields):
+            data[f.name] = f.value_from_object(item)
+        for f in opts.many_to_many:
+            data[f.name] = [i.id for i in f.value_from_object(item)]
+
+        data["id"] = str(data["id"])
+        return data

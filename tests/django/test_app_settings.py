@@ -3,9 +3,7 @@ from django.apps import apps
 from django.urls import re_path
 from django.db import models
 from maestro.backends.django.contrib.factory import create_django_data_store
-from maestro.backends.django.contrib.model_dependencies import (
-    get_model_dependencies,
-)
+from maestro.backends.django.contrib.model_dependencies import get_model_dependencies
 from maestro.backends.django.contrib.signals import temporarily_disable_signals
 from maestro.backends.django.contrib.migrate import commit_model_changes
 from maestro.backends.django.contrib.middleware import _operations_queue
@@ -52,7 +50,10 @@ class AppSettingsTest(TestCase):
 
         data_store = create_django_data_store()
         data_store.commit_item_change(
-            operation=Operation.INSERT, item_id=item_id, item=item,
+            operation=Operation.INSERT,
+            entity_name="my_app_item",
+            item_id=item_id,
+            item=item,
         )
         num_changes = ItemChangeRecord.objects.count()
 
@@ -97,4 +98,3 @@ class AppSettingsTest(TestCase):
             },
         )
         self.assertEqual(all_models, ["my_app.item", "my_app.anothermodel"])
-

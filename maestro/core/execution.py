@@ -1,4 +1,5 @@
 from typing import TYPE_CHECKING, List, Callable, NamedTuple, Optional
+from maestro.core.query.metadata import Query
 from maestro.core.metadata import (
     ItemChange,
     ConflictType,
@@ -12,7 +13,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 class ConflictCheckResult(NamedTuple):
-    '''Stores the result of a conflict check.'''
+    """Stores the result of a conflict check."""
 
     has_conflict: "bool"
     conflict_type: "Optional[ConflictType]"
@@ -22,7 +23,7 @@ class ConflictCheckResult(NamedTuple):
 
 
 class ConflictResolution(NamedTuple):
-    '''Stores information about which change won and which lost a conflict. '''
+    """Stores information about which change won and which lost a conflict. """
 
     item_change_loser: "ItemChange"
     item_change_winner: "ItemChange"
@@ -56,17 +57,15 @@ class ConflictResolver:
             or conflict_type == ConflictType.LOCAL_UPDATE_REMOTE_INSERT
         ):  # Most recent change wins
             if (
-                local_item_change.provider_timestamp
-                > remote_item_change.provider_timestamp
+                local_item_change.change_vector_clock_item.timestamp
+                > remote_item_change.change_vector_clock_item.timestamp
             ):
                 item_change_winner = local_item_change
                 item_change_loser = remote_item_change
             else:
                 item_change_winner = remote_item_change
                 item_change_loser = local_item_change
-        elif (
-            conflict_type == ConflictType.LOCAL_UPDATE_REMOTE_DELETE
-        ):  # Deletion wins
+        elif conflict_type == ConflictType.LOCAL_UPDATE_REMOTE_DELETE:  # Deletion wins
             item_change_winner = remote_item_change
             item_change_loser = local_item_change
         elif conflict_type == ConflictType.LOCAL_DELETE_REMOTE_UPDATE:
@@ -95,16 +94,16 @@ class ChangesExecutor:
         self.events_manager = events_manager
         self.conflict_resolver = conflict_resolver
 
-    def run(self, item_changes: "List[ItemChange]"):
+    def run(self, item_changes: "List[ItemChange]", query:"Optional[Query]"):
         """Iterates the changes and applies each one.
 
         Args:
             item_changes (List[ItemChange]): list of changes to be processed.
         """
         for item_change in item_changes:
-            self.process_remote_change(item_change=item_change)
+            self.process_remote_change(item_change=item_change, query=query)
 
-    def process_remote_change(self, item_change: "ItemChange"):
+    def process_remote_change(self, item_change: "ItemChange", query:"Optional[Query]"):
         """Processes a change received from a remote provider. Processing means:
 
             - Checking if it needs to be applied
@@ -116,7 +115,7 @@ class ChangesExecutor:
         Args:
             item_change (ItemChange): The change to be processed
         """
-        item_change = self.data_store.get_or_create_item_change(item_change=item_change)
+        item_change = self.data_store.get_or_create_item_change(item_change=item_change, query=query)
         self.events_manager.on_item_change_processed(item_change=item_change)
         if item_change.is_applied:
             return
@@ -166,7 +165,7 @@ class ChangesExecutor:
             ConflictCheckResult: The result of the analysis
         """
         local_version = self.data_store.get_local_version(
-            item_id=remote_item_change.item_id
+            item_id=remote_item_change.serialization_result.item_id
         )
         if local_version.current_item_change is None:
             # The item does not exist in storage yet, therefore there's no conflict
@@ -181,15 +180,15 @@ class ChangesExecutor:
         local_item_change = local_version.current_item_change
         local_vector_clock = local_item_change.vector_clock
         local_vector_clock_item = local_vector_clock.get_vector_clock_item(
-            provider_id=local_item_change.provider_id
+            provider_id=local_item_change.change_vector_clock_item.provider_id
         )
 
         remote_vector_clock = remote_item_change.vector_clock
         remote_vector_clock_item = remote_vector_clock.get_vector_clock_item(
-            provider_id=local_item_change.provider_id
+            provider_id=local_item_change.change_vector_clock_item.provider_id
         )
 
-        if local_vector_clock_item.timestamp > remote_vector_clock_item.timestamp:
+        if local_vector_clock_item > remote_vector_clock_item:
             # Source provider was not aware of the local version of the item = conflict
 
             if (
@@ -312,7 +311,7 @@ class ChangesExecutor:
         """
         new_version = ItemVersion(
             current_item_change=item_change,
-            item_id=item_change.item_id,
+            item_id=item_change.serialization_result.item_id,
             vector_clock=item_change.vector_clock,
             date_created=old_version.date_created,
         )

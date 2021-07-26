@@ -3,7 +3,7 @@ from example.api_serializer import APISerializer
 from typing import Any, Dict
 
 
-class FirestoreAPISerializer(APISerializer):
+class NoSQLAPISerializer(APISerializer):
     def to_dict(self, item: "Any") -> "Dict":
         return {
             "id": item["id"],

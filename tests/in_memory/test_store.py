@@ -6,3 +6,9 @@ class InMemoryStoreTest(
     tests.in_memory.base.InMemoryBackendTestMixin, tests.base_store.BaseStoreTest
 ):
     pass
+
+class InMemoryQueriesTest(
+    tests.in_memory.base.InMemoryBackendTestMixin,
+    tests.base_store.BaseQueriesTest,
+):
+    pass

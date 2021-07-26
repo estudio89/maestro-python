@@ -1,10 +1,10 @@
-from typing import TYPE_CHECKING, List, Dict
+from typing import TYPE_CHECKING, List, Dict, Optional
 from .utils import SyncTimer, BaseSyncLock
 from .metadata import VectorClock
 
 if TYPE_CHECKING:  # pragma: no cover
-    from .provider import BaseSyncProvider
-    from .events import EventsManager
+    from maestro.core.provider import BaseSyncProvider
+    from maestro.core.query.metadata import Query
 
 
 class SyncOrchestrator:
@@ -39,8 +39,11 @@ class SyncOrchestrator:
         }
         self.maximum_duration_seconds = maximum_duration_seconds
 
-    def _synchronize_providers(
-        self, source_provider_id: "str", target_provider_id: "str"
+    def synchronize_providers(
+        self,
+        source_provider_id: "str",
+        target_provider_id: "str",
+        query: "Optional[Query]" = None,
     ):
         """Retrieves data from the source provider and sends them to the target provider.
 
@@ -60,10 +63,14 @@ class SyncOrchestrator:
 
         # Start event
         target_provider.events_manager.on_start_sync_session(
-            source_provider_id=source_provider_id, target_provider_id=target_provider_id
+            source_provider_id=source_provider_id,
+            target_provider_id=target_provider_id,
+            query=query,
         )
         source_provider.events_manager.on_start_sync_session(
-            source_provider_id=source_provider_id, target_provider_id=target_provider_id
+            source_provider_id=source_provider_id,
+            target_provider_id=target_provider_id,
+            query=query,
         )
         sync_timer = SyncTimer(timeout_seconds=self.maximum_duration_seconds)
 
@@ -79,9 +86,11 @@ class SyncOrchestrator:
                 sync_timer.tick()
 
                 item_change_batch = target_provider.get_deferred_changes(
-                    vector_clock=deferred_vector_clock
+                    vector_clock=deferred_vector_clock, query=query
                 )
-                target_provider.upload_changes(item_change_batch)
+                target_provider.upload_changes(
+                    item_change_batch=item_change_batch, query=query
+                )
 
                 new_deferred_vector_clock = item_change_batch.get_vector_clock_after_done(
                     initial_vector_clock=deferred_vector_clock
@@ -96,15 +105,17 @@ class SyncOrchestrator:
                 deferred_vector_clock = new_deferred_vector_clock
 
             # New changes
-            target_vector_clock = target_provider.get_vector_clock()
+            target_vector_clock = target_provider.get_vector_clock(query=query)
             while True:
                 sync_timer.tick()
 
                 item_change_batch = source_provider.download_changes(
-                    vector_clock=target_vector_clock
+                    vector_clock=target_vector_clock, query=query
                 )
 
-                target_provider.upload_changes(item_change_batch=item_change_batch)
+                target_provider.upload_changes(
+                    item_change_batch=item_change_batch, query=query
+                )
 
                 source_provider.events_manager.on_item_changes_sent(
                     item_changes=item_change_batch.item_changes
@@ -147,11 +158,13 @@ class SyncOrchestrator:
                 if val != initial_source_provider_id
             ][0]
 
-            self._synchronize_providers(
+            self.synchronize_providers(
                 source_provider_id=initial_source_provider_id,
                 target_provider_id=other_provider_id,
+                query=None,
             )
-            self._synchronize_providers(
+            self.synchronize_providers(
                 source_provider_id=other_provider_id,
                 target_provider_id=initial_source_provider_id,
+                query=None,
             )

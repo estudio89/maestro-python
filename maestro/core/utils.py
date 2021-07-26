@@ -1,4 +1,4 @@
-from typing import ContextManager, Any
+from typing import ContextManager, Any, TypeVar, Optional
 import dateutil.parser
 from abc import ABC, abstractmethod
 from maestro.core.exceptions import SyncTimeoutException
@@ -83,7 +83,7 @@ def get_now_utc() -> "dt.datetime":
     Returns:
         dt.datetime: Current time in UTC.
     """
-    return dt.datetime.now(tz=dt.timezone.utc)
+    return dt.datetime.utcnow().replace(tzinfo=dt.timezone.utc)
 
 regex = r'^(-?(?:[1-9][0-9]*)?[0-9]{4})-(1[0-2]|0[1-9])-(3[01]|0[1-9]|[12][0-9])T(2[0-3]|[01][0-9]):([0-5][0-9]):([0-5][0-9])(\.[0-9]+)?(Z|[+-](?:2[0-3]|[01][0-9]):[0-5][0-9])?$'
 match_iso8601 = re.compile(regex).match
@@ -102,3 +102,39 @@ def parse_datetime(value: "str") -> "dt.datetime":
 
     return dateutil.parser.isoparse(value)
 
+T = TypeVar("T")
+
+def cast_away_optional(arg: Optional[T]) -> T:
+    assert arg is not None
+    return arg
+
+
+def is_iterable(value: "Any"):
+    """Checks if a value is an iterable"""
+    try:
+        iter(value)
+    except TypeError:
+        return False
+    else:
+        return True
+
+def make_hashable(value):
+    """Attempts to make a value hashable.
+    If the value is a dictionary, it will be converted to a tuple (key, val) and the dict values will be made hashable recursively.
+    If the value is a non-hashable iterable, it will be converted to a tuble and its values will be made hashable recursively.
+    """
+
+    if isinstance(value, dict):
+        return tuple(
+            [(key, make_hashable(nested_value)) for key, nested_value in sorted(value.items())]
+        )
+    # Try hash to avoid converting a hashable iterable (e.g. string, frozenset)
+    # to a tuple.
+    try:
+        hash(value)
+    except TypeError:
+        if is_iterable(value):
+            return tuple(map(make_hashable, value))
+        # Non-hashable, non-iterable.
+        raise
+    return value

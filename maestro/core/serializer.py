@@ -1,6 +1,7 @@
 from typing import Any, Dict, TYPE_CHECKING
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
+
 import json
 import datetime as dt
 import copy
@@ -9,6 +10,7 @@ import enum
 
 if TYPE_CHECKING:
     from maestro.core.store import BaseDataStore
+    from maestro.core.metadata import SerializationResult
 
 
 class BaseItemSerializer(ABC):
@@ -16,7 +18,7 @@ class BaseItemSerializer(ABC):
     """Abstract class that serializes items to string and back."""
 
     @abstractmethod
-    def serialize_item(self, item: "Any") -> "str":
+    def serialize_item(self, item: "Any", entity_name: "str") -> "SerializationResult":
         """Serializes the item, converting it to a string.
 
         Args:
@@ -24,11 +26,11 @@ class BaseItemSerializer(ABC):
         """
 
     @abstractmethod
-    def deserialize_item(self, serialized_item: "str") -> "Any":
+    def deserialize_item(self, serialization_result: "SerializationResult") -> "Any":
         """Converts a serialized string to an item.
 
         Args:
-            serialized_item (str): String contendo o objeto serializado.
+            serialization_result (SerializationResult): The result of the serialization
         """
 
 
@@ -142,7 +144,8 @@ class RawDataStoreJSONSerializer:
 
         serialized_db = self.metadata_serializer.serialize(metadata_object=raw_db)
         serialized_items = [
-            data_store.item_serializer.serialize_item(item=item) for item in items
+            data_store.item_serializer.serialize_item(item=item, entity_name="")
+            for item in items
         ]
-        serialized_db["items"] = serialized_items
+        serialized_db["items"] = [result.serialized_item for result in serialized_items]
         return json.dumps(serialized_db, indent=self.indent)

@@ -12,9 +12,10 @@ from maestro.core.metadata import (
     VectorClockItem,
     SyncSessionStatus,
     Operation,
+    SerializationResult,
 )
 import datetime as dt
-from .utils import get_content_type
+from .utils import entity_name_to_content_type, content_type_to_entity_name
 from typing import List, Dict, TYPE_CHECKING, cast, Optional
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -87,7 +88,9 @@ class ItemVersionMetadataConverter(BaseMetadataConverter):
             metadata_object=metadata_object.vector_clock
         )
         current_item_change = cast("ItemChange", metadata_object.current_item_change)
-        content_type = get_content_type(current_item_change.serialized_item)
+        content_type = entity_name_to_content_type(
+            current_item_change.serialization_result.entity_name
+        )
         ItemVersionRecord = apps.get_model("maestro", "ItemVersionRecord")
         return ItemVersionRecord(
             id=metadata_object.item_id,
@@ -102,16 +105,26 @@ class ItemChangeMetadataConverter(BaseMetadataConverter):
     def to_metadata(self, record: "ItemChangeRecord") -> "ItemChange":
         vector_clock_converter = VectorClockMetadataConverter()
         vector_clock = vector_clock_converter.to_metadata(record=record.vector_clock)
+        change_vector_clock_item = VectorClockItem(
+            provider_id=record.provider_id, timestamp=record.provider_timestamp
+        )
+        insert_vector_clock_item = VectorClockItem(
+            provider_id=record.insert_provider_id,
+            timestamp=record.insert_provider_timestamp,
+        )
+        entity_name = content_type_to_entity_name(record.content_type)
+        serialization_result = SerializationResult(
+            item_id=str(record.item_id),
+            entity_name=entity_name,
+            serialized_item=record.serialized_item,
+        )
         metadata_object = ItemChange(
             id=record.id,
             date_created=record.date_created,
             operation=Operation[record.operation],
-            item_id=str(record.item_id),
-            provider_timestamp=record.provider_timestamp,
-            provider_id=record.provider_id,
-            insert_provider_timestamp=record.insert_provider_timestamp,
-            insert_provider_id=record.insert_provider_id,
-            serialized_item=record.serialized_item,
+            change_vector_clock_item=change_vector_clock_item,
+            insert_vector_clock_item=insert_vector_clock_item,
+            serialization_result=serialization_result,
             should_ignore=record.should_ignore,
             is_applied=record.is_applied,
             vector_clock=vector_clock,
@@ -124,18 +137,20 @@ class ItemChangeMetadataConverter(BaseMetadataConverter):
         vector_clock = vector_clock_converter.to_record(
             metadata_object=metadata_object.vector_clock
         )
-        content_type = get_content_type(metadata_object.serialized_item)
+        content_type = entity_name_to_content_type(
+            metadata_object.serialization_result.entity_name
+        )
         return ItemChangeRecord(
             id=metadata_object.id,
             date_created=metadata_object.date_created,
             operation=metadata_object.operation.value,
-            item_id=metadata_object.item_id,
+            item_id=metadata_object.serialization_result.item_id,
             content_type=content_type,
-            provider_timestamp=metadata_object.provider_timestamp,
-            provider_id=metadata_object.provider_id,
-            insert_provider_timestamp=metadata_object.insert_provider_timestamp,
-            insert_provider_id=metadata_object.insert_provider_id,
-            serialized_item=metadata_object.serialized_item,
+            provider_timestamp=metadata_object.change_vector_clock_item.timestamp,
+            provider_id=metadata_object.change_vector_clock_item.provider_id,
+            insert_provider_timestamp=metadata_object.insert_vector_clock_item.timestamp,
+            insert_provider_id=metadata_object.insert_vector_clock_item.provider_id,
+            serialized_item=metadata_object.serialization_result.serialized_item,
             should_ignore=metadata_object.should_ignore,
             is_applied=metadata_object.is_applied,
             vector_clock=vector_clock,

@@ -12,8 +12,9 @@ import {
     VectorClockItemRecord,
 } from "./collections";
 import { FirestoreDataStore } from "./store";
-import { getCollectionName } from "./utils";
+import { entityNameToCollection, collectionToEntityName } from "./utils";
 import * as admin from "firebase-admin";
+import { FirestoreAppItemSerializer } from "./serializer";
 
 abstract class FirestoreConverter<M, R> implements BaseMetadataConverter<M, R> {
     abstract toMetadata(record: R): Promise<M>;
@@ -31,14 +32,40 @@ abstract class FirestoreConverter<M, R> implements BaseMetadataConverter<M, R> {
     }
 }
 
+export class VectorClockItemMetadataConverter
+    implements BaseMetadataConverter<VectorClockItem, VectorClockItemRecord>
+{
+    toMetadata(record: VectorClockItemRecord): Promise<VectorClockItem> {
+        return new Promise((resolve, _) =>
+            resolve(
+                new VectorClockItem(
+                    record.provider_id,
+                    record.timestamp.toDate()
+                )
+            )
+        );
+    }
+    toRecord(metadataObject: VectorClockItem): Promise<VectorClockItemRecord> {
+        return new Promise((resolve, _) =>
+            resolve({
+                provider_id: metadataObject.providerId,
+                timestamp: admin.firestore.Timestamp.fromDate(
+                    metadataObject.timestamp
+                ),
+            })
+        );
+    }
+}
+
 export class VectorClockMetadataConverter
     implements BaseMetadataConverter<VectorClock, VectorClockItemRecord[]>
 {
     async toMetadata(record: VectorClockItemRecord[]): Promise<VectorClock> {
+        const vectorClockItemConverter = new VectorClockItemMetadataConverter();
         const vectorClockItems: VectorClockItem[] = [];
         for (let item of record) {
             vectorClockItems.push(
-                new VectorClockItem(item.provider_id, item.timestamp.toDate())
+                await vectorClockItemConverter.toMetadata(item)
             );
         }
         const vectorClock = new VectorClock(...vectorClockItems);
@@ -48,14 +75,12 @@ export class VectorClockMetadataConverter
     async toRecord(
         metadataObject: VectorClock
     ): Promise<VectorClockItemRecord[]> {
+        const vectorClockItemConverter = new VectorClockItemMetadataConverter();
         const items: VectorClockItemRecord[] = [];
         for (let vectorClockItem of metadataObject) {
-            items.push({
-                provider_id: vectorClockItem.providerId,
-                timestamp: admin.firestore.Timestamp.fromDate(
-                    vectorClockItem.timestamp
-                ),
-            });
+            items.push(
+                await vectorClockItemConverter.toRecord(vectorClockItem)
+            );
         }
         return items;
     }
@@ -63,20 +88,30 @@ export class VectorClockMetadataConverter
 export class ItemChangeMetadataConverter
     implements BaseMetadataConverter<ItemChange, ItemChangeRecord>
 {
+    constructor(public itemSerializer: FirestoreAppItemSerializer) {}
     async toMetadata(record: ItemChangeRecord): Promise<ItemChange> {
         const vectorClockConverter = new VectorClockMetadataConverter();
+        const vectorClockItemConverter = new VectorClockItemMetadataConverter();
         const vectorClock = await vectorClockConverter.toMetadata(
             record.vector_clock
+        );
+        const changeVectorClockItem = await vectorClockItemConverter.toMetadata(
+            record.change_vector_clock_item
+        );
+        const insertVectorClockItem = await vectorClockItemConverter.toMetadata(
+            record.insert_vector_clock_item
+        );
+        const entityName = collectionToEntityName(record.collection_name);
+        const serializationResult = this.itemSerializer.serializeItem(
+            record.serialized_item,
+            entityName
         );
         const metadataObject = new ItemChange(
             record.id,
             record.operation as Operation,
-            record.item_id,
-            record.provider_timestamp.toDate(),
-            record.provider_id,
-            record.insert_provider_id,
-            record.insert_provider_timestamp.toDate(),
-            record.serialized_item,
+            serializationResult,
+            changeVectorClockItem,
+            insertVectorClockItem,
             record.should_ignore,
             record.is_applied,
             vectorClock,
@@ -90,24 +125,32 @@ export class ItemChangeMetadataConverter
         const vectorClockRecord = await vectorClockConverter.toRecord(
             metadataObject.vectorClock
         );
-        const collectionName = getCollectionName(metadataObject.serializedItem);
+        const collectionName = entityNameToCollection(
+            metadataObject.serializationResult.entityName
+        );
+        const deserializedItem =
+            this.itemSerializer.deserializeItem(metadataObject.serializationResult);
         return {
             id: metadataObject.id,
             date_created: admin.firestore.Timestamp.fromDate(
                 metadataObject.dateCreated
             ),
             operation: metadataObject.operation,
-            item_id: metadataObject.itemId,
+            item_id: metadataObject.serializationResult.itemId,
             collection_name: collectionName,
-            provider_timestamp: admin.firestore.Timestamp.fromDate(
-                metadataObject.providerTimestamp
-            ),
-            provider_id: metadataObject.providerId,
-            insert_provider_timestamp: admin.firestore.Timestamp.fromDate(
-                metadataObject.insertProviderTimestamp
-            ),
-            insert_provider_id: metadataObject.insertProviderId,
-            serialized_item: metadataObject.serializedItem,
+            change_vector_clock_item: {
+                provider_id: metadataObject.changeVectorClockItem.providerId,
+                timestamp: admin.firestore.Timestamp.fromDate(
+                    metadataObject.changeVectorClockItem.timestamp
+                ),
+            },
+            insert_vector_clock_item: {
+                provider_id: metadataObject.insertVectorClockItem.providerId,
+                timestamp: admin.firestore.Timestamp.fromDate(
+                    metadataObject.insertVectorClockItem.timestamp
+                ),
+            },
+            serialized_item: deserializedItem,
             should_ignore: metadataObject.shouldIgnore,
             is_applied: metadataObject.isApplied,
             vector_clock: vectorClockRecord,
@@ -142,8 +185,8 @@ export class ItemVersionMetadataConverter extends FirestoreConverter<
         );
         const currentItemChange =
             metadataObject.currentItemChange as ItemChange;
-        const collectionName = getCollectionName(
-            currentItemChange.serializedItem
+        const collectionName = entityNameToCollection(
+            currentItemChange.serializationResult.entityName
         );
 
         return {

@@ -1,13 +1,14 @@
 import unittest
 import unittest.mock
+from maestro.core.utils import make_hashable
 from maestro.core.orchestrator import SyncOrchestrator
-from maestro.core.utils import BaseSyncLock
-from maestro.core.events import EventsManager
-from maestro.core.provider import BaseSyncProvider
-from maestro.core.exceptions import ItemNotFoundException
 from maestro.core.store import BaseDataStore
+from maestro.core.provider import BaseSyncProvider
+from maestro.core.query.store import TrackQueriesStoreMixin
+from maestro.core.events import EventsManager
+from maestro.core.exceptions import ItemNotFoundException
 from maestro.core.execution import ChangesExecutor, ConflictResolver
-
+from maestro.core.query.metadata import Query, Filter, Comparison, Comparator, SortOrder
 from maestro.core.metadata import (
     ConflictStatus,
     ConflictType,
@@ -15,10 +16,10 @@ from maestro.core.metadata import (
     Operation,
     SyncSessionStatus,
 )
-from .base import BackendTestMixin
+from .base import BackendTestMixin, TestDataStoreMixin
+from typing import cast, Union
 import uuid
 import copy
-import json
 
 
 class DebugEventsManager(EventsManager):
@@ -46,42 +47,10 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
 
     maxDiff = None
 
-    def _create_data_store(
-        self, local_provider_id: "str"
-    ) -> "BaseDataStore":  # pragma: no cover
-        raise NotImplementedError()
-
-    def _create_provider(
-        self,
-        provider_id: "str",
-        data_store: "BaseDataStore",
-        events_manager: "EventsManager",
-        changes_executor: "ChangesExecutor",
-        max_num: "int",
-    ) -> "BaseSyncProvider":  # pragma: no cover
-        raise NotImplementedError()
-
-    def _create_item(self, id, name, version):  # pragma: no cover
-        raise NotImplementedError()
-
-    def _serialize_item(self, id, name, version):  # pragma: no cover
-        raise NotImplementedError()
-
-    def _deserialize_item(self, id, name, version):  # pragma: no cover
-        raise NotImplementedError()
-
-    def _get_id(self, item):  # pragma: no cover
-        raise NotImplementedError()
-
-    def _create_sync_lock(self) -> "BaseSyncLock":  # pragma: no cover
-        raise NotImplementedError()
-
     def setUp(self):
 
         # Provider 1
-        self.data_store1 = self._create_data_store(
-            local_provider_id="other_provider",
-        )
+        self.data_store1 = self._create_data_store(local_provider_id="other_provider",)
         self.events_manager1 = DebugEventsManager(data_store=self.data_store1)
         self.changes_executor1 = ChangesExecutor(
             data_store=self.data_store1,
@@ -132,32 +101,48 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
 
         self.data_store1.commit_item_change(
             operation=Operation.INSERT,
+            entity_name="my_app_item",
             item_id=self.item1_id,
-            item=self._create_item(id=self.item1_id, name="I1", version="1"),
+            item=self.data_store1._create_item(
+                id=self.item1_id, name="I1", version="1"
+            ),
         )
         for i in range(2, 6):
             last_item_change = self.data_store1.commit_item_change(
                 operation=Operation.UPDATE,
+                entity_name="my_app_item",
                 item_id=self.item1_id,
-                item=self._create_item(id=self.item1_id, name="I1", version=str(i)),
+                item=self.data_store1._create_item(
+                    id=self.item1_id, name="I1", version=str(i)
+                ),
             )
 
         self.last_item_change_1 = last_item_change
         self.assertEqual(num_changes + 5, len(self.data_store1.get_item_changes()))
 
         item = self.data_store1.get_item_by_id(id=self.item1_id)
+
         self.assertEqual(
-            item, self._deserialize_item(id=str(self.item1_id), name="I1", version="5")
+            item,
+            self.data_store1._create_item(
+                id=str(self.item1_id), name="I1", version="5"
+            ),
         )
 
-        version = self.data_store1.get_local_version(item_id=last_item_change.item_id)
+        version = self.data_store1.get_local_version(
+            item_id=last_item_change.serialization_result.item_id
+        )
         self.assertEqual(version.item_id, self.item1_id)
 
         self.assertEqual(version.current_item_change, last_item_change)
 
         self.assertEqual(
-            json.loads(version.current_item_change.serialized_item),
-            json.loads(self._serialize_item(name="I1", version="5", id=self.item1_id)),
+            self.to_dict(
+                version.current_item_change.serialization_result.serialized_item
+            ),
+            self.to_dict(
+                self._serialize_item(name="I1", version="5", id=self.item1_id)
+            ),
         )
         self.assertEqual(len(self.data_store1.get_item_versions()), 1)
 
@@ -166,14 +151,20 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         self.item2_id = str(uuid.uuid4())
         self.data_store1.commit_item_change(
             operation=Operation.INSERT,
+            entity_name="my_app_item",
             item_id=self.item2_id,
-            item=self._create_item(id=self.item2_id, name="I2", version="1"),
+            item=self.data_store1._create_item(
+                id=self.item2_id, name="I2", version="1"
+            ),
         )
         for i in range(2, 4):
             last_item_change = self.data_store1.commit_item_change(
                 operation=Operation.UPDATE,
+                entity_name="my_app_item",
                 item_id=self.item2_id,
-                item=self._create_item(id=self.item2_id, name="I2", version=str(i)),
+                item=self.data_store1._create_item(
+                    id=self.item2_id, name="I2", version=str(i)
+                ),
             )
 
         self.last_item_change_2 = last_item_change
@@ -181,16 +172,25 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
 
         item = self.data_store1.get_item_by_id(id=self.item2_id)
         self.assertEqual(
-            item, self._deserialize_item(id=str(self.item2_id), name="I2", version="3")
+            item,
+            self.data_store1._create_item(
+                id=str(self.item2_id), name="I2", version="3"
+            ),
         )
 
-        version = self.data_store1.get_local_version(item_id=last_item_change.item_id)
+        version = self.data_store1.get_local_version(
+            item_id=last_item_change.serialization_result.item_id
+        )
         self.assertEqual(version.item_id, self.item2_id)
         self.assertEqual(version.current_item_change, last_item_change)
 
         self.assertEqual(
-            json.loads(version.current_item_change.serialized_item),
-            json.loads(self._serialize_item(name="I2", version="3", id=self.item2_id)),
+            self.to_dict(
+                version.current_item_change.serialization_result.serialized_item
+            ),
+            self.to_dict(
+                self._serialize_item(name="I2", version="3", id=self.item2_id)
+            ),
         )
         self.assertEqual(len(self.data_store1.get_item_versions()), 2)
 
@@ -199,14 +199,20 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         self.item3_id = str(uuid.uuid4())
         self.data_store1.commit_item_change(
             operation=Operation.INSERT,
+            entity_name="my_app_item",
             item_id=self.item3_id,
-            item=self._create_item(id=self.item3_id, name="I3", version="1"),
+            item=self.data_store1._create_item(
+                id=self.item3_id, name="I3", version="1"
+            ),
         )
         for i in range(2, 5):
             last_item_change = self.data_store1.commit_item_change(
                 operation=Operation.UPDATE,
+                entity_name="my_app_item",
                 item_id=self.item3_id,
-                item=self._create_item(id=self.item3_id, name="I3", version=str(i)),
+                item=self.data_store1._create_item(
+                    id=self.item3_id, name="I3", version=str(i)
+                ),
             )
 
         self.last_item_change_3 = last_item_change
@@ -214,16 +220,25 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
 
         item = self.data_store1.get_item_by_id(id=self.item3_id)
         self.assertEqual(
-            item, self._deserialize_item(id=str(self.item3_id), name="I3", version="4")
+            item,
+            self.data_store1._create_item(
+                id=str(self.item3_id), name="I3", version="4"
+            ),
         )
 
-        version = self.data_store1.get_local_version(item_id=last_item_change.item_id)
+        version = self.data_store1.get_local_version(
+            item_id=last_item_change.serialization_result.item_id
+        )
         self.assertEqual(version.item_id, self.item3_id)
         self.assertEqual(version.current_item_change, last_item_change)
 
         self.assertEqual(
-            json.loads(version.current_item_change.serialized_item),
-            json.loads(self._serialize_item(name="I3", version="4", id=self.item3_id)),
+            self.to_dict(
+                version.current_item_change.serialization_result.serialized_item
+            ),
+            self.to_dict(
+                self._serialize_item(name="I3", version="4", id=self.item3_id)
+            ),
         )
         self.assertEqual(len(self.data_store1.get_item_versions()), 3)
 
@@ -234,14 +249,20 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
 
         self.data_store2.commit_item_change(
             operation=Operation.INSERT,
+            entity_name="my_app_item",
             item_id=self.item104_id,
-            item=self._create_item(id=self.item104_id, name="I104", version="1"),
+            item=self.data_store2._create_item(
+                id=self.item104_id, name="I104", version="1"
+            ),
         )
         for i in range(2, 3):
             last_item_change = self.data_store2.commit_item_change(
                 operation=Operation.UPDATE,
+                entity_name="my_app_item",
                 item_id=self.item104_id,
-                item=self._create_item(id=self.item104_id, name="I104", version=str(i)),
+                item=self.data_store2._create_item(
+                    id=self.item104_id, name="I104", version=str(i)
+                ),
             )
 
         self.last_item_change_104 = last_item_change
@@ -249,16 +270,21 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
 
         item = self.data_store2.get_item_by_id(id=self.item104_id)
         self.assertEqual(
-            item, self._deserialize_item(id=self.item104_id, name="I104", version="2")
+            item,
+            self.data_store2._create_item(id=self.item104_id, name="I104", version="2"),
         )
 
-        version = self.data_store2.get_local_version(item_id=last_item_change.item_id)
+        version = self.data_store2.get_local_version(
+            item_id=last_item_change.serialization_result.item_id
+        )
         self.assertEqual(version.item_id, self.item104_id)
         self.assertEqual(version.current_item_change, last_item_change)
 
         self.assertEqual(
-            json.loads(version.current_item_change.serialized_item),
-            json.loads(
+            self.to_dict(
+                version.current_item_change.serialization_result.serialized_item
+            ),
+            self.to_dict(
                 self._serialize_item(name="I104", version="2", id=self.item104_id)
             ),
         )
@@ -270,14 +296,20 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         self.item105_id = str(uuid.uuid4())
         self.data_store2.commit_item_change(
             operation=Operation.INSERT,
+            entity_name="my_app_item",
             item_id=self.item105_id,
-            item=self._create_item(id=self.item105_id, name="I105", version="1"),
+            item=self.data_store2._create_item(
+                id=self.item105_id, name="I105", version="1"
+            ),
         )
         for i in range(2, 5):
             last_item_change = self.data_store2.commit_item_change(
                 operation=Operation.UPDATE,
+                entity_name="my_app_item",
                 item_id=self.item105_id,
-                item=self._create_item(id=self.item105_id, name="I105", version=str(i)),
+                item=self.data_store2._create_item(
+                    id=self.item105_id, name="I105", version=str(i)
+                ),
             )
 
         self.last_item_change_105 = last_item_change
@@ -286,16 +318,21 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
 
         item = self.data_store2.get_item_by_id(id=self.item105_id)
         self.assertEqual(
-            item, self._deserialize_item(id=self.item105_id, name="I105", version="4")
+            item,
+            self.data_store2._create_item(id=self.item105_id, name="I105", version="4"),
         )
 
-        version = self.data_store2.get_local_version(item_id=last_item_change.item_id)
+        version = self.data_store2.get_local_version(
+            item_id=last_item_change.serialization_result.item_id
+        )
         self.assertEqual(version.item_id, self.item105_id)
         self.assertEqual(version.current_item_change, last_item_change)
 
         self.assertEqual(
-            json.loads(version.current_item_change.serialized_item),
-            json.loads(
+            self.to_dict(
+                version.current_item_change.serialization_result.serialized_item
+            ),
+            self.to_dict(
                 self._serialize_item(name="I105", version="4", id=self.item105_id)
             ),
         )
@@ -327,7 +364,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         self.assertEqual(len(initial_items), 2)
 
         self._full_sync_no_conflict_before_first_sync()
-        self.orchestrator._synchronize_providers(
+        self.orchestrator.synchronize_providers(
             source_provider_id="other_provider", target_provider_id="provider_in_test"
         )
         self._full_sync_no_conflict_after_first_sync()
@@ -359,21 +396,34 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         item105 = self.data_store2.get_item_by_id(self.item105_id)
 
         self.assertEqual(
-            item1, self._deserialize_item(id=str(self.item1_id), name="I1", version="5")
+            item1,
+            self.data_store2._create_item(
+                id=str(self.item1_id), name="I1", version="5"
+            ),
         )
         self.assertEqual(
-            item2, self._deserialize_item(id=str(self.item2_id), name="I2", version="3")
+            item2,
+            self.data_store2._create_item(
+                id=str(self.item2_id), name="I2", version="3"
+            ),
         )
         self.assertEqual(
-            item3, self._deserialize_item(id=str(self.item3_id), name="I3", version="4")
+            item3,
+            self.data_store2._create_item(
+                id=str(self.item3_id), name="I3", version="4"
+            ),
         )
         self.assertEqual(
             item104,
-            self._deserialize_item(id=str(self.item104_id), name="I104", version="2"),
+            self.data_store2._create_item(
+                id=str(self.item104_id), name="I104", version="2"
+            ),
         )
         self.assertEqual(
             item105,
-            self._deserialize_item(id=str(self.item105_id), name="I105", version="4"),
+            self.data_store2._create_item(
+                id=str(self.item105_id), name="I105", version="4"
+            ),
         )
 
         # Checking if the versions were created correctly
@@ -383,11 +433,17 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
                 for item_version in self.data_store2.get_item_versions()
             },
             {
-                (str(self._get_id(item1)), str(self.last_item_change_1.id)),
-                (str(self._get_id(item2)), str(self.last_item_change_2.id)),
-                (str(self._get_id(item3)), str(self.last_item_change_3.id)),
-                (str(self._get_id(item104)), str(self.last_item_change_104.id),),
-                (str(self._get_id(item105)), str(self.last_item_change_105.id),),
+                (str(self.data_store2._get_id(item1)), str(self.last_item_change_1.id)),
+                (str(self.data_store2._get_id(item2)), str(self.last_item_change_2.id)),
+                (str(self.data_store2._get_id(item3)), str(self.last_item_change_3.id)),
+                (
+                    str(self.data_store2._get_id(item104)),
+                    str(self.last_item_change_104.id),
+                ),
+                (
+                    str(self.data_store2._get_id(item105)),
+                    str(self.last_item_change_105.id),
+                ),
             },
         )
 
@@ -427,7 +483,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         self.assertEqual(len(initial_items), 3)
 
         self._full_sync_no_conflict_before_second_sync()
-        self.orchestrator._synchronize_providers(
+        self.orchestrator.synchronize_providers(
             source_provider_id="provider_in_test", target_provider_id="other_provider"
         )
         self._full_sync_no_conflict_after_second_sync()
@@ -459,21 +515,34 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         item105 = self.data_store1.get_item_by_id(self.item105_id)
 
         self.assertEqual(
-            item1, self._deserialize_item(id=str(self.item1_id), name="I1", version="5")
+            item1,
+            self.data_store1._create_item(
+                id=str(self.item1_id), name="I1", version="5"
+            ),
         )
         self.assertEqual(
-            item2, self._deserialize_item(id=str(self.item2_id), name="I2", version="3")
+            item2,
+            self.data_store1._create_item(
+                id=str(self.item2_id), name="I2", version="3"
+            ),
         )
         self.assertEqual(
-            item3, self._deserialize_item(id=str(self.item3_id), name="I3", version="4")
+            item3,
+            self.data_store1._create_item(
+                id=str(self.item3_id), name="I3", version="4"
+            ),
         )
         self.assertEqual(
             item104,
-            self._deserialize_item(id=str(self.item104_id), name="I104", version="2"),
+            self.data_store1._create_item(
+                id=str(self.item104_id), name="I104", version="2"
+            ),
         )
         self.assertEqual(
             item105,
-            self._deserialize_item(id=str(self.item105_id), name="I105", version="4"),
+            self.data_store1._create_item(
+                id=str(self.item105_id), name="I105", version="4"
+            ),
         )
 
         # Making sure the version were created correctly
@@ -483,11 +552,17 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
                 for item_version in self.data_store2.get_item_versions()
             },
             {
-                (str(self._get_id(item1)), str(self.last_item_change_1.id)),
-                (str(self._get_id(item2)), str(self.last_item_change_2.id)),
-                (str(self._get_id(item3)), str(self.last_item_change_3.id)),
-                (str(self._get_id(item104)), str(self.last_item_change_104.id),),
-                (str(self._get_id(item105)), str(self.last_item_change_105.id),),
+                (str(self.data_store1._get_id(item1)), str(self.last_item_change_1.id)),
+                (str(self.data_store1._get_id(item2)), str(self.last_item_change_2.id)),
+                (str(self.data_store1._get_id(item3)), str(self.last_item_change_3.id)),
+                (
+                    str(self.data_store1._get_id(item104)),
+                    str(self.last_item_change_104.id),
+                ),
+                (
+                    str(self.data_store1._get_id(item105)),
+                    str(self.last_item_change_105.id),
+                ),
             },
         )
 
@@ -524,8 +599,9 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         # Item I2 is updated by data store 1 (other_provider)
         other_provider_change = self.data_store1.commit_item_change(
             operation=Operation.UPDATE,
+            entity_name="my_app_item",
             item_id=self.item2_id,
-            item=self._deserialize_item(
+            item=self.data_store1._create_item(
                 id=str(self.item2_id), name="I2", version="other_provider_version",
             ),
         )
@@ -533,8 +609,9 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         # Same item I2 is updated by data store 2 (provider_in_test)
         provider_in_test_change = self.data_store2.commit_item_change(
             operation=Operation.UPDATE,
+            entity_name="my_app_item",
             item_id=self.item2_id,
-            item=self._deserialize_item(
+            item=self.data_store2._create_item(
                 id=str(self.item2_id), name="I2", version="provider_in_test_version",
             ),
         )
@@ -542,7 +619,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         # Sinchronization: other_provider (1) -> provider_in_test (2)
         # Expected results: the change from provider_in_test wins because it's the most recent
         num_changes = len(self.data_store2.get_item_changes())
-        self.orchestrator._synchronize_providers(
+        self.orchestrator.synchronize_providers(
             source_provider_id="other_provider", target_provider_id="provider_in_test"
         )
 
@@ -562,7 +639,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         self.assertEqual(num_changes + 1, len(self.data_store2.get_item_changes()))
 
         item_version = self.data_store2.get_local_version(
-            item_id=provider_in_test_change.item_id
+            item_id=provider_in_test_change.serialization_result.item_id
         )
         self.assertEqual(
             item_version.current_item_change.id, provider_in_test_change.id
@@ -582,14 +659,14 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         item2 = self.data_store2.get_item_by_id(id=self.item2_id)
         self.assertEqual(
             item2,
-            self._deserialize_item(
+            self.data_store2._create_item(
                 id=str(self.item2_id), name="I2", version="provider_in_test_version"
             ),
         )
 
         # Sinchronization: provider_in_test (2) -> other_provider (1)
         num_changes = len(self.data_store1.get_item_changes())
-        self.orchestrator._synchronize_providers(
+        self.orchestrator.synchronize_providers(
             source_provider_id="provider_in_test", target_provider_id="other_provider"
         )
 
@@ -609,7 +686,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         self.assertEqual(num_changes + 1, len(self.data_store1.get_item_changes()))
 
         item_version = self.data_store1.get_local_version(
-            item_id=provider_in_test_change.item_id
+            item_id=provider_in_test_change.serialization_result.item_id
         )
         self.assertEqual(
             item_version.current_item_change.id, provider_in_test_change.id
@@ -629,7 +706,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         item2 = self.data_store1.get_item_by_id(id=self.item2_id)
         self.assertEqual(
             item2,
-            self._deserialize_item(
+            self.data_store1._create_item(
                 id=str(self.item2_id), name="I2", version="provider_in_test_version"
             ),
         )
@@ -644,8 +721,9 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         # Item I2 is updated by data_store1 (other_provider)
         other_provider_change = self.data_store1.commit_item_change(
             operation=Operation.UPDATE,
+            entity_name="my_app_item",
             item_id=self.item2_id,
-            item=self._deserialize_item(
+            item=self.data_store1._create_item(
                 id=str(self.item2_id), name="I2", version="other_provider_version",
             ),
         )
@@ -653,15 +731,18 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         # Same item I2 is deleted by data_store2 (provider_in_test)
         provider_in_test_change = self.data_store2.commit_item_change(
             operation=Operation.DELETE,
+            entity_name="my_app_item",
             item_id=self.item2_id,
-            item=self._deserialize_item(id=str(self.item2_id), name="I2", version="3"),
+            item=self.data_store2._create_item(
+                id=str(self.item2_id), name="I2", version="3"
+            ),
         )
 
         # Sinchronization: other_provider (1) -> provider_in_test (2)
         # Expected results: deletion by provider_in_test wins
         num_changes = len(self.data_store2.get_item_changes())
         num_items = len(self.data_store2.get_items())
-        self.orchestrator._synchronize_providers(
+        self.orchestrator.synchronize_providers(
             source_provider_id="other_provider", target_provider_id="provider_in_test"
         )
 
@@ -682,7 +763,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         self.assertEqual(num_items, len(self.data_store2.get_items()))
 
         item_version = self.data_store2.get_local_version(
-            item_id=provider_in_test_change.item_id
+            item_id=provider_in_test_change.serialization_result.item_id
         )
         self.assertEqual(
             item_version.current_item_change.id, provider_in_test_change.id
@@ -705,7 +786,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         # Sincronization: provider_in_test (2) -> other_provider (1)
         num_changes = len(self.data_store1.get_item_changes())
         num_items = len(self.data_store1.get_items())
-        self.orchestrator._synchronize_providers(
+        self.orchestrator.synchronize_providers(
             source_provider_id="provider_in_test", target_provider_id="other_provider"
         )
 
@@ -726,7 +807,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         self.assertEqual(num_items - 1, len(self.data_store1.get_items()))
 
         item_version = self.data_store1.get_local_version(
-            item_id=provider_in_test_change.item_id
+            item_id=provider_in_test_change.serialization_result.item_id
         )
         self.assertEqual(
             item_version.current_item_change.id, provider_in_test_change.id
@@ -756,22 +837,28 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         # Item I2 is deleted by data_store1 (other_provider)
         other_provider_change = self.data_store1.commit_item_change(
             operation=Operation.DELETE,
+            entity_name="my_app_item",
             item_id=self.item2_id,
-            item=self._deserialize_item(id=str(self.item2_id), name="I2", version="3"),
+            item=self.data_store1._create_item(
+                id=str(self.item2_id), name="I2", version="3"
+            ),
         )
 
         # Same item I2 is also deleted by data_store2 (provider_in_test)
         provider_in_test_change = self.data_store2.commit_item_change(
             operation=Operation.DELETE,
+            entity_name="my_app_item",
             item_id=self.item2_id,
-            item=self._deserialize_item(id=str(self.item2_id), name="I2", version="3"),
+            item=self.data_store2._create_item(
+                id=str(self.item2_id), name="I2", version="3"
+            ),
         )
 
         # Sinchronization: other_provider (1) -> provider_in_test (2)
         # Expected results: deletion by provider_in_test wins because it's the most recent
         num_changes = len(self.data_store2.get_item_changes())
         num_items = len(self.data_store2.get_items())
-        self.orchestrator._synchronize_providers(
+        self.orchestrator.synchronize_providers(
             source_provider_id="other_provider", target_provider_id="provider_in_test"
         )
 
@@ -792,7 +879,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         self.assertEqual(num_items, len(self.data_store2.get_items()))
 
         item_version = self.data_store2.get_local_version(
-            item_id=provider_in_test_change.item_id
+            item_id=provider_in_test_change.serialization_result.item_id
         )
         self.assertEqual(
             item_version.current_item_change.id, provider_in_test_change.id
@@ -815,7 +902,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         # Sincronization: provider_in_test (2) -> other_provider (1)
         num_changes = len(self.data_store1.get_item_changes())
         num_items = len(self.data_store1.get_items())
-        self.orchestrator._synchronize_providers(
+        self.orchestrator.synchronize_providers(
             source_provider_id="provider_in_test", target_provider_id="other_provider"
         )
 
@@ -836,7 +923,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         self.assertEqual(num_items, len(self.data_store1.get_items()))
 
         item_version = self.data_store1.get_local_version(
-            item_id=provider_in_test_change.item_id
+            item_id=provider_in_test_change.serialization_result.item_id
         )
         self.assertEqual(
             item_version.current_item_change.id, provider_in_test_change.id
@@ -882,16 +969,18 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         # Items I2 e I3 are updated by data_store1
         other_provider_change_i2 = self.data_store1.commit_item_change(
             operation=Operation.UPDATE,
+            entity_name="my_app_item",
             item_id=self.item2_id,
-            item=self._deserialize_item(
+            item=self.data_store1._create_item(
                 id=str(self.item2_id), name="I2", version="other_provider_version_i2",
             ),
         )
 
         other_provider_change_i3 = self.data_store1.commit_item_change(
             operation=Operation.UPDATE,
+            entity_name="my_app_item",
             item_id=self.item3_id,
-            item=self._deserialize_item(
+            item=self.data_store1._create_item(
                 id=str(self.item3_id), name="I3", version="other_provider_version_i3",
             ),
         )
@@ -902,7 +991,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         item2_id = self.item2_id
 
         def execute_item_change_mock(item_change: "ItemChange"):
-            if str(item_change.item_id) == str(item2_id):
+            if str(item_change.serialization_result.item_id) == str(item2_id):
                 raise ValueError("Error!")
             else:
                 original(item_change)
@@ -914,7 +1003,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         num_items = len(self.data_store2.get_items())
         num_conflict_logs = len(self.data_store2.get_conflict_logs())
 
-        self.orchestrator._synchronize_providers(
+        self.orchestrator.synchronize_providers(
             source_provider_id="other_provider", target_provider_id="provider_in_test"
         )
         self.events_manager2.raise_exception = True
@@ -931,11 +1020,13 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         item2 = self.data_store2.get_item_by_id(id=self.item2_id)
         self.assertEqual(
             item2,
-            self._deserialize_item(id=str(self.item2_id), name="I2", version="3"),
+            self.data_store2._create_item(
+                id=str(self.item2_id), name="I2", version="3"
+            ),
         )
 
         item2_version = self.data_store2.get_local_version(
-            item_id=other_provider_change_i2.item_id
+            item_id=other_provider_change_i2.serialization_result.item_id
         )
         self.assertEqual(
             item2_version.current_item_change.id, self.last_item_change_2.id
@@ -965,12 +1056,12 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         item3 = self.data_store2.get_item_by_id(id=self.item3_id)
         self.assertEqual(
             item3,
-            self._deserialize_item(
+            self.data_store2._create_item(
                 id=str(self.item3_id), name="I3", version="other_provider_version_i3"
             ),
         )
         item3_version = self.data_store2.get_local_version(
-            item_id=other_provider_change_i3.item_id
+            item_id=other_provider_change_i3.serialization_result.item_id
         )
         self.assertEqual(
             item3_version.current_item_change.id, other_provider_change_i3.id
@@ -983,7 +1074,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         item2_id = self.item2_id
 
         def execute_item_change_mock(item_change: "ItemChange"):
-            if str(item_change.item_id) == str(item2_id):
+            if str(item_change.serialization_result.item_id) == str(item2_id):
                 raise ValueError("Error!")
             else:
                 original(item_change)
@@ -995,7 +1086,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         num_items = len(self.data_store2.get_items())
         num_conflict_logs = len(self.data_store2.get_conflict_logs())
 
-        self.orchestrator._synchronize_providers(
+        self.orchestrator.synchronize_providers(
             source_provider_id="other_provider", target_provider_id="provider_in_test"
         )
         self.events_manager2.raise_exception = True
@@ -1009,11 +1100,13 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         item2 = self.data_store2.get_item_by_id(id=self.item2_id)
         self.assertEqual(
             item2,
-            self._deserialize_item(id=str(self.item2_id), name="I2", version="3"),
+            self.data_store2._create_item(
+                id=str(self.item2_id), name="I2", version="3"
+            ),
         )
 
         item2_version = self.data_store2.get_local_version(
-            item_id=other_provider_change_i2.item_id
+            item_id=other_provider_change_i2.serialization_result.item_id
         )
         self.assertEqual(
             item2_version.current_item_change.id, self.last_item_change_2.id
@@ -1041,12 +1134,12 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         item3 = self.data_store2.get_item_by_id(id=self.item3_id)
         self.assertEqual(
             item3,
-            self._deserialize_item(
+            self.data_store2._create_item(
                 id=str(self.item3_id), name="I3", version="other_provider_version_i3"
             ),
         )
         item3_version = self.data_store2.get_local_version(
-            item_id=other_provider_change_i3.item_id
+            item_id=other_provider_change_i3.serialization_result.item_id
         )
         self.assertEqual(
             item3_version.current_item_change.id, other_provider_change_i3.id
@@ -1058,7 +1151,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         num_items = len(self.data_store2.get_items())
         num_conflict_logs = len(self.data_store2.get_conflict_logs())
 
-        self.orchestrator._synchronize_providers(
+        self.orchestrator.synchronize_providers(
             source_provider_id="other_provider", target_provider_id="provider_in_test"
         )
 
@@ -1069,13 +1162,13 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         item2 = self.data_store2.get_item_by_id(id=self.item2_id)
         self.assertEqual(
             item2,
-            self._deserialize_item(
+            self.data_store2._create_item(
                 id=str(self.item2_id), name="I2", version="other_provider_version_i2"
             ),
         )
 
         item2_version = self.data_store2.get_local_version(
-            item_id=other_provider_change_i2.item_id
+            item_id=other_provider_change_i2.serialization_result.item_id
         )
         self.assertEqual(
             item2_version.current_item_change.id, other_provider_change_i2.id
@@ -1087,6 +1180,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         conflict_log = self.data_store2.get_conflict_logs()[0]
         self.assertEqual(conflict_log.item_change_loser.id, other_provider_change_i2.id)
         self.assertEqual(conflict_log.status, ConflictStatus.RESOLVED)
+
         self.assertEqual(self.data_store1, self.data_store2)
 
     def test_conflict_exception2(self):
@@ -1115,15 +1209,19 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         # other_provider >> Deletes item I2
         other_provider_delete_i2 = self.data_store1.commit_item_change(
             operation=Operation.DELETE,
+            entity_name="my_app_item",
             item_id=self.item2_id,
-            item=self._deserialize_item(id=str(self.item2_id), name=None, version=None),
+            item=self.data_store1._create_item(
+                id=str(self.item2_id), name=None, version=None
+            ),
         )
 
         # provider_in_test >> Updates item I2
         provider_in_test_update_i2_1 = self.data_store2.commit_item_change(
             operation=Operation.UPDATE,
+            entity_name="my_app_item",
             item_id=self.item2_id,
-            item=self._deserialize_item(
+            item=self.data_store2._create_item(
                 id=str(self.item2_id),
                 name="I2",
                 version="provider_in_test_update_i2_1",
@@ -1133,8 +1231,9 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         # provider_in_test >> Updates item I2
         provider_in_test_update_i2_2 = self.data_store2.commit_item_change(
             operation=Operation.UPDATE,
+            entity_name="my_app_item",
             item_id=self.item2_id,
-            item=self._deserialize_item(
+            item=self.data_store2._create_item(
                 id=str(self.item2_id),
                 name="I2",
                 version="provider_in_test_update_i2_2",
@@ -1144,8 +1243,9 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         # other_provider >> Updates item I3
         other_provider_change_i3 = self.data_store1.commit_item_change(
             operation=Operation.UPDATE,
+            entity_name="my_app_item",
             item_id=self.item3_id,
-            item=self._deserialize_item(
+            item=self.data_store1._create_item(
                 id=str(self.item3_id), name="I3", version="other_provider_update_i3_1",
             ),
         )
@@ -1156,7 +1256,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         item2_id = self.item2_id
 
         def execute_item_change_mock(item_change: "ItemChange"):
-            if str(item_change.item_id) == str(item2_id):
+            if str(item_change.serialization_result.item_id) == str(item2_id):
                 raise ValueError("Error!")
             else:
                 original(item_change)
@@ -1185,7 +1285,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         item2 = self.data_store2.get_item_by_id(id=self.item2_id)
         self.assertEqual(
             item2,
-            self._deserialize_item(
+            self.data_store2._create_item(
                 id=str(self.item2_id),
                 name="I2",
                 version="provider_in_test_update_i2_2",
@@ -1193,7 +1293,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         )
 
         item2_version = self.data_store2.get_local_version(
-            item_id=provider_in_test_update_i2_2.item_id
+            item_id=provider_in_test_update_i2_2.serialization_result.item_id
         )
         self.assertEqual(
             item2_version.current_item_change.id, provider_in_test_update_i2_2.id
@@ -1223,12 +1323,12 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         item3 = self.data_store2.get_item_by_id(id=self.item3_id)
         self.assertEqual(
             item3,
-            self._deserialize_item(
+            self.data_store2._create_item(
                 id=str(self.item3_id), name="I3", version="other_provider_update_i3_1",
             ),
         )
         item3_version = self.data_store2.get_local_version(
-            item_id=other_provider_change_i3.item_id
+            item_id=other_provider_change_i3.serialization_result.item_id
         )
         self.assertEqual(
             item3_version.current_item_change.id, other_provider_change_i3.id
@@ -1241,7 +1341,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
             self.data_store1.get_item_by_id(id=self.item2_id)
 
         item2_version = self.data_store1.get_local_version(
-            item_id=other_provider_delete_i2.item_id
+            item_id=other_provider_delete_i2.serialization_result.item_id
         )
         self.assertEqual(
             item2_version.current_item_change.id, other_provider_delete_i2.id
@@ -1281,12 +1381,12 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         item3 = self.data_store1.get_item_by_id(id=self.item3_id)
         self.assertEqual(
             item3,
-            self._deserialize_item(
+            self.data_store1._create_item(
                 id=str(self.item3_id), name="I3", version="other_provider_update_i3_1",
             ),
         )
         item3_version = self.data_store1.get_local_version(
-            item_id=other_provider_change_i3.item_id
+            item_id=other_provider_change_i3.serialization_result.item_id
         )
         self.assertEqual(
             item3_version.current_item_change.id, other_provider_change_i3.id
@@ -1296,8 +1396,9 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         # provider_in_test >> Updates item I2
         provider_in_test_update_i2_3 = self.data_store2.commit_item_change(
             operation=Operation.UPDATE,
+            entity_name="my_app_item",
             item_id=self.item2_id,
-            item=self._deserialize_item(
+            item=self.data_store2._create_item(
                 id=str(self.item2_id),
                 name="I2",
                 version="provider_in_test_update_i2_3",
@@ -1319,7 +1420,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
             self.data_store2.get_item_by_id(id=self.item2_id)
 
         item2_version = self.data_store2.get_local_version(
-            item_id=provider_in_test_update_i2_3.item_id
+            item_id=provider_in_test_update_i2_3.serialization_result.item_id
         )
         self.assertEqual(
             item2_version.current_item_change.id, other_provider_delete_i2.id
@@ -1359,7 +1460,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
             self.data_store1.get_item_by_id(id=self.item2_id)
 
         item2_version = self.data_store1.get_local_version(
-            item_id=other_provider_delete_i2.item_id
+            item_id=other_provider_delete_i2.serialization_result.item_id
         )
         self.assertEqual(
             item2_version.current_item_change.id, other_provider_delete_i2.id
@@ -1419,8 +1520,9 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         # other_provider >> Updates item I2
         other_provider_update_i2_1 = self.data_store1.commit_item_change(
             operation=Operation.UPDATE,
+            entity_name="my_app_item",
             item_id=self.item2_id,
-            item=self._deserialize_item(
+            item=self.data_store1._create_item(
                 id=str(self.item2_id), name="I2", version="other_provider_update_i2_1",
             ),
         )
@@ -1428,15 +1530,19 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         # provider_in_test >> Deletes item I2
         provider_in_test_delete_i2 = self.data_store2.commit_item_change(
             operation=Operation.DELETE,
+            entity_name="my_app_item",
             item_id=self.item2_id,
-            item=self._deserialize_item(id=str(self.item2_id), name=None, version=None),
+            item=self.data_store2._create_item(
+                id=str(self.item2_id), name=None, version=None
+            ),
         )
 
         # other_provider >> Updates item I2
         other_provider_update_i2_2 = self.data_store1.commit_item_change(
             operation=Operation.UPDATE,
+            entity_name="my_app_item",
             item_id=self.item2_id,
-            item=self._deserialize_item(
+            item=self.data_store1._create_item(
                 id=str(self.item2_id), name="I2", version="other_provider_update_i2_2",
             ),
         )
@@ -1531,7 +1637,7 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         item2 = self.data_store1.get_item_by_id(id=self.item2_id)
         self.assertEqual(
             item2,
-            self._deserialize_item(
+            self.data_store1._create_item(
                 id=str(self.item2_id), name="I2", version="other_provider_update_i2_2",
             ),
         )
@@ -1573,8 +1679,9 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
         # other_provider >> Updates item I2
         other_provider_update_i2_3 = self.data_store1.commit_item_change(
             operation=Operation.UPDATE,
+            entity_name="my_app_item",
             item_id=self.item2_id,
-            item=self._deserialize_item(
+            item=self.data_store1._create_item(
                 id=str(self.item2_id), name="I2", version="other_provider_update_i2_3",
             ),
         )
@@ -1757,3 +1864,673 @@ class FullSyncTest(BackendTestMixin, unittest.TestCase):
 
         with self.assertRaises(ItemNotFoundException):
             self.data_store2.get_item_by_id(id=self.item2_id)
+
+
+class QueryFullSyncTest(BackendTestMixin, unittest.TestCase):
+    def setUp(self):
+        # Provider 1
+        self.data_store1 = cast(
+            "Union[TestDataStoreMixin, TrackQueriesStoreMixin, BaseDataStore]",
+            self._create_data_store(local_provider_id="other_provider",),
+        )
+        self.events_manager1 = DebugEventsManager(data_store=self.data_store1)
+        self.changes_executor1 = ChangesExecutor(
+            data_store=self.data_store1,
+            events_manager=self.events_manager1,
+            conflict_resolver=ConflictResolver(),
+        )
+        self.other_provider = self._create_provider(
+            provider_id="other_provider",
+            data_store=self.data_store1,
+            events_manager=self.events_manager1,
+            changes_executor=self.changes_executor1,
+            max_num=5,
+        )
+
+        # Provider 2
+        self.data_store2 = cast(
+            "Union[TestDataStoreMixin, TrackQueriesStoreMixin, BaseDataStore]",
+            self._create_data_store(local_provider_id="provider_in_test",),
+        )
+        self.events_manager2 = DebugEventsManager(data_store=self.data_store2)
+        self.changes_executor2 = ChangesExecutor(
+            data_store=self.data_store2,
+            events_manager=self.events_manager2,
+            conflict_resolver=ConflictResolver(),
+        )
+        self.provider_in_test = self._create_provider(
+            provider_id="provider_in_test",
+            data_store=self.data_store2,
+            events_manager=self.events_manager2,
+            changes_executor=self.changes_executor2,
+            max_num=5,
+        )
+
+        self.sync_lock = self._create_sync_lock()
+        self.orchestrator = SyncOrchestrator(
+            sync_lock=self.sync_lock,
+            providers=[self.other_provider, self.provider_in_test],
+            maximum_duration_seconds=5 * 60,
+        )
+
+    def _test_sync_query(
+        self, source_provider: "BaseSyncProvider", target_provider: "BaseSyncProvider"
+    ):
+        """Simulates the situation where changes are selected and a query is used to filter the results.
+
+            The timeline is:
+                a)
+                    - There are 5 items, 3 of them with versions less than 5 (2,3,4) and
+                    2 with versions more or equal to 5 (5, 6)
+                    - A query is made for 2 items with versions less than 5 ordered by version
+                        - Only the changes related to items with version 2 and 3 are returned
+
+                b)
+                    - A new item with version 1 is added
+                    - The item that had version 3 is updated to version 4
+                    - A new query (using the vector clock from the previous request) is made
+                        - Both the changes related to the new item and to the updated item
+                        are listed
+
+                c)
+                    - Item with version 4 is deleted
+                    - Item with version 1 is updated (but its version remains the same)
+                    - A new query (using the vector clock from the previous request) is made
+                        - The change related to the deletion is not returned (as its no longer
+                        part of the query)
+                        - The change related to the update is returned
+
+                d)
+                    - A new query without a vector clock is made for the next 2 items
+                        - The changes related to item with version 4 are returned (both INSERT and DELETE)
+
+                e)
+                    - The target data store updates item with version 1 to version 4
+                        - The target vector clock for both queries is updated accordingly
+
+        """
+
+        # Setup
+        source_data_store = source_provider.data_store
+        target_data_store = target_provider.data_store
+
+        item1 = cast("TestDataStoreMixin", source_data_store)._create_item(
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="2",
+        )
+        item1_change1 = cast("BaseDataStore", source_data_store).commit_item_change(
+            operation=Operation.INSERT,
+            entity_name="my_app_item",
+            item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+            item=item1,
+        )
+
+        item2 = cast("TestDataStoreMixin", source_data_store)._create_item(
+            id="6ec0755a-2ca9-407e-87fa-0bd73db8c29f", name="item_2", version="3",
+        )
+        item2_change1 = cast("BaseDataStore", source_data_store).commit_item_change(
+            operation=Operation.INSERT,
+            entity_name="my_app_item",
+            item_id="6ec0755a-2ca9-407e-87fa-0bd73db8c29f",
+            item=item2,
+        )
+
+        item3 = cast("TestDataStoreMixin", source_data_store)._create_item(
+            id="b45d1471-819b-4048-b888-ddfefde02485", name="item_3", version="4",
+        )
+        item3_change1 = cast("BaseDataStore", source_data_store).commit_item_change(
+            operation=Operation.INSERT,
+            entity_name="my_app_item",
+            item_id="b45d1471-819b-4048-b888-ddfefde02485",
+            item=item3,
+        )
+
+        item4 = cast("TestDataStoreMixin", source_data_store)._create_item(
+            id="72e754b6-6f75-4999-bc1d-5709e244a52e", name="item_4", version="5",
+        )
+        item4_change1 = cast("BaseDataStore", source_data_store).commit_item_change(
+            operation=Operation.INSERT,
+            entity_name="my_app_item",
+            item_id="72e754b6-6f75-4999-bc1d-5709e244a52e",
+            item=item4,
+        )
+
+        item5 = cast("TestDataStoreMixin", source_data_store)._create_item(
+            id="18e13474-d6a5-4d1c-8624-38cb45add4d6", name="item_5", version="6",
+        )
+        item5_change1 = cast("BaseDataStore", source_data_store).commit_item_change(
+            operation=Operation.INSERT,
+            entity_name="my_app_item",
+            item_id="18e13474-d6a5-4d1c-8624-38cb45add4d6",
+            item=item5,
+        )
+
+        # a)
+        query1 = Query(
+            entity_name="my_app_item",
+            filter=Filter(
+                children=[
+                    Comparison(
+                        field_name="version",
+                        comparator=Comparator.LESS_THAN,
+                        value="5",
+                    )
+                ]
+            ),
+            ordering=[SortOrder(field_name="version")],
+            limit=2,
+            offset=None,
+        )
+        cast("TrackQueriesStoreMixin", target_data_store).start_tracking_query(query1)
+
+        num_changes_target = len(target_data_store.get_item_changes())
+        num_items_target = len(target_data_store.get_items())
+
+        self.orchestrator.synchronize_providers(
+            source_provider_id=source_provider.provider_id,
+            target_provider_id=target_provider.provider_id,
+            query=query1,
+        )
+
+        item_changes = target_data_store.get_item_changes()
+        items = target_data_store.get_items()
+        self.assertEqual(num_changes_target + 2, len(item_changes))
+        self.assertEqual(num_items_target + 2, len(items))
+        self.assertEqual(item_changes, [item1_change1, item2_change1])
+
+        self.assertEqual(
+            make_hashable(items),
+            make_hashable(
+                [
+                    cast("TestDataStoreMixin", target_data_store)._create_item(
+                        id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+                        name="item_1",
+                        version="2",
+                    ),
+                    cast("TestDataStoreMixin", target_data_store)._create_item(
+                        id="6ec0755a-2ca9-407e-87fa-0bd73db8c29f",
+                        name="item_2",
+                        version="3",
+                    ),
+                ]
+            ),
+        )
+
+        # b)
+        item6 = cast("TestDataStoreMixin", source_data_store)._create_item(
+            id="75fdef62-6302-429a-9973-4f7f4d6a0e8f", name="item_6", version="1",
+        )
+        item6_change1 = cast("BaseDataStore", source_data_store).commit_item_change(
+            operation=Operation.INSERT,
+            entity_name="my_app_item",
+            item_id="18e13474-d6a5-4d1c-8624-38cb45add4d6",
+            item=item6,
+        )
+
+        item2 = cast("TestDataStoreMixin", source_data_store)._create_item(
+            id="6ec0755a-2ca9-407e-87fa-0bd73db8c29f", name="item_2", version="4",
+        )
+        item2_change2 = cast("BaseDataStore", source_data_store).commit_item_change(
+            operation=Operation.UPDATE,
+            entity_name="my_app_item",
+            item_id="6ec0755a-2ca9-407e-87fa-0bd73db8c29f",
+            item=item2,
+        )
+
+        num_changes_target = len(target_data_store.get_item_changes())
+        num_items_target = len(target_data_store.get_items())
+
+        self.orchestrator.synchronize_providers(
+            source_provider_id=source_provider.provider_id,
+            target_provider_id=target_provider.provider_id,
+            query=query1,
+        )
+
+        item_changes = target_data_store.get_item_changes()
+        items = target_data_store.get_items()
+        self.assertEqual(num_changes_target + 2, len(item_changes))
+        self.assertEqual(num_items_target + 1, len(items))
+        self.assertEqual(
+            item_changes, [item1_change1, item2_change1, item6_change1, item2_change2],
+        )
+
+        self.assertEqual(
+            make_hashable(items),
+            make_hashable(
+                [
+                    cast("TestDataStoreMixin", target_data_store)._create_item(
+                        id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+                        name="item_1",
+                        version="2",
+                    ),
+                    cast("TestDataStoreMixin", target_data_store)._create_item(
+                        id="6ec0755a-2ca9-407e-87fa-0bd73db8c29f",
+                        name="item_2",
+                        version="4",
+                    ),
+                    cast("TestDataStoreMixin", target_data_store)._create_item(
+                        id="75fdef62-6302-429a-9973-4f7f4d6a0e8f",
+                        name="item_6",
+                        version="1",
+                    ),
+                ]
+            ),
+        )
+
+        # c)
+        item3_change2 = cast("BaseDataStore", source_data_store).commit_item_change(
+            operation=Operation.DELETE,
+            entity_name="my_app_item",
+            item_id="b45d1471-819b-4048-b888-ddfefde02485",
+            item=item3,
+        )
+        item6 = cast("TestDataStoreMixin", source_data_store)._create_item(
+            id="75fdef62-6302-429a-9973-4f7f4d6a0e8f",
+            name="item_6_updated",
+            version="1",
+        )
+        item6_change2 = cast("BaseDataStore", source_data_store).commit_item_change(
+            operation=Operation.UPDATE,
+            entity_name="my_app_item",
+            item_id="18e13474-d6a5-4d1c-8624-38cb45add4d6",
+            item=item6,
+        )
+
+        num_changes_target = len(target_data_store.get_item_changes())
+        num_items_target = len(target_data_store.get_items())
+
+        self.orchestrator.synchronize_providers(
+            source_provider_id=source_provider.provider_id,
+            target_provider_id=target_provider.provider_id,
+            query=query1,
+        )
+
+        item_changes = target_data_store.get_item_changes()
+        items = target_data_store.get_items()
+
+        self.assertEqual(num_changes_target + 1, len(item_changes))
+        self.assertEqual(num_items_target, len(items))
+        self.assertEqual(
+            item_changes,
+            [
+                item1_change1,
+                item2_change1,
+                item6_change1,
+                item2_change2,
+                item6_change2,
+            ],
+        )
+        self.assertEqual(
+            make_hashable(items),
+            make_hashable(
+                [
+                    cast("TestDataStoreMixin", target_data_store)._create_item(
+                        id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+                        name="item_1",
+                        version="2",
+                    ),
+                    cast("TestDataStoreMixin", target_data_store)._create_item(
+                        id="6ec0755a-2ca9-407e-87fa-0bd73db8c29f",
+                        name="item_2",
+                        version="4",
+                    ),
+                    cast("TestDataStoreMixin", target_data_store)._create_item(
+                        id="75fdef62-6302-429a-9973-4f7f4d6a0e8f",
+                        name="item_6_updated",
+                        version="1",
+                    ),
+                ]
+            ),
+        )
+
+        # d)
+        query2 = Query(
+            entity_name="my_app_item",
+            filter=Filter(
+                children=[
+                    Comparison(
+                        field_name="version",
+                        comparator=Comparator.LESS_THAN,
+                        value="5",
+                    )
+                ]
+            ),
+            ordering=[SortOrder(field_name="version")],
+            limit=2,
+            offset=2,
+        )
+        cast("TrackQueriesStoreMixin", target_data_store).start_tracking_query(query2)
+        num_changes_target = len(target_data_store.get_item_changes())
+        num_items_target = len(target_data_store.get_items())
+
+        self.orchestrator.synchronize_providers(
+            source_provider_id=source_provider.provider_id,
+            target_provider_id=target_provider.provider_id,
+            query=query2,
+        )
+
+        item_changes = target_data_store.get_item_changes()
+        items = target_data_store.get_items()
+        self.assertEqual(num_changes_target + 2, len(item_changes))
+        self.assertEqual(num_items_target, len(items))
+        self.assertEqual(
+            item_changes,
+            [
+                item1_change1,
+                item2_change1,
+                item6_change1,
+                item2_change2,
+                item6_change2,
+                item3_change1,
+                item3_change2,
+            ],
+        )
+        self.assertEqual(
+            make_hashable(items),
+            make_hashable(
+                [
+                    cast("TestDataStoreMixin", target_data_store)._create_item(
+                        id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+                        name="item_1",
+                        version="2",
+                    ),
+                    cast("TestDataStoreMixin", target_data_store)._create_item(
+                        id="6ec0755a-2ca9-407e-87fa-0bd73db8c29f",
+                        name="item_2",
+                        version="4",
+                    ),
+                    cast("TestDataStoreMixin", target_data_store)._create_item(
+                        id="75fdef62-6302-429a-9973-4f7f4d6a0e8f",
+                        name="item_6_updated",
+                        version="1",
+                    ),
+                ]
+            ),
+        )
+
+        # e)
+        item6 = cast("TestDataStoreMixin", target_data_store)._create_item(
+            id="75fdef62-6302-429a-9973-4f7f4d6a0e8f",
+            name="item_6_updated",
+            version="4",
+        )
+
+        item6_change3 = target_data_store.commit_item_change(
+            operation=Operation.UPDATE,
+            entity_name="my_app_item",
+            item_id="75fdef62-6302-429a-9973-4f7f4d6a0e8f",
+            item=item6,
+        )
+
+        vector_clock1 = target_data_store.get_local_vector_clock(query=query1)
+        vector_clock2 = target_data_store.get_local_vector_clock(query=query2)
+
+        self.assertEqual(
+            vector_clock1.get_vector_clock_item(
+                provider_id=target_provider.provider_id
+            ),
+            item6_change3.change_vector_clock_item,
+        )
+
+        self.assertEqual(
+            vector_clock2.get_vector_clock_item(
+                provider_id=target_provider.provider_id
+            ),
+            item6_change3.change_vector_clock_item,
+        )
+
+    def _test_overlapping_queries(
+        self, source_provider: "BaseSyncProvider", target_provider: "BaseSyncProvider"
+    ):
+        """Simulates the situation where two overlapping queries are being tracked.
+
+        The timeline is:
+            a)
+                - There are 2 items, one with version 3 and the other with version 5
+                - The target data store starts tracking to queries, one that selects
+                all items with version less or equal to 3 (query1) and one that selects all
+                items with version less or equal to 6 (query2)
+                - The target data store syncs both queries once
+
+            b)
+                - The item with version 5 is updated (but its version stays the same)
+                - The item with version 3 is updated (but its version stays the same)
+                - The target data store syncs query1
+                    - The change to item with version 3 is returned
+
+                - The target data store syncs query2
+                    - Both the changes to items with versions 3 and 5 are returned
+
+        """
+
+        source_data_store = source_provider.data_store
+        target_data_store = target_provider.data_store
+
+        # a)
+
+        item1 = cast("TestDataStoreMixin", source_data_store)._create_item(
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="3",
+        )
+        item1_change1 = cast("BaseDataStore", source_data_store).commit_item_change(
+            operation=Operation.INSERT,
+            entity_name="my_app_item",
+            item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+            item=item1,
+        )
+
+        item2 = cast("TestDataStoreMixin", source_data_store)._create_item(
+            id="6ec0755a-2ca9-407e-87fa-0bd73db8c29f", name="item_2", version="5",
+        )
+        item2_change1 = cast("BaseDataStore", source_data_store).commit_item_change(
+            operation=Operation.INSERT,
+            entity_name="my_app_item",
+            item_id="6ec0755a-2ca9-407e-87fa-0bd73db8c29f",
+            item=item2,
+        )
+
+        query1 = Query(
+            entity_name="my_app_item",
+            filter=Filter(
+                children=[
+                    Comparison(
+                        field_name="version",
+                        comparator=Comparator.LESS_THAN_OR_EQUALS,
+                        value="3",
+                    )
+                ]
+            ),
+            ordering=[SortOrder(field_name="version")],
+            limit=2,
+            offset=None,
+        )
+        cast("TrackQueriesStoreMixin", target_data_store).start_tracking_query(query1)
+
+        query2 = Query(
+            entity_name="my_app_item",
+            filter=Filter(
+                children=[
+                    Comparison(
+                        field_name="version",
+                        comparator=Comparator.LESS_THAN_OR_EQUALS,
+                        value="6",
+                    )
+                ]
+            ),
+            ordering=[SortOrder(field_name="version")],
+            limit=2,
+            offset=None,
+        )
+        cast("TrackQueriesStoreMixin", target_data_store).start_tracking_query(query2)
+
+        item_changes = target_data_store.get_item_changes()
+        items = target_data_store.get_items()
+        num_changes_target = len(item_changes)
+        num_items_target = len(items)
+
+        self.orchestrator.synchronize_providers(
+            source_provider_id=source_provider.provider_id,
+            target_provider_id=target_provider.provider_id,
+            query=query1,
+        )
+
+        item_changes = target_data_store.get_item_changes()
+        items = target_data_store.get_items()
+        self.assertEqual(num_changes_target + 1, len(item_changes))
+        self.assertEqual(num_items_target + 1, len(items))
+        self.assertEqual(item_changes, [item1_change1])
+        self.assertEqual(
+            make_hashable(items),
+            make_hashable(
+                [
+                    cast("TestDataStoreMixin", target_data_store)._create_item(
+                        id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+                        name="item_1",
+                        version="3",
+                    )
+                ]
+            ),
+        )
+
+        item_changes = target_data_store.get_item_changes()
+        items = target_data_store.get_items()
+        num_changes_target = len(item_changes)
+        num_items_target = len(items)
+
+        self.orchestrator.synchronize_providers(
+            source_provider_id=source_provider.provider_id,
+            target_provider_id=target_provider.provider_id,
+            query=query2,
+        )
+
+        item_changes = target_data_store.get_item_changes()
+        items = target_data_store.get_items()
+
+        self.assertEqual(num_changes_target + 1, len(item_changes))
+        self.assertEqual(num_items_target + 1, len(items))
+        self.assertEqual(item_changes, [item1_change1, item2_change1])
+        self.assertEqual(
+            make_hashable(items),
+            make_hashable(
+                [
+                    cast("TestDataStoreMixin", target_data_store)._create_item(
+                        id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+                        name="item_1",
+                        version="3",
+                    ),
+                    cast("TestDataStoreMixin", target_data_store)._create_item(
+                        id="6ec0755a-2ca9-407e-87fa-0bd73db8c29f",
+                        name="item_2",
+                        version="5",
+                    ),
+                ]
+            ),
+        )
+
+        # b)
+        item2_updated = cast("TestDataStoreMixin", source_data_store)._create_item(
+            id="6ec0755a-2ca9-407e-87fa-0bd73db8c29f",
+            name="item_2_updated",
+            version="5",
+        )
+        item2_change2 = cast("BaseDataStore", source_data_store).commit_item_change(
+            operation=Operation.UPDATE,
+            entity_name="my_app_item",
+            item_id="6ec0755a-2ca9-407e-87fa-0bd73db8c29f",
+            item=item2_updated,
+        )
+
+        item1_updated = cast("TestDataStoreMixin", source_data_store)._create_item(
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+            name="item_1_update",
+            version="3",
+        )
+        item1_change2 = cast("BaseDataStore", source_data_store).commit_item_change(
+            operation=Operation.UPDATE,
+            entity_name="my_app_item",
+            item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+            item=item1_updated,
+        )
+
+        item_changes = target_data_store.get_item_changes()
+        items = target_data_store.get_items()
+        num_changes_target = len(item_changes)
+        num_items_target = len(items)
+
+        self.orchestrator.synchronize_providers(
+            source_provider_id=source_provider.provider_id,
+            target_provider_id=target_provider.provider_id,
+            query=query1,
+        )
+
+        item_changes = target_data_store.get_item_changes()
+        items = target_data_store.get_items()
+        self.assertEqual(num_changes_target + 1, len(item_changes))
+        self.assertEqual(num_items_target, len(items))
+        self.assertEqual(item_changes, [item1_change1, item2_change1, item1_change2])
+        self.assertEqual(
+            make_hashable(items),
+            make_hashable(
+                [
+                    cast("TestDataStoreMixin", target_data_store)._create_item(
+                        id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+                        name="item_1_update",
+                        version="3",
+                    ),
+                    cast("TestDataStoreMixin", target_data_store)._create_item(
+                        id="6ec0755a-2ca9-407e-87fa-0bd73db8c29f",
+                        name="item_2",
+                        version="5",
+                    ),
+                ]
+            ),
+        )
+
+        item_changes = target_data_store.get_item_changes()
+        items = target_data_store.get_items()
+        num_changes_target = len(item_changes)
+        num_items_target = len(items)
+
+        self.orchestrator.synchronize_providers(
+            source_provider_id=source_provider.provider_id,
+            target_provider_id=target_provider.provider_id,
+            query=query2,
+        )
+
+        item_changes = target_data_store.get_item_changes()
+        items = target_data_store.get_items()
+        self.assertEqual(num_changes_target + 1, len(item_changes))
+        self.assertEqual(num_items_target, len(items))
+        self.assertEqual(
+            item_changes, [item1_change1, item2_change1, item1_change2, item2_change2]
+        )
+        self.assertEqual(
+            make_hashable(items),
+            make_hashable(
+                [
+                    cast("TestDataStoreMixin", target_data_store)._create_item(
+                        id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+                        name="item_1_update",
+                        version="3",
+                    ),
+                    cast("TestDataStoreMixin", target_data_store)._create_item(
+                        id="6ec0755a-2ca9-407e-87fa-0bd73db8c29f",
+                        name="item_2_updated",
+                        version="5",
+                    ),
+                ]
+            ),
+        )
+
+    def test_sync_query_source(self):
+        self._test_sync_query(
+            source_provider=self.provider_in_test, target_provider=self.other_provider
+        )
+
+    def test_sync_query_target(self):
+        self._test_sync_query(
+            source_provider=self.other_provider, target_provider=self.provider_in_test
+        )
+
+    def test_overlapping_queries_source(self):
+        self._test_overlapping_queries(
+            source_provider=self.provider_in_test, target_provider=self.other_provider
+        )

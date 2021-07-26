@@ -6,6 +6,7 @@ from maestro.core.metadata import (
     ItemChange,
     ItemChangeBatch,
     Operation,
+    SerializationResult,
 )
 import datetime as dt
 import uuid
@@ -150,7 +151,7 @@ class VectorClockTest(unittest.TestCase):
 
     def test_update(self):
         new_timestamp = dt.datetime(day=17, month=6, year=2021, hour=15, minute=47)
-        self.vector_clock.update_vector_clock_item("provider1", new_timestamp)
+        self.vector_clock.update(VectorClockItem("provider1", new_timestamp))
 
         self.assertEqual(
             self.vector_clock.get_vector_clock_item("provider1").timestamp,
@@ -172,26 +173,31 @@ class ItemChangeBatchTest(unittest.TestCase):
             ItemChange(
                 id=uuid.uuid4(),
                 operation=Operation.INSERT,
-                item_id=uuid.uuid4(),
-                provider_timestamp=dt.datetime(
-                    day=17,
-                    month=6,
-                    year=2021,
-                    hour=15,
-                    minute=44,
-                    tzinfo=dt.timezone.utc,
+                serialization_result=SerializationResult(
+                    item_id=uuid.uuid4(), serialized_item="", entity_name="my_app_item"
                 ),
-                provider_id="provider1",
-                insert_provider_timestamp=dt.datetime(
-                    day=17,
-                    month=6,
-                    year=2021,
-                    hour=15,
-                    minute=44,
-                    tzinfo=dt.timezone.utc,
+                change_vector_clock_item=VectorClockItem(
+                    timestamp=dt.datetime(
+                        day=17,
+                        month=6,
+                        year=2021,
+                        hour=15,
+                        minute=44,
+                        tzinfo=dt.timezone.utc,
+                    ),
+                    provider_id="provider1",
                 ),
-                insert_provider_id="provider1",
-                serialized_item="",
+                insert_vector_clock_item=VectorClockItem(
+                    timestamp=dt.datetime(
+                        day=17,
+                        month=6,
+                        year=2021,
+                        hour=15,
+                        minute=44,
+                        tzinfo=dt.timezone.utc,
+                    ),
+                    provider_id="provider1",
+                ),
                 should_ignore=False,
                 is_applied=False,
                 date_created=dt.datetime(
@@ -241,7 +247,9 @@ class ItemChangeBatchTest(unittest.TestCase):
             ItemChange(
                 id=uuid.uuid4(),
                 operation=Operation.UPDATE,
-                item_id=uuid.uuid4(),
+                serialization_result=SerializationResult(
+                    item_id=uuid.uuid4(), serialized_item="", entity_name="my_app_item"
+                ),
                 date_created=dt.datetime(
                     day=18,
                     month=6,
@@ -250,25 +258,28 @@ class ItemChangeBatchTest(unittest.TestCase):
                     minute=25,
                     tzinfo=dt.timezone.utc,
                 ),
-                provider_timestamp=dt.datetime(
-                    day=18,
-                    month=6,
-                    year=2021,
-                    hour=11,
-                    minute=25,
-                    tzinfo=dt.timezone.utc,
+                change_vector_clock_item=VectorClockItem(
+                    timestamp=dt.datetime(
+                        day=18,
+                        month=6,
+                        year=2021,
+                        hour=11,
+                        minute=25,
+                        tzinfo=dt.timezone.utc,
+                    ),
+                    provider_id="provider1",
                 ),
-                provider_id="provider1",
-                insert_provider_timestamp=dt.datetime(
-                    day=17,
-                    month=6,
-                    year=2021,
-                    hour=15,
-                    minute=44,
-                    tzinfo=dt.timezone.utc,
+                insert_vector_clock_item=VectorClockItem(
+                    timestamp=dt.datetime(
+                        day=17,
+                        month=6,
+                        year=2021,
+                        hour=15,
+                        minute=44,
+                        tzinfo=dt.timezone.utc,
+                    ),
+                    provider_id="provider1",
                 ),
-                insert_provider_id="provider1",
-                serialized_item="",
                 should_ignore=False,
                 is_applied=False,
                 vector_clock=VectorClock(
@@ -310,7 +321,9 @@ class ItemChangeBatchTest(unittest.TestCase):
             ItemChange(
                 id=uuid.uuid4(),
                 operation=Operation.UPDATE,
-                item_id=uuid.uuid4(),
+                serialization_result=SerializationResult(
+                    item_id=uuid.uuid4(), serialized_item="", entity_name="my_app_item"
+                ),
                 date_created=dt.datetime(
                     day=19,
                     month=6,
@@ -319,25 +332,28 @@ class ItemChangeBatchTest(unittest.TestCase):
                     minute=50,
                     tzinfo=dt.timezone.utc,
                 ),
-                provider_timestamp=dt.datetime(
-                    day=19,
-                    month=6,
-                    year=2021,
-                    hour=15,
-                    minute=50,
-                    tzinfo=dt.timezone.utc,
+                change_vector_clock_item=VectorClockItem(
+                    timestamp=dt.datetime(
+                        day=19,
+                        month=6,
+                        year=2021,
+                        hour=15,
+                        minute=50,
+                        tzinfo=dt.timezone.utc,
+                    ),
+                    provider_id="provider1",
                 ),
-                provider_id="provider1",
-                insert_provider_timestamp=dt.datetime(
-                    day=17,
-                    month=6,
-                    year=2021,
-                    hour=15,
-                    minute=44,
-                    tzinfo=dt.timezone.utc,
+                insert_vector_clock_item=VectorClockItem(
+                    timestamp=dt.datetime(
+                        day=17,
+                        month=6,
+                        year=2021,
+                        hour=15,
+                        minute=44,
+                        tzinfo=dt.timezone.utc,
+                    ),
+                    provider_id="provider1",
                 ),
-                insert_provider_id="provider1",
-                serialized_item="",
                 should_ignore=False,
                 is_applied=False,
                 vector_clock=VectorClock(
