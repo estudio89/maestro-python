@@ -5,53 +5,17 @@ from maestro.core.metadata import (
     ConflictLog,
     VectorClock,
 )
-from maestro.core.serializer import BaseItemSerializer, SerializationResult
+from maestro.core.metadata import SerializationResult
 from maestro.core.execution import ChangesExecutor, ConflictResolver
 from example.events import DebugEventsManager
 from maestro.backends.in_memory import (
     InMemoryDataStore,
     InMemorySyncProvider,
     NullConverter,
+    JSONSerializer,
 )
 from .types import TodoType
 from .api_serializer import InMemoryAPISerializer
-import json
-
-
-class InMemoryExampleSerializer(BaseItemSerializer):
-    def serialize_item(
-        self, item: "TodoType", entity_name: "str"
-    ) -> "SerializationResult":
-
-        serialized = (
-            {
-                "date_created": item["date_created"],
-                "done": item["done"],
-                "text": item["text"],
-            },
-        )
-
-        serialized = dict(sorted(serialized.items()))
-        result = SerializationResult(
-            item_id=item["id"],
-            entity_name=entity_name,
-            serialized_item=json.dumps(serialized),
-        )
-
-        return result
-
-    def deserialize_item(
-        self, serialization_result: "SerializationResult"
-    ) -> "TodoType":
-        data = json.loads(serialization_result.serialized_item)
-        deserialized = {
-            "id": serialization_result.item_id,
-            "text": data["text"],
-            "done": data["done"],
-            "date_created": data["date_created"],
-        }
-
-        return deserialized
 
 
 def create_provider(local_provider_id: "str"):
@@ -63,7 +27,7 @@ def create_provider(local_provider_id: "str"):
         item_change_metadata_converter=NullConverter(metadata_class=ItemChange),
         conflict_log_metadata_converter=NullConverter(metadata_class=ConflictLog),
         vector_clock_metadata_converter=NullConverter(metadata_class=VectorClock),
-        item_serializer=InMemoryExampleSerializer(),
+        item_serializer=JSONSerializer(),
     )
     events_manager = DebugEventsManager(data_store=data_store)
     changes_executor = ChangesExecutor(

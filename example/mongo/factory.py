@@ -7,8 +7,8 @@ from maestro.backends.mongo import (
     ItemChangeMetadataConverter,
     ConflictLogMetadataConverter,
     VectorClockMetadataConverter,
+    TrackedQueryMetadataConverter
 )
-from maestro.backends.base_nosql.converters import TrackedQueryMetadataConverter
 from example.base_nosql.api_serializer import NoSQLAPISerializer
 from example.base_nosql.factory import NoSQLExampleSerializer
 from example.events import DebugEventsManager
