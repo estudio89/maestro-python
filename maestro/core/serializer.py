@@ -147,5 +147,5 @@ class RawDataStoreJSONSerializer:
             data_store.item_serializer.serialize_item(item=item, entity_name="")
             for item in items
         ]
-        serialized_db["items"] = serialized_items
+        serialized_db["items"] = [result.serialized_item for result in serialized_items]
         return json.dumps(serialized_db, indent=self.indent)
