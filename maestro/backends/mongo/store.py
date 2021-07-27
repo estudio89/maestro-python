@@ -311,8 +311,13 @@ class MongoDataStore(TrackQueriesStoreMixin, NoSQLDataStore):
         query: "Optional[Query]" = None,
     ) -> "ItemChangeBatch":
 
+        mongo_filter = {"status": {"$eq": ConflictStatus.DEFERRED.value}}
+
+        if query:
+            mongo_filter["query_ids"] = {"$eq": query.get_id()}
+
         docs = self._get_collection_query(CollectionType.CONFLICT_LOGS).find(
-            filter={"status": {"$eq": ConflictStatus.DEFERRED.value}},
+            filter=mongo_filter,
             sort=[["created_at", pymongo.ASCENDING]],
             limit=max_num,
         )
@@ -327,11 +332,6 @@ class MongoDataStore(TrackQueriesStoreMixin, NoSQLDataStore):
         item_changes = self.find_item_changes(ids=item_change_ids)
         item_changes.sort(key=lambda item_change: item_change.date_created)
 
-        filtered_item_ids: "Optional[Set[str]]" = None
-        if query:
-            filtered_item_ids = self.get_item_ids_for_query(
-                query=query, vector_clock=vector_clock
-            )
 
         selected_item_changes = []
         for item_change in item_changes:
@@ -339,12 +339,6 @@ class MongoDataStore(TrackQueriesStoreMixin, NoSQLDataStore):
                 provider_id=item_change.change_vector_clock_item.provider_id
             )
             if item_change.change_vector_clock_item > vector_clock_item:
-                if (
-                    filtered_item_ids is not None
-                    and item_change.serialization_result.item_id
-                    not in filtered_item_ids
-                ):
-                    continue
                 selected_item_changes.append(item_change)
 
         current_count = len(selected_item_changes)

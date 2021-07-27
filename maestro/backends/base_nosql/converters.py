@@ -132,6 +132,7 @@ class ConflictLogMetadataConverter(DataStoreAccessConverter):
             status=ConflictStatus[record["status"]],
             conflict_type=ConflictType[record["conflict_type"]],
             description=record["description"],
+            query_ids=record["query_ids"]
         )
 
     def to_record(self, metadata_object: "ConflictLog") -> "ConflictLogRecord":
@@ -148,6 +149,7 @@ class ConflictLogMetadataConverter(DataStoreAccessConverter):
             status=metadata_object.status.value,
             conflict_type=metadata_object.conflict_type.value,
             description=metadata_object.description,
+            query_ids=metadata_object.query_ids
         )
 
 

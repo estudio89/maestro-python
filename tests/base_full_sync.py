@@ -17,7 +17,7 @@ from maestro.core.metadata import (
     SyncSessionStatus,
 )
 from .base import BackendTestMixin, TestDataStoreMixin
-from typing import cast, Union
+from typing import cast, Union, Optional
 import uuid
 import copy
 
@@ -25,12 +25,17 @@ import copy
 class DebugEventsManager(EventsManager):
     raise_exception = True
 
-    def on_exception(self, remote_item_change: "ItemChange", exception: "Exception"):
+    def on_exception(
+        self,
+        remote_item_change: "ItemChange",
+        exception: "Exception",
+        query: "Optional[Query]",
+    ):
         if self.raise_exception:  # pragma: no cover
             raise exception
         else:
             super().on_exception(
-                remote_item_change=remote_item_change, exception=exception
+                remote_item_change=remote_item_change, exception=exception, query=query
             )
 
     def on_failed_sync_session(self, exception: "Exception"):
@@ -2533,4 +2538,579 @@ class QueryFullSyncTest(BackendTestMixin, unittest.TestCase):
     def test_overlapping_queries_source(self):
         self._test_overlapping_queries(
             source_provider=self.provider_in_test, target_provider=self.other_provider
+        )
+
+    def _test_sync_query_conflict_1(
+        self, source_provider: "BaseSyncProvider", target_provider: "BaseSyncProvider"
+    ):
+        """Simulates the situation where a conflict occurs when syncing a query.
+
+        The timeline is:
+
+        a)
+            - The target data store starts tracking a query that selects all items
+            with version less than 3
+            - An item with version 1 is created in the source data store and is synced
+            to the target data store
+
+        b)
+            - The item is updated in the source data store
+            - An error occurs when syncing to the target data store
+
+        c)
+            - The item is updated again in the source data store
+            - Same error occurs when syncing to the target data store
+
+        d)
+            - Another sync attempt is made, this time with no errors
+                - This time, since the item was updated in the source data store,
+                the target data store will not attempt to execute the change that
+                was causing exceptions, since it is now in conflict with the newest change
+                - Both stores must contain the same changes and the items in the same state
+        """
+
+        source_data_store = source_provider.data_store
+        target_data_store = target_provider.data_store
+
+        # a)
+
+        query1 = Query(
+            entity_name="my_app_item",
+            filter=Filter(
+                children=[
+                    Comparison(
+                        field_name="version",
+                        comparator=Comparator.LESS_THAN,
+                        value="3",
+                    )
+                ]
+            ),
+            ordering=[SortOrder(field_name="version")],
+            limit=2,
+            offset=None,
+        )
+        cast("TrackQueriesStoreMixin", target_data_store).start_tracking_query(query1)
+
+        item1 = cast("TestDataStoreMixin", source_data_store)._create_item(
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="1",
+        )
+        item1_change1 = cast("BaseDataStore", source_data_store).commit_item_change(
+            operation=Operation.INSERT,
+            entity_name="my_app_item",
+            item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+            item=item1,
+        )
+
+        item_changes = target_data_store.get_item_changes()
+        items = target_data_store.get_items()
+        num_changes_target = len(item_changes)
+        num_items_target = len(items)
+
+        self.orchestrator.synchronize_providers(
+            source_provider_id=source_provider.provider_id,
+            target_provider_id=target_provider.provider_id,
+            query=query1,
+        )
+
+        item_changes = target_data_store.get_item_changes()
+        items = target_data_store.get_items()
+        self.assertEqual(num_changes_target + 1, len(item_changes))
+        self.assertEqual(num_items_target + 1, len(items))
+        self.assertEqual(item_changes, [item1_change1])
+        self.assertEqual(
+            make_hashable(items),
+            make_hashable(
+                [
+                    cast("TestDataStoreMixin", target_data_store)._create_item(
+                        id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+                        name="item_1",
+                        version="1",
+                    )
+                ]
+            ),
+        )
+
+        # b)
+        item1_change2_source = cast(
+            "BaseDataStore", source_data_store
+        ).commit_item_change(
+            operation=Operation.UPDATE,
+            entity_name="my_app_item",
+            item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+            item=cast("TestDataStoreMixin", source_data_store)._create_item(
+                id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+                name="item_1_update_source",
+                version="1",
+            ),
+        )
+
+        item_changes = target_data_store.get_item_changes()
+        items = target_data_store.get_items()
+        conflict_logs = target_data_store.get_conflict_logs()
+        num_changes_target = len(item_changes)
+        num_items_target = len(items)
+        num_conflict_logs_target = len(conflict_logs)
+
+        original = target_data_store.execute_item_change
+
+        def execute_item_change_mock(item_change: "ItemChange"):
+            if item_change.id == item1_change2_source.id:
+                raise ValueError("Error!")
+            else:
+                original(item_change)
+
+        target_data_store.execute_item_change = execute_item_change_mock # type: ignore
+        cast(
+            "DebugEventsManager", target_provider.events_manager
+        ).raise_exception = False
+
+        self.orchestrator.synchronize_providers(
+            source_provider_id=source_provider.provider_id,
+            target_provider_id=target_provider.provider_id,
+            query=query1,
+        )
+
+        cast(
+            "DebugEventsManager", target_provider.events_manager
+        ).raise_exception = True
+        target_data_store.execute_item_change = original # type: ignore
+
+        item_changes = target_data_store.get_item_changes()
+        items = target_data_store.get_items()
+        conflict_logs = target_data_store.get_conflict_logs()
+        self.assertEqual(num_changes_target + 1, len(item_changes))
+        self.assertEqual(num_items_target, len(items))
+        self.assertEqual(num_conflict_logs_target + 1, len(conflict_logs))
+        self.assertEqual(conflict_logs[0].status, ConflictStatus.DEFERRED)
+        self.assertEqual(
+            conflict_logs[0].conflict_type, ConflictType.EXCEPTION_OCCURRED
+        )
+        self.assertEqual(
+            [item_change.id for item_change in item_changes],
+            [item1_change1.id, item1_change2_source.id],
+        )
+        self.assertEqual(
+            make_hashable(items),
+            make_hashable(
+                [
+                    cast("TestDataStoreMixin", target_data_store)._create_item(
+                        id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+                        name="item_1",
+                        version="1",
+                    )
+                ]
+            ),
+        )
+
+        # c)
+
+        item1_change3_source = cast(
+            "BaseDataStore", source_data_store
+        ).commit_item_change(
+            operation=Operation.UPDATE,
+            entity_name="my_app_item",
+            item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+            item=cast("TestDataStoreMixin", source_data_store)._create_item(
+                id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+                name="item_1_update_source2",
+                version="5",
+            ),
+        )
+
+        item_changes = target_data_store.get_item_changes()
+        items = target_data_store.get_items()
+        conflict_logs = target_data_store.get_conflict_logs()
+        num_changes_target = len(item_changes)
+        num_items_target = len(items)
+        num_conflict_logs_target = len(conflict_logs)
+
+        original = target_data_store.execute_item_change
+
+
+        target_data_store.execute_item_change = execute_item_change_mock # type: ignore
+        cast(
+            "DebugEventsManager", target_provider.events_manager
+        ).raise_exception = False
+
+        self.orchestrator.synchronize_providers(
+            source_provider_id=source_provider.provider_id,
+            target_provider_id=target_provider.provider_id,
+            query=query1,
+        )
+
+        cast(
+            "DebugEventsManager", target_provider.events_manager
+        ).raise_exception = True
+        target_data_store.execute_item_change = original # type: ignore
+
+        item_changes = target_data_store.get_item_changes()
+        items = target_data_store.get_items()
+        conflict_logs = target_data_store.get_conflict_logs()
+        self.assertEqual(num_changes_target + 1, len(item_changes))
+        self.assertEqual(num_items_target, len(items))
+        self.assertEqual(num_conflict_logs_target, len(conflict_logs))
+        self.assertEqual(conflict_logs[0].status, ConflictStatus.DEFERRED)
+        self.assertEqual(
+            conflict_logs[0].conflict_type, ConflictType.EXCEPTION_OCCURRED
+        )
+        self.assertEqual(
+            [item_change.id for item_change in item_changes],
+            [item1_change1.id, item1_change2_source.id, item1_change3_source.id],
+        )
+        self.assertEqual(
+            make_hashable(items),
+            make_hashable(
+                [
+                    cast("TestDataStoreMixin", target_data_store)._create_item(
+                        id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+                        name="item_1_update_source2",
+                        version="5",
+                    )
+                ]
+            ),
+        )
+
+        # d)
+        item_changes = target_data_store.get_item_changes()
+        items = target_data_store.get_items()
+        conflict_logs = target_data_store.get_conflict_logs()
+        num_changes_target = len(item_changes)
+        num_items_target = len(items)
+        num_conflict_logs_target = len(conflict_logs)
+
+        original = target_data_store.execute_item_change
+
+        target_data_store.execute_item_change = execute_item_change_mock # type: ignore
+        cast(
+            "DebugEventsManager", target_provider.events_manager
+        ).raise_exception = False
+
+        self.orchestrator.synchronize_providers(
+            source_provider_id=source_provider.provider_id,
+            target_provider_id=target_provider.provider_id,
+            query=query1,
+        )
+
+        item_changes = target_data_store.get_item_changes()
+        items = target_data_store.get_items()
+        conflict_logs = target_data_store.get_conflict_logs()
+        self.assertEqual(num_changes_target, len(item_changes))
+        self.assertEqual(num_items_target, len(items))
+        self.assertEqual(num_conflict_logs_target + 1, len(conflict_logs))
+        self.assertEqual(conflict_logs[0].status, ConflictStatus.RESOLVED)
+        self.assertEqual(
+            conflict_logs[0].conflict_type, ConflictType.EXCEPTION_OCCURRED
+        )
+        self.assertEqual(conflict_logs[1].status, ConflictStatus.RESOLVED)
+        self.assertEqual(
+            conflict_logs[1].conflict_type, ConflictType.LOCAL_UPDATE_REMOTE_UPDATE
+        )
+        self.assertEqual(
+            [item_change.id for item_change in item_changes],
+            [item1_change1.id, item1_change2_source.id, item1_change3_source.id],
+        )
+        self.assertEqual(
+            make_hashable(items),
+            make_hashable(
+                [
+                    cast("TestDataStoreMixin", target_data_store)._create_item(
+                        id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+                        name="item_1_update_source2",
+                        version="5",
+                    )
+                ]
+            ),
+        )
+
+    def test_sync_query_conflict_1_source(self):
+        self._test_sync_query_conflict_1(
+            source_provider=self.provider_in_test, target_provider=self.other_provider
+        )
+
+    def test_sync_query_conflict_1_target(self):
+        self._test_sync_query_conflict_1(
+            source_provider=self.other_provider, target_provider=self.provider_in_test
+        )
+
+    def _test_sync_query_conflict_2(
+        self, source_provider: "BaseSyncProvider", target_provider: "BaseSyncProvider"
+    ):
+        """Simulates the situation where a conflict occurs when syncing a query.
+
+        The timeline is:
+
+        a)
+            - The target data store starts tracking a query that selects all items
+            with version less than 3
+            - An item with version 1 is created in the source data store and is synced
+            to the target data store
+
+        b)
+            - The item is updated in the source data store and its version changes to 5
+            - An error occurs when syncing to the target data store
+
+        c)
+            - An item with version 2 is created in the source data store
+            - Same error occurs when syncing the the first change to the target data store
+
+        d)
+            - Another sync attempt is made, this time with no errors
+                - Both stores must contain the same changes and the items in the same state
+        """
+
+        source_data_store = source_provider.data_store
+        target_data_store = target_provider.data_store
+
+        # a)
+
+        query1 = Query(
+            entity_name="my_app_item",
+            filter=Filter(
+                children=[
+                    Comparison(
+                        field_name="version",
+                        comparator=Comparator.LESS_THAN,
+                        value="3",
+                    )
+                ]
+            ),
+            ordering=[SortOrder(field_name="version")],
+            limit=2,
+            offset=None,
+        )
+        cast("TrackQueriesStoreMixin", target_data_store).start_tracking_query(query1)
+
+        item1 = cast("TestDataStoreMixin", source_data_store)._create_item(
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="1",
+        )
+        item1_change1 = cast("BaseDataStore", source_data_store).commit_item_change(
+            operation=Operation.INSERT,
+            entity_name="my_app_item",
+            item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+            item=item1,
+        )
+
+        item_changes = target_data_store.get_item_changes()
+        items = target_data_store.get_items()
+        num_changes_target = len(item_changes)
+        num_items_target = len(items)
+
+        self.orchestrator.synchronize_providers(
+            source_provider_id=source_provider.provider_id,
+            target_provider_id=target_provider.provider_id,
+            query=query1,
+        )
+
+        item_changes = target_data_store.get_item_changes()
+        items = target_data_store.get_items()
+        self.assertEqual(num_changes_target + 1, len(item_changes))
+        self.assertEqual(num_items_target + 1, len(items))
+        self.assertEqual(item_changes, [item1_change1])
+        self.assertEqual(
+            make_hashable(items),
+            make_hashable(
+                [
+                    cast("TestDataStoreMixin", target_data_store)._create_item(
+                        id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+                        name="item_1",
+                        version="1",
+                    )
+                ]
+            ),
+        )
+
+        # b)
+        item1_change2_source = cast(
+            "BaseDataStore", source_data_store
+        ).commit_item_change(
+            operation=Operation.UPDATE,
+            entity_name="my_app_item",
+            item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+            item=cast("TestDataStoreMixin", source_data_store)._create_item(
+                id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+                name="item_1_update_source",
+                version="5",
+            ),
+        )
+
+        item_changes = target_data_store.get_item_changes()
+        items = target_data_store.get_items()
+        conflict_logs = target_data_store.get_conflict_logs()
+        num_changes_target = len(item_changes)
+        num_items_target = len(items)
+        num_conflict_logs_target = len(conflict_logs)
+
+        original = target_data_store.execute_item_change
+
+        def execute_item_change_mock(item_change: "ItemChange"):
+            if item_change.id == item1_change2_source.id:
+                raise ValueError("Error!")
+            else:
+                original(item_change)
+
+        target_data_store.execute_item_change = execute_item_change_mock # type: ignore
+        cast(
+            "DebugEventsManager", target_provider.events_manager
+        ).raise_exception = False
+
+        self.orchestrator.synchronize_providers(
+            source_provider_id=source_provider.provider_id,
+            target_provider_id=target_provider.provider_id,
+            query=query1,
+        )
+
+        cast(
+            "DebugEventsManager", target_provider.events_manager
+        ).raise_exception = True
+        target_data_store.execute_item_change = original # type: ignore
+
+        item_changes = target_data_store.get_item_changes()
+        items = target_data_store.get_items()
+        conflict_logs = target_data_store.get_conflict_logs()
+        self.assertEqual(num_changes_target + 1, len(item_changes))
+        self.assertEqual(num_items_target, len(items))
+        self.assertEqual(num_conflict_logs_target + 1, len(conflict_logs))
+        self.assertEqual(conflict_logs[0].status, ConflictStatus.DEFERRED)
+        self.assertEqual(
+            conflict_logs[0].conflict_type, ConflictType.EXCEPTION_OCCURRED
+        )
+        self.assertEqual(
+            [item_change.id for item_change in item_changes],
+            [item1_change1.id, item1_change2_source.id],
+        )
+        self.assertEqual(
+            make_hashable(items),
+            make_hashable(
+                [
+                    cast("TestDataStoreMixin", target_data_store)._create_item(
+                        id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+                        name="item_1",
+                        version="1",
+                    )
+                ]
+            ),
+        )
+
+        # c)
+
+        item2_change1 = cast("BaseDataStore", source_data_store).commit_item_change(
+            operation=Operation.UPDATE,
+            entity_name="my_app_item",
+            item_id="6ec0755a-2ca9-407e-87fa-0bd73db8c29f",
+            item=cast("TestDataStoreMixin", source_data_store)._create_item(
+                id="6ec0755a-2ca9-407e-87fa-0bd73db8c29f", name="item_2", version="2",
+            ),
+        )
+
+        item_changes = target_data_store.get_item_changes()
+        items = target_data_store.get_items()
+        conflict_logs = target_data_store.get_conflict_logs()
+        num_changes_target = len(item_changes)
+        num_items_target = len(items)
+        num_conflict_logs_target = len(conflict_logs)
+
+        original = target_data_store.execute_item_change
+
+        target_data_store.execute_item_change = execute_item_change_mock # type: ignore
+        cast(
+            "DebugEventsManager", target_provider.events_manager
+        ).raise_exception = False
+
+        self.orchestrator.synchronize_providers(
+            source_provider_id=source_provider.provider_id,
+            target_provider_id=target_provider.provider_id,
+            query=query1,
+        )
+
+        cast(
+            "DebugEventsManager", target_provider.events_manager
+        ).raise_exception = True
+        target_data_store.execute_item_change = original # type: ignore
+
+        item_changes = target_data_store.get_item_changes()
+        items = target_data_store.get_items()
+        conflict_logs = target_data_store.get_conflict_logs()
+        self.assertEqual(num_changes_target + 1, len(item_changes))
+        self.assertEqual(num_items_target + 1, len(items))
+        self.assertEqual(num_conflict_logs_target, len(conflict_logs))
+        self.assertEqual(conflict_logs[0].status, ConflictStatus.DEFERRED)
+        self.assertEqual(
+            conflict_logs[0].conflict_type, ConflictType.EXCEPTION_OCCURRED
+        )
+        self.assertEqual(
+            [item_change.id for item_change in item_changes],
+            [item1_change1.id, item1_change2_source.id, item2_change1.id],
+        )
+        self.assertEqual(
+            make_hashable(items),
+            make_hashable(
+                [
+                    cast("TestDataStoreMixin", target_data_store)._create_item(
+                        id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+                        name="item_1",
+                        version="1",
+                    ),
+                    cast("TestDataStoreMixin", target_data_store)._create_item(
+                        id="6ec0755a-2ca9-407e-87fa-0bd73db8c29f",
+                        name="item_2",
+                        version="2",
+                    ),
+                ]
+            ),
+        )
+
+        # d)
+        item_changes = target_data_store.get_item_changes()
+        items = target_data_store.get_items()
+        conflict_logs = target_data_store.get_conflict_logs()
+        num_changes_target = len(item_changes)
+        num_items_target = len(items)
+        num_conflict_logs_target = len(conflict_logs)
+
+        self.orchestrator.synchronize_providers(
+            source_provider_id=source_provider.provider_id,
+            target_provider_id=target_provider.provider_id,
+            query=query1,
+        )
+
+        item_changes = target_data_store.get_item_changes()
+        items = target_data_store.get_items()
+        conflict_logs = target_data_store.get_conflict_logs()
+        self.assertEqual(num_changes_target, len(item_changes))
+        self.assertEqual(num_items_target, len(items))
+        self.assertEqual(num_conflict_logs_target, len(conflict_logs))
+        self.assertEqual(conflict_logs[0].status, ConflictStatus.RESOLVED)
+        self.assertEqual(
+            conflict_logs[0].conflict_type, ConflictType.EXCEPTION_OCCURRED
+        )
+        self.assertEqual(
+            [item_change.id for item_change in item_changes],
+            [item1_change1.id, item1_change2_source.id, item2_change1.id],
+        )
+        self.assertEqual(
+            make_hashable(items),
+            make_hashable(
+                [
+                    cast("TestDataStoreMixin", target_data_store)._create_item(
+                        id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+                        name="item_1_update_source",
+                        version="5",
+                    ),
+                    cast("TestDataStoreMixin", target_data_store)._create_item(
+                        id="6ec0755a-2ca9-407e-87fa-0bd73db8c29f",
+                        name="item_2",
+                        version="2",
+                    ),
+                ]
+            ),
+        )
+
+    def test_sync_query_conflict_2_source(self):
+        self._test_sync_query_conflict_2(
+            source_provider=self.provider_in_test, target_provider=self.other_provider
+        )
+
+    def test_sync_query_conflict_2_target(self):
+        self._test_sync_query_conflict_2(
+            source_provider=self.other_provider, target_provider=self.provider_in_test
         )

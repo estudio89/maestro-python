@@ -84,17 +84,33 @@ class EventsManager:
         parts.extend(traceback.format_exception(*sys.exc_info())[1:])
         return "".join(parts)
 
-    def on_exception(self, remote_item_change: "ItemChange", exception: "Exception"):
+    def on_exception(
+        self,
+        remote_item_change: "ItemChange",
+        exception: "Exception",
+        query: "Optional[Query]",
+    ):
         """Called when an exception is raised when trying to execute an ItemChange. It creates a ConflictLog and saves it to the data store.
 
         Args:
             remote_item_change (ItemChange): ItemChange that was being executed when the exception was raised.
             exception (Exception): Exception that was raised.
+            query (Optional[Query]): The query that was being synced
+
+        Returns:
+            TYPE: Description
         """
         conflict_logs = self.data_store.get_deferred_conflict_logs(
             item_change_loser=remote_item_change
         )
         if len(conflict_logs) > 0:
+            if query:
+                conflict_log = conflict_logs[-1]
+                query_id = query.get_id()
+                if query_id not in conflict_log.query_ids:
+                    conflict_log.query_ids.append(query_id)
+                    self.data_store.save_conflict_log(conflict_log=conflict_log)
+
             return
 
         now_utc = get_now_utc()
@@ -107,6 +123,7 @@ class EventsManager:
             status=ConflictStatus.DEFERRED,
             conflict_type=ConflictType.EXCEPTION_OCCURRED,
             description=self._format_stacktrace(),
+            query_ids=[query.get_id()] if query else []
         )
         self.data_store.save_conflict_log(conflict_log=conflict_log)
 

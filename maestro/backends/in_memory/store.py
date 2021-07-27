@@ -117,15 +117,6 @@ class InMemoryDataStore(TrackQueriesStoreMixin, BaseDataStore):
 
         selected_changes: "List[ItemChange]" = []
 
-        filtered_item_ids: "Optional[Set[str]]" = None
-        if query:
-            old_query_items = self.query_items(query=query, vector_clock=vector_clock)
-            old_item_ids = {item["id"] for item in old_query_items}
-
-            current_query_items = self.query_items(query=query, vector_clock=None)
-            current_item_ids = {item["id"] for item in current_query_items}
-            filtered_item_ids = old_item_ids.union(current_item_ids)
-
         for conflict_log in self.get_conflict_logs():
             if conflict_log.status == ConflictStatus.DEFERRED:
                 item_change = conflict_log.item_change_loser
@@ -134,11 +125,10 @@ class InMemoryDataStore(TrackQueriesStoreMixin, BaseDataStore):
                     provider_id=item_change.change_vector_clock_item.provider_id
                 )
                 if vector_clock_item < item_change.change_vector_clock_item:
-                    if filtered_item_ids:
-                        if (
-                            item_change.serialization_result.item_id
-                            not in filtered_item_ids
-                        ):
+                    if query:
+                        query_id = query.get_id()
+
+                        if query_id not in conflict_log.query_ids:
                             continue
 
                     selected_changes.append(item_change)
@@ -245,7 +235,10 @@ class InMemoryDataStore(TrackQueriesStoreMixin, BaseDataStore):
         self._save(item=sync_session_record, key="sync_sessions")
 
     def query_items(
-        self, query: "Query", vector_clock: "Optional[VectorClock]"
+        self,
+        query: "Query",
+        vector_clock: "Optional[VectorClock]",
+        check_applied: "bool" = False,
     ) -> "List[Any]":
 
         # Filtering

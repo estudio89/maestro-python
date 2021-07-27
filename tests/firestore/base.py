@@ -158,6 +158,7 @@ class TestFirestoreDataStore(FirestoreDataStore, tests.base.TestDataStoreMixin):
                 "status": conflict_log.status.value,
                 "conflict_type": conflict_log.conflict_type.value,
                 "description": conflict_log.description,
+                "query_ids": []
             }
         )
 

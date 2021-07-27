@@ -94,7 +94,7 @@ class ChangesExecutor:
         self.events_manager = events_manager
         self.conflict_resolver = conflict_resolver
 
-    def run(self, item_changes: "List[ItemChange]", query:"Optional[Query]"):
+    def run(self, item_changes: "List[ItemChange]", query: "Optional[Query]"):
         """Iterates the changes and applies each one.
 
         Args:
@@ -103,7 +103,9 @@ class ChangesExecutor:
         for item_change in item_changes:
             self.process_remote_change(item_change=item_change, query=query)
 
-    def process_remote_change(self, item_change: "ItemChange", query:"Optional[Query]"):
+    def process_remote_change(
+        self, item_change: "ItemChange", query: "Optional[Query]"
+    ):
         """Processes a change received from a remote provider. Processing means:
 
             - Checking if it needs to be applied
@@ -114,8 +116,12 @@ class ChangesExecutor:
 
         Args:
             item_change (ItemChange): The change to be processed
+            query (Optional[Query]): The query that is being synced
+
         """
-        item_change = self.data_store.get_or_create_item_change(item_change=item_change, query=query)
+        item_change = self.data_store.get_or_create_item_change(
+            item_change=item_change, query=query
+        )
         self.events_manager.on_item_change_processed(item_change=item_change)
         if item_change.is_applied:
             return
@@ -151,7 +157,9 @@ class ChangesExecutor:
             )
             post_transaction_callback()
         except Exception as e:
-            self.handle_exception(remote_item_change=item_change, exception=e)
+            self.handle_exception(
+                remote_item_change=item_change, query=query, exception=e
+            )
 
     def check_conflict(self, remote_item_change: "ItemChange") -> "ConflictCheckResult":
         """Checks if the remote change causes a conflict.
@@ -285,16 +293,18 @@ class ChangesExecutor:
         return post_transaction_callback
 
     def handle_exception(
-        self, remote_item_change: "ItemChange", exception: "Exception"
+        self, remote_item_change: "ItemChange", exception: "Exception", query: "Optional[Query]"
     ):
         """Called whenever an exception is raised while trying to apply a change to an item.
 
         Args:
             remote_item_change (ItemChange): The change that was being applied when the exception was raised.
             exception (Exception): The exception that was raised.
+            query (Optional[Query]): The query that was being synced
+
         """
         self.events_manager.on_exception(
-            remote_item_change=remote_item_change, exception=exception
+            remote_item_change=remote_item_change, exception=exception, query=query
         )
 
     def apply_item_change(self, item_change: "ItemChange", old_version: "ItemVersion"):

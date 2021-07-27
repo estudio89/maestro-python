@@ -1186,6 +1186,26 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                 result, ItemChangeBatch(item_changes=[], is_last_batch=True,),
             )
 
+    def test_select_changes_2(self):
+        # Adding a change to an object
+        item_change1 = self.data_store.commit_item_change(
+            operation=Operation.INSERT,
+            entity_name="my_app_item",
+            item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+            item=self.data_store._create_item(
+                id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="I1", version="1"
+            ),
+        )
+
+        vector_clock1 = VectorClock.create_empty(
+            provider_ids=["other_provider"]
+        )
+
+        result = self.data_store.select_changes(vector_clock=vector_clock1, max_num=10)
+        self.assertEqual(
+            result.item_changes, [item_change1],
+        )
+
     def test_select_deferred_changes(self):
         # Adding a change to an object
         item = self.data_store._create_item(

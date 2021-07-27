@@ -433,6 +433,7 @@ class ConflictLog:
         status (ConflictStatus): The status of the conflict.
         conflict_type (ConflictType): The type of conflict.
         description (Optional[str]): This field will contain the stack trace in cause the type of conflict is ConflictType.EXCEPTION_OCURRED, otherwise it will be null.
+        query_ids (List[str], optional): A list with identifiers of queries that tried to sync this change
     """
 
     id: "uuid.UUID"
@@ -440,6 +441,7 @@ class ConflictLog:
     resolved_at: "Optional[dt.datetime]"
     item_change_loser: "ItemChange"
     item_change_winner: "Optional[ItemChange]"
+    query_ids: "List[str]"
     status: "ConflictStatus"
     conflict_type: "ConflictType"
     description: "Optional[str]"
@@ -454,6 +456,7 @@ class ConflictLog:
         status: "ConflictStatus",
         conflict_type: "ConflictType",
         description: "Optional[str]",
+        query_ids: "List[str]" = [],
     ):
         """
         Args:
@@ -465,6 +468,7 @@ class ConflictLog:
             status (ConflictStatus): The status of the conflict.
             conflict_type (ConflictType): The type of conflict.
             description (Optional[str]): This field will contain the stack trace in cause the type of conflict is ConflictType.EXCEPTION_OCURRED, otherwise it will be null.
+            query_ids (List[str], optional): A list with identifiers of queries that tried to sync this change
         """
         self.id = id
         self.created_at = created_at
@@ -474,9 +478,10 @@ class ConflictLog:
         self.status = status
         self.conflict_type = conflict_type
         self.description = description
+        self.query_ids = query_ids
 
     def __repr__(self):  # pragma: no cover
-        return f"ConflictLog(id='{self.id}', item_change_loser_id='{self.item_change_loser.id}', item_change_winner_id='{self.item_change_winner.id if self.item_change_winner else None}', conflict_type={self.conflict_type}, status={self.status})"
+        return f"ConflictLog(id='{self.id}', item_change_loser_id='{self.item_change_loser.id}', item_change_winner_id='{self.item_change_winner.id if self.item_change_winner else None}', conflict_type={self.conflict_type}, status={self.status}, query_ids={self.query_ids})"
 
     def __eq__(self, other: "object"):
         assert isinstance(other, ConflictLog)
@@ -490,6 +495,7 @@ class ConflictLog:
             "status",
             "conflict_type",
             "description",
+            "query_ids",
         ]:
             if not getattr(self, param) == getattr(other, param):
                 return False

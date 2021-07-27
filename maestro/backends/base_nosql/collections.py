@@ -48,6 +48,7 @@ class ConflictLogRecord(TypedDict):
     status: "str"
     conflict_type: "str"
     description: "Optional[str]"
+    query_ids: "List[str]"
 
 
 class SyncSessionRecord(TypedDict):
