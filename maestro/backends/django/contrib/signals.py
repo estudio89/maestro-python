@@ -1,11 +1,16 @@
 from django.apps import apps
 from django.db import models
 from django.db.models.signals import post_save, pre_delete
-from typing import Type, Optional, List, cast
+from typing import Type, Optional, List, cast, TYPE_CHECKING
 from maestro.backends.django.settings import maestro_settings
+from maestro.backends.django.contrib.factory import create_django_data_store
+from maestro.backends.django.utils import model_to_entity_name
 from maestro.core.metadata import Operation
 from .middleware import _add_operation_to_queue
 import copy
+
+if TYPE_CHECKING:
+    from maestro.backends.django import DjangoDataStore
 
 
 def model_saved_signal(
@@ -23,12 +28,31 @@ def model_saved_signal(
     else:
         operation = Operation.UPDATE
 
+    data_store: "DjangoDataStore" = create_django_data_store()
+    entity_name = model_to_entity_name(instance)
+    data_store.commit_item_change(
+        operation=operation,
+        entity_name=entity_name,
+        item_id=str(instance.pk),
+        item=copy.deepcopy(instance),
+        execute_operation=False,
+    )
     _add_operation_to_queue(operation=operation, item=copy.deepcopy(instance))
 
 
 def model_pre_delete_signal(
     sender: "Type[models.Model]", instance: "models.Model", using: "str", **kwargs
 ):
+
+    data_store: "DjangoDataStore" = create_django_data_store()
+    entity_name = model_to_entity_name(instance)
+    data_store.commit_item_change(
+        operation=Operation.DELETE,
+        entity_name=entity_name,
+        item_id=str(instance.pk),
+        item=copy.deepcopy(instance),
+        execute_operation=False,
+    )
     _add_operation_to_queue(operation=Operation.DELETE, item=copy.deepcopy(instance))
 
 

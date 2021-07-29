@@ -1,7 +1,6 @@
 from django.test import TestCase, override_settings
 from django.apps import apps
 from django.urls import re_path
-from django.db import models
 from maestro.backends.django.contrib.factory import create_django_data_store
 from maestro.backends.django.contrib.model_dependencies import get_model_dependencies
 from maestro.backends.django.contrib.signals import temporarily_disable_signals
@@ -64,6 +63,10 @@ class AppSettingsTest(TestCase):
         last_change = ItemChangeRecord.objects.order_by("-date_created").first()
         self.assertEqual(last_change.item_id, item_id)
         self.assertEqual(last_change.operation, Operation.UPDATE.value)
+        self.assertEqual(
+            last_change.serialized_item,
+            f'{{"id": "{item_id}", "name": "item", "version": "12"}}',
+        )
 
     def test_migrate(self):
         Item = apps.get_model("my_app", "Item")

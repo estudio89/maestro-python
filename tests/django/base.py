@@ -18,6 +18,8 @@ from maestro.backends.in_memory import (
     JSONSerializer,
 )
 
+from maestro.backends.django.contrib.signals import temporarily_disable_signals
+
 from maestro.backends.django import (
     DjangoDataStore,
     SyncSessionMetadataConverter,
@@ -57,7 +59,6 @@ class TestDjangoDataStore(DjangoDataStore, tests.base.TestDataStoreMixin):
         return item.id
 
     def _add_item_change(self, item_change: "ItemChange"):
-
         vector_clock = [
             {"provider_id": val.provider_id, "timestamp": val.timestamp.isoformat()}
             for val in item_change.vector_clock
@@ -66,6 +67,7 @@ class TestDjangoDataStore(DjangoDataStore, tests.base.TestDataStoreMixin):
         Item = apps.get_model("my_app", "Item")
         content_type = ContentType.objects.get_for_model(Item)
         ItemChangeRecord = apps.get_model("maestro", "ItemChangeRecord")
+
         return ItemChangeRecord.objects.create(
             id=item_change.id,
             date_created=item_change.date_created,
@@ -92,6 +94,7 @@ class TestDjangoDataStore(DjangoDataStore, tests.base.TestDataStoreMixin):
         content_type = ContentType.objects.get_for_model(Item)
         ItemVersionRecord = apps.get_model("maestro", "ItemVersionRecord")
         current_item_change = cast("ItemChange", item_version.current_item_change)
+
         return ItemVersionRecord.objects.create(
             id=item_version.item_id,
             current_item_change_id=current_item_change.id,
@@ -102,6 +105,7 @@ class TestDjangoDataStore(DjangoDataStore, tests.base.TestDataStoreMixin):
 
     def _add_conflict_log(self, conflict_log: "ConflictLog"):
         ConflictLogRecord = apps.get_model("maestro", "ConflictLogRecord")
+
         return ConflictLogRecord.objects.create(
             id=conflict_log.id,
             created_at=conflict_log.created_at,
@@ -116,7 +120,8 @@ class TestDjangoDataStore(DjangoDataStore, tests.base.TestDataStoreMixin):
         )
 
     def _add_item(self, item: "Any"):
-        item.save()
+        with temporarily_disable_signals(item._meta.model):
+            item.save()
 
 
 class DjangoBackendTestMixin(tests.base.BackendTestMixin):

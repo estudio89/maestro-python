@@ -1,14 +1,9 @@
 from django.db import models
 from django.core.exceptions import MiddlewareNotUsed
-from maestro.backends.django.contrib.factory import create_django_data_store
-from maestro.backends.django.utils import model_to_entity_name
 from maestro.core.metadata import Operation
 from maestro.backends.django.settings import maestro_settings
-from typing import NamedTuple, Callable, TYPE_CHECKING
+from typing import NamedTuple, Callable
 import threading
-
-if TYPE_CHECKING:
-    from maestro.backends.django import DjangoDataStore
 
 
 class _QueuedOperation(NamedTuple):
@@ -20,18 +15,7 @@ def _add_operation_to_queue(operation: "Operation", item: "models.Model"):
     _operations_queue.items.append(_QueuedOperation(operation=operation, item=item))
 
 
-def _commit_queued_operations():
-    data_store: "DjangoDataStore" = create_django_data_store()
-    for queued_operation in _operations_queue.items:
-        entity_name = model_to_entity_name(queued_operation.item)
-        data_store.commit_item_change(
-            operation=queued_operation.operation,
-            entity_name=entity_name,
-            item_id=str(queued_operation.item.pk),
-            item=queued_operation.item,
-            execute_operation=False,
-        )
-
+def _notify_queued_operations():
     if _operations_queue.items:
         if maestro_settings.CHANGES_COMMITTED_CALLBACK:
             callback = maestro_settings.CHANGES_COMMITTED_CALLBACK
@@ -59,10 +43,10 @@ class SyncQueueMiddleware:
 
         response = self.get_response(request)
 
-        _commit_queued_operations()
+        _notify_queued_operations()
 
         return response
 
     def process_exception(self, request, exception):
         if _operations_queue.items:
-            _commit_queued_operations()
+            _notify_queued_operations()
