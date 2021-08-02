@@ -17,3 +17,4 @@ coverage/
 node_modules/
 dev.test.ts
 extras/typescript/lib/
+extras/typescript/*.tgz
