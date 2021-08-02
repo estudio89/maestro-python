@@ -5,7 +5,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "sync_framework.backends.django",
+    "maestro.backends.django",
     "tests.django",
 ]
 
@@ -19,6 +19,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "maestro.backends.django.contrib.middleware.SyncQueueMiddleware",
 ]
 
 TEMPLATES = [
@@ -41,3 +42,5 @@ TEMPLATES = [
 # https://docs.djangoproject.com/en/3.1/ref/settings/#databases
 
 DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": "db.sqlite3",}}
+
+MAESTRO = {"MODELS": ["my_app.item"]}

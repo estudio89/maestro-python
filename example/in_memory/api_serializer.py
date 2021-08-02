@@ -6,4 +6,5 @@ class InMemoryAPISerializer(APISerializer):
 		return item
 
 	def from_dict(self, data: "Dict") -> "Any":
+		data["entity_name"] = "todos_todo"
 		return data

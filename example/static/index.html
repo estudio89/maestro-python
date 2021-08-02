@@ -47,6 +47,10 @@
 				border-radius: 10px;
 				margin-bottom: 20px;
 			}
+
+			.item-form .form-buttons {
+				margin-top: 10px;
+			}
 		</style>
 	</head>
 	<body>
@@ -92,17 +96,27 @@
 				function buildEditing() {
 					var $el = $("" +
 					"<div class='item-form'>"	+
-						"<input type='text'>" +
-						"<button>OK</button>" +
-						"<button>Cancel</button>" +
+						"<div>" +
+							"<input type='checkbox'>" +
+							"<input type='text'>" +
+						"</div>" +
+
+						"<div class='form-buttons'>" +
+							"<button>OK</button>" +
+							"<button>Cancel</button>" +
+						"</div>" +
 					"</div>");
 
-					var $input = $el.find("input");
-					$input.val(item.text);
+					var $textInput = $el.find("input[type=text]");
+					var $cbInput = $el.find("input[type=checkbox]");
+					$textInput.val(item.text);
+					$cbInput.prop("checked", item.done);
+					console.log("item.done", item.done);
 					$el.find("button:first-of-type").on("click", function() {
-						var value = $input.val();
+						var textValue = $textInput.val();
+						var cbValue = $cbInput.prop("checked");
 
-						if (!value) {
+						if (!textValue) {
 							return;
 						}
 
@@ -110,12 +124,13 @@
 							"method": "PUT",
 							"body": JSON.stringify({
 								"id": item.id,
-								"text": value,
-								"done": item.done,
+								"text": textValue,
+								"done": cbValue,
 								"date_created": item.date_created
 							})
 						}).then(response => {
-							item.text = value;
+							item.text = textValue;
+							item.done = cbValue;
 							setState(() => {
 								state.editing = false;
 							})
@@ -135,6 +150,7 @@
 				function buildNormal() {
 					var $el = $("" +
 					"<div class='list-item'>"	+
+						"<input type='checkbox' disabled " + (item.done? "checked='checked'": "") + ">" +
 						"<p class='item-title'>" + item.text + "</p>" +
 						"<p class='item-id'>" + item.id + "</p>" +
 						"<div class='item-buttons'>" +
@@ -206,9 +222,14 @@
 				function buildForm() {
 					var $form = $("" +
 						"<div class='add-form'>" +
-							"<input id='input-title' type='text' placeholder='Title'>" +
-							"<button id='btn-confirm'>OK</button>" +
-							"<button id='btn-cancel'>Cancel</button>" +
+							"<div>" +
+								"<input id='input-done' type='checkbox'>" +
+								"<input id='input-title' type='text' placeholder='Title'>" +
+							"</div>" +
+							"<div class='form-buttons'>" +
+								"<button id='btn-confirm'>OK</button>" +
+								"<button id='btn-cancel'>Cancel</button>" +
+							"</div>" +
 						"</div>"
 					);
 
@@ -218,8 +239,10 @@
 						if (!value) {
 							return;
 						}
+						var inputCb = $form.find("#input-done");
+						var cbValue = $(inputCb).prop("checked");
 
-						onConfirm(value);
+						onConfirm({text: value, done: cbValue});
 						setState(() => {
 							state.show_form = false;
 						});
@@ -434,14 +457,14 @@
 				  });
 				}
 
-				function addItem(text) {
+				function addItem(itemData) {
 					setState(() => {
 						state.loading = true;
 					});
 					var item = {
 						id: uuidv4(),
-						text: text,
-						done: false,
+						text: itemData.text,
+						done: itemData.done,
 						date_created: new Date().toISOString().replace("Z", "+00:00")
 					};
 					fetch("/api" + window.location.pathname, {

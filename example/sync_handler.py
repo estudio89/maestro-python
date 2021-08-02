@@ -1,31 +1,43 @@
-from sync_framework.core.serializer import (
+from maestro.core.serializer import (
     RawDataStoreJSONSerializer,
     MetadataSerializer,
 )
-from sync_framework.backends.in_memory import InMemorySyncLock
+from maestro.backends.in_memory import InMemorySyncLock
 
-from sync_framework.core.orchestrator import SyncOrchestrator
-from sync_framework.core.metadata import Operation
+from maestro.core.orchestrator import SyncOrchestrator
+from maestro.core.metadata import Operation
 import uuid
 import json
 
 from typing import Dict
 
-from .in_memory import create_provider as create_in_memory_provider
-from .firestore import create_provider as create_firestore_provider
+# from .in_memory import create_provider as create_in_memory_provider
+# from .firestore import create_provider as create_firestore_provider
 from .django import create_provider as create_django_provider
+from .mongo import create_provider as create_mongo_provider
 
 
 class SyncHandler:
     def __init__(self):
 
+        # Provider 1
         self.firestore_providers = []
-        self.provider1, api_serializer = create_firestore_provider(
+        # self.provider1, api_serializer = create_firestore_provider(
+        #     local_provider_id="provider1",
+        # )
+        # self.firestore_providers.append(self.provider1)
+        # self.provider1.api_serializer = api_serializer
+        self.provider1, api_serializer = create_django_provider(
             local_provider_id="provider1",
         )
-        self.firestore_providers.append(self.provider1)
         self.provider1.api_serializer = api_serializer
-        self.provider2, api_serializer = create_django_provider(
+
+        # Provider 2
+        # self.provider2, api_serializer = create_django_provider(
+        #     local_provider_id="provider2",
+        # )
+        # self.provider2.api_serializer = api_serializer
+        self.provider2, api_serializer = create_mongo_provider(
             local_provider_id="provider2",
         )
         self.provider2.api_serializer = api_serializer
@@ -51,7 +63,10 @@ class SyncHandler:
         item = provider.api_serializer.from_dict(data=raw_item)
 
         provider.data_store.commit_item_change(
-            operation=Operation.UPDATE, item_id=item_id, item=item
+            operation=Operation.UPDATE,
+            item_id=item_id,
+            item=item,
+            entity_name="todos_todo",
         )
 
     def delete_item(self, provider_id: "str", item_id: "str", raw_item: "Dict"):
@@ -59,7 +74,10 @@ class SyncHandler:
 
         item = provider.api_serializer.from_dict(data=raw_item)
         provider.data_store.commit_item_change(
-            operation=Operation.DELETE, item_id=uuid.UUID(item_id), item=item,
+            operation=Operation.DELETE,
+            item_id=uuid.UUID(item_id),
+            item=item,
+            entity_name="todos_todo",
         )
 
     def create_item(self, provider_id: "str", item_id: "str", raw_item: "Dict"):
@@ -68,7 +86,10 @@ class SyncHandler:
 
         item = provider.api_serializer.from_dict(data=raw_item)
         provider.data_store.commit_item_change(
-            operation=Operation.INSERT, item_id=uuid.UUID(item_id), item=item
+            operation=Operation.INSERT,
+            item_id=uuid.UUID(item_id),
+            item=item,
+            entity_name="todos_todo",
         )
 
     def synchronize(self, initial_source_provider_id: "str"):

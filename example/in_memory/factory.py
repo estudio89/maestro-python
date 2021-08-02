@@ -1,50 +1,21 @@
-from sync_framework.core.metadata import (
+from maestro.core.metadata import (
     SyncSession,
     ItemVersion,
     ItemChange,
     ConflictLog,
     VectorClock,
 )
-from sync_framework.core.serializer import BaseItemSerializer
-from sync_framework.core.execution import ChangesExecutor, ConflictResolver
+from maestro.core.metadata import SerializationResult
+from maestro.core.execution import ChangesExecutor, ConflictResolver
 from example.events import DebugEventsManager
-from sync_framework.backends.in_memory import (
+from maestro.backends.in_memory import (
     InMemoryDataStore,
     InMemorySyncProvider,
     NullConverter,
+    JSONSerializer,
 )
 from .types import TodoType
 from .api_serializer import InMemoryAPISerializer
-from typing import List
-import json
-
-
-class InMemoryExampleSerializer(BaseItemSerializer):
-    def serialize_item(self, item: "TodoType") -> "str":
-
-        serialized = {
-            "fields": {
-                "date_created": item["date_created"],
-                "done": item["done"],
-                "text": item["text"],
-            },
-            "pk": item["id"],
-            "table_name": "todos_todo",
-        }
-
-        serialized = dict(sorted(serialized.items()))
-        return json.dumps(serialized)
-
-    def deserialize_item(self, serialized_item: "str") -> "TodoType":
-        data = json.loads(serialized_item)
-        deserialized = {
-            "id": data["pk"],
-            "text": data["fields"]["text"],
-            "done": data["fields"]["done"],
-            "date_created": data["fields"]["date_created"],
-        }
-
-        return deserialized
 
 
 def create_provider(local_provider_id: "str"):
@@ -56,7 +27,7 @@ def create_provider(local_provider_id: "str"):
         item_change_metadata_converter=NullConverter(metadata_class=ItemChange),
         conflict_log_metadata_converter=NullConverter(metadata_class=ConflictLog),
         vector_clock_metadata_converter=NullConverter(metadata_class=VectorClock),
-        item_serializer=InMemoryExampleSerializer(),
+        item_serializer=JSONSerializer(),
     )
     events_manager = DebugEventsManager(data_store=data_store)
     changes_executor = ChangesExecutor(

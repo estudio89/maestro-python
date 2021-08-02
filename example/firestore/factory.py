@@ -1,7 +1,6 @@
-from sync_framework.core.serializer import BaseItemSerializer
-from sync_framework.core.execution import ChangesExecutor, ConflictResolver
+from maestro.core.execution import ChangesExecutor, ConflictResolver
 
-from sync_framework.backends.firestore import (
+from maestro.backends.firestore import (
     FirestoreDataStore,
     FirestoreSyncProvider,
     SyncSessionMetadataConverter,
@@ -10,43 +9,12 @@ from sync_framework.backends.firestore import (
     ConflictLogMetadataConverter,
     VectorClockMetadataConverter,
 )
-from sync_framework.core.utils import parse_datetime
 from example.events import DebugEventsManager
-from .collections import TodoRecord
-from .api_serializer import FirestoreAPISerializer
+from example.base_nosql.api_serializer import NoSQLAPISerializer
+from example.base_nosql.factory import NoSQLExampleSerializer
 import os
 import firebase_admin
 from firebase_admin import credentials, firestore
-import json
-
-
-class FirestoreExampleSerializer(BaseItemSerializer):
-    def serialize_item(self, item: "TodoRecord") -> "str":
-
-        serialized = {
-            "fields": {
-                "date_created": item["date_created"].isoformat(),
-                "done": item["done"],
-                "text": item["text"],
-            },
-            "pk": item["id"],
-            "table_name": "todos_todo",
-        }
-
-        serialized = dict(sorted(serialized.items()))
-        return json.dumps(serialized)
-
-    def deserialize_item(self, serialized_item: "str") -> "TodoRecord":
-        data = json.loads(serialized_item)
-        deserialized = {
-            "id": data["pk"],
-            "text": data["fields"]["text"],
-            "done": data["fields"]["done"],
-            "date_created": parse_datetime(value=data["fields"]["date_created"]),
-            "collection_name": "todos_todo",
-        }
-
-        return deserialized
 
 
 class FirestoreExampleDataStore(FirestoreDataStore):
@@ -73,9 +41,12 @@ def create_provider(local_provider_id: "str"):
     db = firestore.client()
 
     # Dependency injection
+    item_serializer = NoSQLExampleSerializer()
     sync_session_metadata_converter = SyncSessionMetadataConverter()
     item_version_metadata_converter = ItemVersionMetadataConverter()
-    item_change_metadata_converter = ItemChangeMetadataConverter()
+    item_change_metadata_converter = ItemChangeMetadataConverter(
+        item_serializer=item_serializer
+    )
     conflict_log_metadata_converter = ConflictLogMetadataConverter()
     vector_clock_metadata_converter = VectorClockMetadataConverter()
 
@@ -86,7 +57,7 @@ def create_provider(local_provider_id: "str"):
         item_change_metadata_converter=item_change_metadata_converter,
         conflict_log_metadata_converter=conflict_log_metadata_converter,
         vector_clock_metadata_converter=vector_clock_metadata_converter,
-        item_serializer=FirestoreExampleSerializer(),
+        item_serializer=item_serializer,
         db=db,
     )
 
@@ -107,4 +78,4 @@ def create_provider(local_provider_id: "str"):
         changes_executor=changes_executor,
         max_num=10,
     )
-    return provider, FirestoreAPISerializer()
+    return provider, NoSQLAPISerializer()

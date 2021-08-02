@@ -13,10 +13,10 @@ def get_version(package):
     return re.search("__version__ = ['\"]([^'\"]+)['\"]", init_py).group(1)
 
 
-version = get_version('sync_framework')
+version = get_version('maestro')
 
 setup(
-	name="pythonsyncframework",
+	name="maestro",
 	version=version,
 	url='',
 	license='BSD',
@@ -30,7 +30,8 @@ setup(
 	install_requires=["python-dateutil>=2.8.1"],
     extras_require={
         "django": "django >= 3.1",
-        "firestore": "firebase-admin >= 5.0.1"
+        "firestore": "firebase-admin >= 5.0.1",
+        "mongo": "pymongo >= 3.12.0"
     },
 	python_requires=">=3.8",
 	classifiers=[

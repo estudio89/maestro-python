@@ -19,4 +19,16 @@ class Migration(migrations.Migration):
                 ("version", models.TextField()),
             ],
         ),
+        migrations.CreateModel(
+            name="AnotherModel",
+            fields=[
+                ("id", models.UUIDField(primary_key=True, serialize=False)),
+                (
+                    "item",
+                    models.ForeignKey(
+                        "my_app.Item", null=True, on_delete=models.SET_NULL
+                    ),
+                ),
+            ],
+        ),
     ]
