@@ -46,8 +46,10 @@ class DjangoSyncLockContext(django.db.transaction.Atomic):
         SyncLockRecord.objects.select_for_update().filter(key="sync_running")
 
     def __exit__(self, *args, **kwargs):
-        super().__exit__(*args, **kwargs)
-        cache.set("maestro_running", False, timeout=None)
+        try:
+            super().__exit__(*args, **kwargs)
+        finally:
+            cache.set("maestro_running", False, timeout=None)
 
 
 class DjangoSyncLock(BaseSyncLock):

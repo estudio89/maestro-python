@@ -117,7 +117,7 @@ class EventsManager:
         conflict_log = ConflictLog(
             id=uuid.uuid4(),
             created_at=now_utc,
-            resolved_at=now_utc,
+            resolved_at=None,
             item_change_loser=remote_item_change,
             item_change_winner=None,
             status=ConflictStatus.DEFERRED,
@@ -178,3 +178,4 @@ class EventsManager:
         self.current_sync_session.ended_at = now_utc
         self.current_sync_session.status = SyncSessionStatus.FAILED
         self.data_store.save_sync_session(sync_session=self.current_sync_session)
+        self.current_sync_session = None

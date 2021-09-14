@@ -44,10 +44,6 @@ class Comparison:
             and self.value == other.value
         )
 
-    # implementar str
-    # continuar a implementar dunder methods do filter
-
-
 class Connector(Enum):
     """Represents the connection between filters when they are combined."""
 

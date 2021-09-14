@@ -26,14 +26,18 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
     maxDiff = None
 
     def setUp(self):
-        self.data_store = self._create_data_store(local_provider_id="provider_in_test",)
+        self.data_store = self._create_data_store(
+            local_provider_id="provider_in_test",
+        )
 
     def test_get_local_version(self):
-        """ Tests retrieving the local version of an item. """
+        """Tests retrieving the local version of an item."""
 
         # Adding a change to an object
         item = self.data_store._create_item(
-            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="1",
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+            name="item_1",
+            version="1",
         )
         self.data_store._add_item(item=item)
 
@@ -107,7 +111,9 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
         # Adding a change to another object
 
         item = self.data_store._create_item(
-            id="915a67f9-e597-491a-a28f-cf0fda241b68", name="item_2", version="1",
+            id="915a67f9-e597-491a-a28f-cf0fda241b68",
+            name="item_2",
+            version="1",
         )
         self.data_store._add_item(item=item)
 
@@ -224,7 +230,9 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
     def test_get_or_create_item_change(self):
         item = self.data_store._create_item(
-            id="2d6c7fef-a337-43cb-828a-4e6d2341ac7d", name="item_1", version="1",
+            id="2d6c7fef-a337-43cb-828a-4e6d2341ac7d",
+            name="item_1",
+            version="1",
         )
         self.data_store._add_item(item=item)
 
@@ -440,7 +448,9 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
     def test_serialize_item(self):
         item = self.data_store._create_item(
-            id="2d24691e-7958-4ed9-830d-1afe7f5157e0", name="my item", version="1",
+            id="2d24691e-7958-4ed9-830d-1afe7f5157e0",
+            name="my item",
+            version="1",
         )
         serialization_result = self.data_store.serialize_item(
             item=item, entity_name="my_app_item"
@@ -452,7 +462,9 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
     def test_deserialize_item(self):
         item = self.data_store._create_item(
-            id="2d24691e-7958-4ed9-830d-1afe7f5157e0", name="my item", version="1",
+            id="2d24691e-7958-4ed9-830d-1afe7f5157e0",
+            name="my item",
+            version="1",
         )
         manually_serialized = self._serialize_item(
             id="2d24691e-7958-4ed9-830d-1afe7f5157e0", name="my item", version="1"
@@ -471,7 +483,9 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
         # Adding a change to an object
         item = self.data_store._create_item(
-            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="1",
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+            name="item_1",
+            version="1",
         )
         self.data_store._add_item(item=item)
 
@@ -534,7 +548,9 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
         # Adding a change to another object
         item = self.data_store._create_item(
-            id="915a67f9-e597-491a-a28f-cf0fda241b68", name="item_2", version="1",
+            id="915a67f9-e597-491a-a28f-cf0fda241b68",
+            name="item_2",
+            version="1",
         )
         self.data_store._add_item(item=item)
 
@@ -746,7 +762,9 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
     def test_get_item_change_by_id(self):
         item = self.data_store._create_item(
-            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="2.1",
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+            name="item_1",
+            version="2.1",
         )
         self.data_store._add_item(item=item)
 
@@ -822,7 +840,9 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
     def test_select_changes(self):
         # Adding a change to an object
         item = self.data_store._create_item(
-            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="1",
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+            name="item_1",
+            version="1",
         )
         self.data_store._add_item(item=item)
 
@@ -888,7 +908,9 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
         # Adding a change to another object
 
         item = self.data_store._create_item(
-            id="915a67f9-e597-491a-a28f-cf0fda241b68", name="item_2", version="1",
+            id="915a67f9-e597-491a-a28f-cf0fda241b68",
+            name="item_2",
+            version="1",
         )
         self.data_store._add_item(item=item)
 
@@ -1130,7 +1152,13 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
         self.assertEqual(
             result.item_changes,
-            [item_change1, item_change2, item_change3, item_change4, item_change5,],
+            [
+                item_change1,
+                item_change2,
+                item_change3,
+                item_change4,
+                item_change5,
+            ],
         )
 
         if not result.is_last_batch:
@@ -1141,7 +1169,11 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                 vector_clock=next_vector_clock, max_num=10
             )
             self.assertEqual(
-                result, ItemChangeBatch(item_changes=[], is_last_batch=True,),
+                result,
+                ItemChangeBatch(
+                    item_changes=[],
+                    is_last_batch=True,
+                ),
             )
 
         vector_clock2 = VectorClock(
@@ -1172,7 +1204,10 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
         result = self.data_store.select_changes(vector_clock=vector_clock2, max_num=10)
 
         self.assertEqual(
-            result.item_changes, [item_change3,],
+            result.item_changes,
+            [
+                item_change3,
+            ],
         )
 
         if not result.is_last_batch:
@@ -1183,7 +1218,11 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                 vector_clock=next_vector_clock, max_num=10
             )
             self.assertEqual(
-                result, ItemChangeBatch(item_changes=[], is_last_batch=True,),
+                result,
+                ItemChangeBatch(
+                    item_changes=[],
+                    is_last_batch=True,
+                ),
             )
 
     def test_select_changes_2(self):
@@ -1197,19 +1236,20 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
             ),
         )
 
-        vector_clock1 = VectorClock.create_empty(
-            provider_ids=["other_provider"]
-        )
+        vector_clock1 = VectorClock.create_empty(provider_ids=["other_provider"])
 
         result = self.data_store.select_changes(vector_clock=vector_clock1, max_num=10)
         self.assertEqual(
-            result.item_changes, [item_change1],
+            result.item_changes,
+            [item_change1],
         )
 
     def test_select_deferred_changes(self):
         # Adding a change to an object
         item = self.data_store._create_item(
-            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="1",
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+            name="item_1",
+            version="1",
         )
         self.data_store._add_item(item=item)
 
@@ -1274,7 +1314,9 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
         # Adding a change to another object
         item = self.data_store._create_item(
-            id="915a67f9-e597-491a-a28f-cf0fda241b68", name="item_2", version="1",
+            id="915a67f9-e597-491a-a28f-cf0fda241b68",
+            name="item_2",
+            version="1",
         )
         self.data_store._add_item(item=item)
 
@@ -1530,7 +1572,10 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
             vector_clock=vector_clock1, max_num=10
         )
         self.assertEqual(
-            result.item_changes, [item_change4,],
+            result.item_changes,
+            [
+                item_change4,
+            ],
         )
 
         if not result.is_last_batch:
@@ -1541,12 +1586,18 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
                 vector_clock=vector_clock2, max_num=10
             )
             self.assertEqual(
-                result, ItemChangeBatch(item_changes=[], is_last_batch=True,),
+                result,
+                ItemChangeBatch(
+                    item_changes=[],
+                    is_last_batch=True,
+                ),
             )
 
     def test_save_item_change(self):
         item = self.data_store._create_item(
-            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="1",
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+            name="item_1",
+            version="1",
         )
         self.data_store._add_item(item=item)
 
@@ -1622,7 +1673,9 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
     def test_save_item(self):
         item = self.data_store._create_item(
-            id="dd418733-571d-4208-af50-ef53765b9dac", name="hello", version="10",
+            id="dd418733-571d-4208-af50-ef53765b9dac",
+            name="hello",
+            version="10",
         )
         self.data_store.save_item(item=item)
 
@@ -1633,7 +1686,9 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
     def test_delete_item(self):
         item = self.data_store._create_item(
-            id="dd418733-571d-4208-af50-ef53765b9dac", name="hello", version="10",
+            id="dd418733-571d-4208-af50-ef53765b9dac",
+            name="hello",
+            version="10",
         )
         self.data_store._add_item(item=item)
 
@@ -1644,7 +1699,9 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
     def test_run_in_transaction(self):
         item = self.data_store._create_item(
-            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="2.1",
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+            name="item_1",
+            version="2.1",
         )
         self.data_store._add_item(item=item)
 
@@ -1725,7 +1782,9 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
     def test_save_conflict_log(self):
         item = self.data_store._create_item(
-            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="1",
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+            name="item_1",
+            version="1",
         )
         self.data_store._add_item(item=item)
 
@@ -1814,7 +1873,9 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
     def test_execute_item_change(self):
         # Insert
         item1 = self.data_store._create_item(
-            id="dd418733-571d-4208-af50-ef53765b9dac", name="hello", version="12",
+            id="dd418733-571d-4208-af50-ef53765b9dac",
+            name="hello",
+            version="12",
         )
         item_change1 = ItemChange(
             id=uuid.UUID("54417070-60f1-47e7-a2f3-7755dfafb194"),
@@ -1886,7 +1947,9 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
         # Update
         item2 = self.data_store._create_item(
-            id="dd418733-571d-4208-af50-ef53765b9dac", name="hello there", version="13",
+            id="dd418733-571d-4208-af50-ef53765b9dac",
+            name="hello there",
+            version="13",
         )
         item_change2 = ItemChange(
             id=uuid.UUID("54417070-60f1-47e7-a2f3-7755dfafb194"),
@@ -2027,7 +2090,9 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
     def test_save_item_version(self):
         item1 = self.data_store._create_item(
-            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="1",
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+            name="item_1",
+            version="1",
         )
         self.data_store._add_item(item=item1)
 
@@ -2102,7 +2167,9 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
     def test_get_deferred_conflict_logs(self):
         item1 = self.data_store._create_item(
-            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="1",
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+            name="item_1",
+            version="1",
         )
         self.data_store._add_item(item=item1)
 
@@ -2181,7 +2248,9 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
         self.data_store._add_conflict_log(conflict_log=conflict_log1)
 
         item2 = self.data_store._create_item(
-            id="915a67f9-e597-491a-a28f-cf0fda241b68", name="item_2", version="1",
+            id="915a67f9-e597-491a-a28f-cf0fda241b68",
+            name="item_2",
+            version="1",
         )
         self.data_store._add_item(item=item2)
 
@@ -2268,7 +2337,9 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
     def test_save_sync_session(self):
         item1 = self.data_store._create_item(
-            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="1",
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+            name="item_1",
+            version="1",
         )
         self.data_store._add_item(item=item1)
 
@@ -2351,7 +2422,9 @@ class BaseStoreTest(BackendTestMixin, unittest.TestCase):
 
 class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
     def setUp(self):
-        self.data_store = self._create_data_store(local_provider_id="provider_in_test",)
+        self.data_store = self._create_data_store(
+            local_provider_id="provider_in_test",
+        )
 
     def test_get_local_vector_clock_query(self):
 
@@ -2361,7 +2434,9 @@ class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
             filter=Filter(
                 children=[
                     Comparison(
-                        field_name="name", comparator=Comparator.EQUALS, value="item_2",
+                        field_name="name",
+                        comparator=Comparator.EQUALS,
+                        value="item_2",
                     )
                 ]
             ),
@@ -2377,7 +2452,9 @@ class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
             entity_name="my_app_item",
             item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
             item=self.data_store._create_item(
-                id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="1",
+                id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+                name="item_1",
+                version="1",
             ),
         )
 
@@ -2386,7 +2463,9 @@ class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
             entity_name="my_app_item",
             item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
             item=self.data_store._create_item(
-                id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="2",
+                id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+                name="item_1",
+                version="2",
             ),
         )
 
@@ -2395,7 +2474,9 @@ class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
             entity_name="my_app_item",
             item_id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
             item=self.data_store._create_item(
-                id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="2.1",
+                id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+                name="item_1",
+                version="2.1",
             ),
         )
 
@@ -2405,14 +2486,17 @@ class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
             entity_name="my_app_item",
             item_id="915a67f9-e597-491a-a28f-cf0fda241b68",
             item=self.data_store._create_item(
-                id="915a67f9-e597-491a-a28f-cf0fda241b68", name="item_2", version="1",
+                id="915a67f9-e597-491a-a28f-cf0fda241b68",
+                name="item_2",
+                version="1",
             ),
         )
 
         # Filtering with a query
         result = self.data_store.get_local_vector_clock(query=query1)
         self.assertEqual(
-            result, VectorClock(item_change4.change_vector_clock_item),
+            result,
+            VectorClock(item_change4.change_vector_clock_item),
         )
 
     def test_query_equals(self):
@@ -2421,7 +2505,9 @@ class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
         # Setup
         # Item 1
         item1 = self.data_store._create_item(
-            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="1",
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+            name="item_1",
+            version="1",
         )
         self.data_store._add_item(item=item1)
 
@@ -2540,7 +2626,9 @@ class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
 
         # Item 2
         item2 = self.data_store._create_item(
-            id="bbe4ae59-ec84-41c3-8774-ea2f6d38283f", name="item_2", version="2",
+            id="bbe4ae59-ec84-41c3-8774-ea2f6d38283f",
+            name="item_2",
+            version="2",
         )
         self.data_store._add_item(item=item2)
 
@@ -2665,7 +2753,9 @@ class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
             filter=Filter(
                 children=[
                     Comparison(
-                        field_name="version", comparator=Comparator.EQUALS, value="1",
+                        field_name="version",
+                        comparator=Comparator.EQUALS,
+                        value="1",
                     )
                 ]
             ),
@@ -2682,7 +2772,9 @@ class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
             filter=Filter(
                 children=[
                     Comparison(
-                        field_name="version", comparator=Comparator.EQUALS, value="1",
+                        field_name="version",
+                        comparator=Comparator.EQUALS,
+                        value="1",
                     )
                 ]
             ),
@@ -2699,7 +2791,9 @@ class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
             filter=Filter(
                 children=[
                     Comparison(
-                        field_name="version", comparator=Comparator.EQUALS, value="2",
+                        field_name="version",
+                        comparator=Comparator.EQUALS,
+                        value="2",
                     )
                 ]
             ),
@@ -2716,7 +2810,9 @@ class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
         # Setup
         # Item 1
         item1 = self.data_store._create_item(
-            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="1",
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+            name="item_1",
+            version="1",
         )
         self.data_store._add_item(item=item1)
 
@@ -2835,7 +2931,9 @@ class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
 
         # Item 2
         item2 = self.data_store._create_item(
-            id="bbe4ae59-ec84-41c3-8774-ea2f6d38283f", name="item_2", version="2",
+            id="bbe4ae59-ec84-41c3-8774-ea2f6d38283f",
+            name="item_2",
+            version="2",
         )
         self.data_store._add_item(item=item2)
 
@@ -2980,7 +3078,9 @@ class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
         # Setup
         # Item 1
         item1 = self.data_store._create_item(
-            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="1",
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+            name="item_1",
+            version="1",
         )
         self.data_store._add_item(item=item1)
 
@@ -3099,7 +3199,9 @@ class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
 
         # Item 2
         item2 = self.data_store._create_item(
-            id="bbe4ae59-ec84-41c3-8774-ea2f6d38283f", name="item_2", version="2",
+            id="bbe4ae59-ec84-41c3-8774-ea2f6d38283f",
+            name="item_2",
+            version="2",
         )
         self.data_store._add_item(item=item2)
 
@@ -3239,7 +3341,9 @@ class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
         # Setup
         # Item 1
         item1 = self.data_store._create_item(
-            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="1",
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+            name="item_1",
+            version="1",
         )
         self.data_store._add_item(item=item1)
 
@@ -3358,7 +3462,9 @@ class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
 
         # Item 2
         item2 = self.data_store._create_item(
-            id="bbe4ae59-ec84-41c3-8774-ea2f6d38283f", name="item_2", version="2",
+            id="bbe4ae59-ec84-41c3-8774-ea2f6d38283f",
+            name="item_2",
+            version="2",
         )
         self.data_store._add_item(item=item2)
 
@@ -3498,7 +3604,9 @@ class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
         # Setup
         # Item 1
         item1 = self.data_store._create_item(
-            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="1",
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+            name="item_1",
+            version="1",
         )
         self.data_store._add_item(item=item1)
 
@@ -3617,7 +3725,9 @@ class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
 
         # Item 2
         item2 = self.data_store._create_item(
-            id="bbe4ae59-ec84-41c3-8774-ea2f6d38283f", name="item_2", version="2",
+            id="bbe4ae59-ec84-41c3-8774-ea2f6d38283f",
+            name="item_2",
+            version="2",
         )
         self.data_store._add_item(item=item2)
 
@@ -3757,7 +3867,9 @@ class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
         # Setup
         # Item 1
         item1 = self.data_store._create_item(
-            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="1",
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+            name="item_1",
+            version="1",
         )
         self.data_store._add_item(item=item1)
 
@@ -3876,7 +3988,9 @@ class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
 
         # Item 2
         item2 = self.data_store._create_item(
-            id="bbe4ae59-ec84-41c3-8774-ea2f6d38283f", name="item_2", version="2",
+            id="bbe4ae59-ec84-41c3-8774-ea2f6d38283f",
+            name="item_2",
+            version="2",
         )
         self.data_store._add_item(item=item2)
 
@@ -4073,7 +4187,9 @@ class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
         # Setup
         # Item 1
         item1 = self.data_store._create_item(
-            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="1",
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+            name="item_1",
+            version="1",
         )
         self.data_store._add_item(item=item1)
 
@@ -4192,7 +4308,9 @@ class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
 
         # Item 2
         item2 = self.data_store._create_item(
-            id="bbe4ae59-ec84-41c3-8774-ea2f6d38283f", name="item_2", version="2",
+            id="bbe4ae59-ec84-41c3-8774-ea2f6d38283f",
+            name="item_2",
+            version="2",
         )
         self.data_store._add_item(item=item2)
 
@@ -4334,7 +4452,9 @@ class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
             filter=Filter(
                 children=[
                     Comparison(
-                        field_name="version", comparator=Comparator.IN, value=["2"],
+                        field_name="version",
+                        comparator=Comparator.IN,
+                        value=["2"],
                     )
                 ]
             ),
@@ -4350,7 +4470,9 @@ class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
             filter=Filter(
                 children=[
                     Comparison(
-                        field_name="version", comparator=Comparator.IN, value=["3"],
+                        field_name="version",
+                        comparator=Comparator.IN,
+                        value=["3"],
                     )
                 ]
             ),
@@ -4400,19 +4522,21 @@ class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
     def test_select_changes_query_1(self):
         """Simulates the situation where changes are selected and a query is used to filter the results.
 
-            Situation 1:
-                - There 2 items, one with version 2.1 that has 3 changes and
-                one with version 3 that has only one change
-                - An empty vector clock is used for selecting the changes
-                - A query filtering only items with version 3 is used
+        Situation 1:
+            - There 2 items, one with version 2.1 that has 3 changes and
+            one with version 3 that has only one change
+            - An empty vector clock is used for selecting the changes
+            - A query filtering only items with version 3 is used
 
-                Expected results:
-                    - Only the change related to item 2 is returned
+            Expected results:
+                - Only the change related to item 2 is returned
         """
 
         # Adding 3 changes to an object
         item = self.data_store._create_item(
-            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="1",
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+            name="item_1",
+            version="1",
         )
         self.data_store._add_item(item=item)
 
@@ -4603,7 +4727,9 @@ class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
 
         # Adding a change to another object
         item = self.data_store._create_item(
-            id="915a67f9-e597-491a-a28f-cf0fda241b68", name="item_2", version="3",
+            id="915a67f9-e597-491a-a28f-cf0fda241b68",
+            name="item_2",
+            version="3",
         )
         self.data_store._add_item(item=item)
 
@@ -4679,7 +4805,9 @@ class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
             filter=Filter(
                 children=[
                     Comparison(
-                        field_name="version", comparator=Comparator.EQUALS, value="3",
+                        field_name="version",
+                        comparator=Comparator.EQUALS,
+                        value="3",
                     )
                 ]
             ),
@@ -4697,28 +4825,31 @@ class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
         )
 
         self.assertEqual(
-            result.item_changes, [item_change4],
+            result.item_changes,
+            [item_change4],
         )
 
     def test_select_changes_query_2(self):
         """Simulates the situation where changes are selected and a query is used to filter the results.
 
-            Situation 2:
-                - There 3 items, one with version 2.1 (that used to be version 2) that has 3 changes,
-                one with version 2 that has two changes and one with version 1 that has 1 change
-                - A vector clock is used for selecting the changes. The vector clock is posterior
-                to the second change of item 1 and first change of item 2. It is inferior
-                to the change of item 1
-                - A query filtering only items with version 2 is used
+        Situation 2:
+            - There 3 items, one with version 2.1 (that used to be version 2) that has 3 changes,
+            one with version 2 that has two changes and one with version 1 that has 1 change
+            - A vector clock is used for selecting the changes. The vector clock is posterior
+            to the second change of item 1 and first change of item 2. It is inferior
+            to the change of item 1
+            - A query filtering only items with version 2 is used
 
-                Expected results:
-                    - The third change related to item 1 is returned (item_change3) as well as
-                    the second change related to item 2 (item_change5)
+            Expected results:
+                - The third change related to item 1 is returned (item_change3) as well as
+                the second change related to item 2 (item_change5)
         """
 
         # Adding 3 changes to an object
         item = self.data_store._create_item(
-            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1", name="item_1", version="2.1",
+            id="e104b1c0-9a15-4ac1-b5fb-b273b91250d1",
+            name="item_1",
+            version="2.1",
         )
         self.data_store._add_item(item=item)
 
@@ -4907,7 +5038,9 @@ class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
 
         # Adding a change to another object
         item = self.data_store._create_item(
-            id="915a67f9-e597-491a-a28f-cf0fda241b68", name="item_2", version="2",
+            id="915a67f9-e597-491a-a28f-cf0fda241b68",
+            name="item_2",
+            version="2",
         )
         self.data_store._add_item(item=item)
 
@@ -5041,7 +5174,9 @@ class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
 
         # Adding a third item
         item = self.data_store._create_item(
-            id="559168e5-a155-49eb-be16-5161f7c29e55", name="item_3", version="1",
+            id="559168e5-a155-49eb-be16-5161f7c29e55",
+            name="item_3",
+            version="1",
         )
         self.data_store._add_item(item=item)
 
@@ -5127,7 +5262,9 @@ class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
             filter=Filter(
                 children=[
                     Comparison(
-                        field_name="version", comparator=Comparator.EQUALS, value="2",
+                        field_name="version",
+                        comparator=Comparator.EQUALS,
+                        value="2",
                     )
                 ]
             ),
@@ -5166,5 +5303,6 @@ class BaseQueriesTest(BackendTestMixin, unittest.TestCase):
         )
 
         self.assertEqual(
-            result.item_changes, [item_change3, item_change5],
+            result.item_changes,
+            [item_change3, item_change5],
         )
