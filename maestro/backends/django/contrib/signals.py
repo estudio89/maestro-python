@@ -8,11 +8,23 @@ from maestro.backends.django.utils import model_to_entity_name
 from maestro.core.metadata import Operation
 from .middleware import _add_operation_to_queue
 import copy
+import threading
 
 if TYPE_CHECKING:
     from maestro.backends.django import DjangoDataStore
 
+_thread_data = threading.local()
 
+def _signal_check(func):
+    def wrapper(sender: "Type[models.Model]", *args, **kwargs):
+        if getattr(_thread_data, "disabled_signals", {}).get(sender, False):
+            return
+        return func(*args, sender=sender, **kwargs)
+
+    return wrapper
+
+
+@_signal_check
 def model_saved_signal(
     sender: "Type[models.Model]",
     instance: "models.Model",
@@ -22,8 +34,6 @@ def model_saved_signal(
     update_fields: "Optional[List[str]]",
     **kwargs,
 ):
-    if getattr(sender, "_maestro_disable_signals", False):
-        return
 
     operation: "Operation"
     if created:
@@ -43,11 +53,10 @@ def model_saved_signal(
     _add_operation_to_queue(operation=operation, item=copy.deepcopy(instance))
 
 
+@_signal_check
 def model_pre_delete_signal(
     sender: "Type[models.Model]", instance: "models.Model", using: "str", **kwargs
 ):
-    if getattr(sender, "_maestro_disable_signals", False):
-        return
 
     data_store: "DjangoDataStore" = create_django_data_store()
     entity_name = model_to_entity_name(instance)
@@ -89,10 +98,15 @@ class _DisableSignalsContext:
         self.model = model
 
     def __enter__(self):
+        if not hasattr(_thread_data, "disabled_signals"):
+            _thread_data.disabled_signals = {}
+
+        _thread_data.disabled_signals[self.model] = True
         self.model._maestro_disable_signals = True
 
     def __exit__(self, type, value, traceback):
-        self.model._maestro_disable_signals = False
+        del _thread_data.disabled_signals[self.model]
+
 
 def temporarily_disable_signals(model: "Type[models.Model]"):
     return _DisableSignalsContext(model=model)
