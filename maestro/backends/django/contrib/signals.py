@@ -22,6 +22,9 @@ def model_saved_signal(
     update_fields: "Optional[List[str]]",
     **kwargs,
 ):
+    if getattr(sender, "_maestro_disable_signals", False):
+        return
+
     operation: "Operation"
     if created:
         operation = Operation.INSERT
@@ -43,6 +46,8 @@ def model_saved_signal(
 def model_pre_delete_signal(
     sender: "Type[models.Model]", instance: "models.Model", using: "str", **kwargs
 ):
+    if getattr(sender, "_maestro_disable_signals", False):
+        return
 
     data_store: "DjangoDataStore" = create_django_data_store()
     entity_name = model_to_entity_name(instance)
@@ -79,35 +84,15 @@ def connect_signals():
         _connect_signal(model=model)
 
 
-def _disconnect_signal(model: "models.Model"):
-    full_label = (
-        cast("str", model._meta.app_label) + "_" + cast("str", model._meta.model_name)
-    )
-    post_save.disconnect(
-        receiver=model_saved_signal,
-        sender=model,
-        dispatch_uid=full_label + "_update_sync",
-    )
-    pre_delete.disconnect(
-        receiver=model_saved_signal,
-        sender=model,
-        dispatch_uid=full_label + "_delete_sync",
-    )
-
-
 class _DisableSignalsContext:
     def __init__(self, model: "Type[models.Model]"):
         self.model = model
 
     def __enter__(self):
-        _disconnect_signal(model=self.model)
+        self.model._maestro_disable_signals = True
 
     def __exit__(self, type, value, traceback):
-        label = self.model._meta.app_label + "." + self.model._meta.model_name
-        enabled_models = [label.lower() for label in maestro_settings.MODELS]
-        if label in enabled_models:
-            _connect_signal(model=self.model)
-
+        self.model._maestro_disable_signals = False
 
 def temporarily_disable_signals(model: "Type[models.Model]"):
     return _DisableSignalsContext(model=model)
