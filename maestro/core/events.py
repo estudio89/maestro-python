@@ -8,7 +8,7 @@ from .metadata import (
     SyncSession,
     SyncSessionStatus,
 )
-from .utils import get_now_utc
+from .utils import cast_away_optional, get_now_utc
 import uuid
 import traceback
 import sys
@@ -21,10 +21,11 @@ class EventsManager:
     """Handles the events that happen during a sync session."""
 
     data_store: "BaseDataStore"
-    current_sync_session: "SyncSession"
+    current_sync_session: "Optional[SyncSession]"
 
     def __init__(self, data_store: "BaseDataStore"):
         self.data_store = data_store
+        self.current_sync_session = None
 
     def on_start_sync_session(
         self,
@@ -123,7 +124,7 @@ class EventsManager:
             status=ConflictStatus.DEFERRED,
             conflict_type=ConflictType.EXCEPTION_OCCURRED,
             description=self._format_stacktrace(),
-            query_ids=[query.get_id()] if query else []
+            query_ids=[query.get_id()] if query else [],
         )
         self.data_store.save_conflict_log(conflict_log=conflict_log)
 
@@ -133,7 +134,7 @@ class EventsManager:
         Args:
             item_change (ItemChange): ItemChange saved to the data store
         """
-        self.current_sync_session.item_changes.append(item_change)
+        cast_away_optional(self.current_sync_session).item_changes.append(item_change)
 
     def on_item_change_applied(self, item_change: "ItemChange"):
         """Called after an ItemChange was executed successfully.
@@ -159,14 +160,15 @@ class EventsManager:
         Args:
             item_changes (List[ItemChange]): The changes that were sent.
         """
-        self.current_sync_session.item_changes += item_changes
+        cast_away_optional(self.current_sync_session).item_changes += item_changes
 
     def on_end_sync_session(self):
-        """Called at the end of the sync session.
-        """
+        """Called at the end of the sync session."""
         now_utc = get_now_utc()
-        self.current_sync_session.ended_at = now_utc
-        self.current_sync_session.status = SyncSessionStatus.FINISHED
+        cast_away_optional(self.current_sync_session).ended_at = now_utc
+        cast_away_optional(
+            self.current_sync_session
+        ).status = SyncSessionStatus.FINISHED
         self.data_store.save_sync_session(sync_session=self.current_sync_session)
         self.current_sync_session = None
 
@@ -175,7 +177,9 @@ class EventsManager:
         failure in the framework itself, not in the execution of an ItemChange.
         """
         now_utc = get_now_utc()
-        self.current_sync_session.ended_at = now_utc
-        self.current_sync_session.status = SyncSessionStatus.FAILED
-        self.data_store.save_sync_session(sync_session=self.current_sync_session)
+        cast_away_optional(self.current_sync_session).ended_at = now_utc
+        cast_away_optional(self.current_sync_session).status = SyncSessionStatus.FAILED
+        self.data_store.save_sync_session(
+            sync_session=cast_away_optional(self.current_sync_session)
+        )
         self.current_sync_session = None
