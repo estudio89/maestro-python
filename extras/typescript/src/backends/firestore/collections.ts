@@ -45,4 +45,5 @@ export interface QueuedOperation {
     collection_name: string;
     operation: string;
     data: any;
+    timestamp: admin.firestore.Timestamp | undefined;
 }

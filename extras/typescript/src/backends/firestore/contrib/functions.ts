@@ -37,7 +37,8 @@ export function setupCommitQueue(
             console.log(
                 "Processing commit operation",
                 queuedOperation.operation,
-                queuedOperation.item_id
+                queuedOperation.item_id,
+                queuedOperation.timestamp?.toDate()
             );
             let item = queuedOperation.data;
             item.id = queuedOperation.item_id;
@@ -69,7 +70,8 @@ export function setupCommitQueue(
                 queuedOperation.operation as Operation,
                 entityName,
                 queuedOperation.item_id,
-                item
+                item,
+                queuedOperation.timestamp?.toDate()
             );
 
             await db

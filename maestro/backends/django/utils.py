@@ -38,23 +38,16 @@ def model_to_entity_name(model: "Model") -> "str":
     return content_type_to_entity_name(content_type=content_type)
 
 
-class DjangoSyncLockContext(django.db.transaction.Atomic):
+class DjangoSyncLockContext:
     def __enter__(self, *args, **kwargs):
-        super().__enter__(*args, **kwargs)
         cache.set("maestro_running", True, timeout=None)
-        SyncLockRecord = apps.get_model("maestro", "SyncLockRecord")
-        SyncLockRecord.objects.select_for_update().filter(key="sync_running")
 
     def __exit__(self, *args, **kwargs):
-        try:
-            super().__exit__(*args, **kwargs)
-        finally:
-            cache.set("maestro_running", False, timeout=None)
-
+        cache.set("maestro_running", False, timeout=None)
 
 class DjangoSyncLock(BaseSyncLock):
     def is_running(self) -> "bool":
         return cache.get("maestro_running", False)
 
     def lock(self):
-        return DjangoSyncLockContext(using=None, savepoint=True)
+        return DjangoSyncLockContext()
