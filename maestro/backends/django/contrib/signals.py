@@ -8,23 +8,11 @@ from maestro.backends.django.utils import model_to_entity_name
 from maestro.core.metadata import Operation
 from .middleware import _add_operation_to_queue
 import copy
-import threading
 
 if TYPE_CHECKING:
     from maestro.backends.django import DjangoDataStore
 
-_thread_data = threading.local()
 
-def _signal_check(func):
-    def wrapper(sender: "Type[models.Model]", *args, **kwargs):
-        if getattr(_thread_data, "disabled_signals", {}).get(sender, False):
-            return
-        return func(*args, sender=sender, **kwargs)
-
-    return wrapper
-
-
-@_signal_check
 def model_saved_signal(
     sender: "Type[models.Model]",
     instance: "models.Model",
@@ -34,7 +22,6 @@ def model_saved_signal(
     update_fields: "Optional[List[str]]",
     **kwargs,
 ):
-
     operation: "Operation"
     if created:
         operation = Operation.INSERT
@@ -53,7 +40,6 @@ def model_saved_signal(
     _add_operation_to_queue(operation=operation, item=copy.deepcopy(instance))
 
 
-@_signal_check
 def model_pre_delete_signal(
     sender: "Type[models.Model]", instance: "models.Model", using: "str", **kwargs
 ):
@@ -93,19 +79,34 @@ def connect_signals():
         _connect_signal(model=model)
 
 
+def _disconnect_signal(model: "models.Model"):
+    full_label = (
+        cast("str", model._meta.app_label) + "_" + cast("str", model._meta.model_name)
+    )
+    post_save.disconnect(
+        receiver=model_saved_signal,
+        sender=model,
+        dispatch_uid=full_label + "_update_sync",
+    )
+    pre_delete.disconnect(
+        receiver=model_pre_delete_signal,
+        sender=model,
+        dispatch_uid=full_label + "_delete_sync",
+    )
+
+
 class _DisableSignalsContext:
     def __init__(self, model: "Type[models.Model]"):
         self.model = model
 
     def __enter__(self):
-        if not hasattr(_thread_data, "disabled_signals"):
-            _thread_data.disabled_signals = {}
-
-        _thread_data.disabled_signals[self.model] = True
-        self.model._maestro_disable_signals = True
+        _disconnect_signal(model=self.model)
 
     def __exit__(self, type, value, traceback):
-        del _thread_data.disabled_signals[self.model]
+        label = self.model._meta.app_label + "." + self.model._meta.model_name
+        enabled_models = [label.lower() for label in maestro_settings.MODELS]
+        if label in enabled_models:
+            _connect_signal(model=self.model)
 
 
 def temporarily_disable_signals(model: "Type[models.Model]"):
