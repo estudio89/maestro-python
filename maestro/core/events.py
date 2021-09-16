@@ -58,7 +58,7 @@ class EventsManager:
         conflict_type: "ConflictType",
         item_change_winner: "ItemChange",
         item_change_loser: "ItemChange",
-    ):
+    ) -> "ConflictLog":
         """Called after a conflict is resolved. It creates a ConflictLog and saves it to the data store.
 
         Args:
@@ -78,6 +78,7 @@ class EventsManager:
             description=None,
         )
         self.data_store.save_conflict_log(conflict_log=conflict_log)
+        return conflict_log
 
     def _format_stacktrace(self):
         parts = ["Traceback (most recent call last):\n"]
