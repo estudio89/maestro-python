@@ -1,13 +1,14 @@
 {
   "name": "maestro",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Maestro library for the Firestore backend.",
   "scripts": {
     "lint": "eslint --ext .js,.ts .",
     "build": "tsc",
     "start": "npm run shell",
     "test": "nyc ./node_modules/.bin/_mocha 'test/**/*.test.ts' && open coverage/index.html",
-    "debugTest": "./node_modules/mocha/bin/mocha --inspect-brk 'test/**/*.test.ts'"
+    "debugTest": "./node_modules/mocha/bin/mocha --inspect-brk 'test/**/*.test.ts'",
+    "publish": "npm run build && npm pack"
   },
   "nyc": {
     "extension": [

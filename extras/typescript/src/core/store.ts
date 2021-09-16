@@ -30,17 +30,20 @@ export abstract class BaseDataStore<T> {
         operation: Operation,
         entityName: string,
         itemId: string,
-        item: T
+        item: T,
+        timestamp: Date | undefined
     ) {
         let oldVersion = await this.getLocalVersion(itemId);
         let localVectorClock = oldVersion.vectorClock.clone();
-        let nowUTC = getNowUTC();
+        if (!timestamp) {
+            timestamp = getNowUTC();
+        }
         let changeVectorClockItem = new VectorClockItem(
             this.localProviderId,
-            nowUTC
+            timestamp
         );
 
-        localVectorClock.updateVectorClockItem(this.localProviderId, nowUTC);
+        localVectorClock.updateVectorClockItem(this.localProviderId, timestamp);
 
         let itemChange = new ItemChange(
             uuid(),
@@ -52,7 +55,7 @@ export abstract class BaseDataStore<T> {
             false,
             true,
             localVectorClock,
-            nowUTC
+            timestamp
         );
 
         await this.saveItemChange(itemChange, true);
@@ -95,12 +98,12 @@ export abstract class BaseDataStore<T> {
     serializeItem(item: T, entityName: string): SerializationResult {
         return this.itemSerializer.serializeItem(item, entityName);
     }
-    abstract async getItemVersion(
+    abstract getItemVersion(
         itemId: string
     ): Promise<ItemVersion | undefined>;
-    abstract async saveItemChange(
+    abstract saveItemChange(
         itemChange: ItemChange,
         isCreating: boolean
     ): Promise<void>;
-    abstract async saveItemVersion(itemVersion: ItemVersion): Promise<void>;
+    abstract saveItemVersion(itemVersion: ItemVersion): Promise<void>;
 }

@@ -61,7 +61,7 @@ export class FirestoreDataStore extends BaseDataStore<AppItem> {
     ): Promise<void> {
         const documentId = instance.id;
         const ref = this.db.collection(collection).doc(documentId);
-        delete instance["id"];
+        delete (instance as any)["id"];
         await ref.set(instance);
     }
 
