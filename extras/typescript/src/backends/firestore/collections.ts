@@ -40,10 +40,18 @@ export interface ItemVersionRecord extends FirestoreItem {
     vector_clock: VectorClockItemRecord[];
 }
 
+export enum QueuedOperationStatus {
+    PENDING = "pending",
+    ERROR = "error",
+    DONE = "done",
+}
+
 export interface QueuedOperation {
+    id: string;
     item_id: string;
     collection_name: string;
     operation: string;
     data: any;
     timestamp: admin.firestore.Timestamp | undefined;
+    status: QueuedOperationStatus
 }

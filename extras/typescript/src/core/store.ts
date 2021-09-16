@@ -31,7 +31,8 @@ export abstract class BaseDataStore<T> {
         entityName: string,
         itemId: string,
         item: T,
-        timestamp: Date | undefined
+        timestamp: Date | undefined,
+        id: string | undefined
     ) {
         let oldVersion = await this.getLocalVersion(itemId);
         let localVectorClock = oldVersion.vectorClock.clone();
@@ -46,7 +47,7 @@ export abstract class BaseDataStore<T> {
         localVectorClock.updateVectorClockItem(this.localProviderId, timestamp);
 
         let itemChange = new ItemChange(
-            uuid(),
+            id ?? uuid(),
             operation,
             this.serializeItem(item, entityName),
             changeVectorClockItem,
