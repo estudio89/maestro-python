@@ -113,12 +113,12 @@ class SyncOrchestrator:
                     vector_clock=target_vector_clock, query=query
                 )
 
-                target_provider.upload_changes(
-                    item_change_batch=item_change_batch, query=query
-                )
-
                 source_provider.events_manager.on_item_changes_sent(
                     item_changes=item_change_batch.item_changes
+                )
+
+                target_provider.upload_changes(
+                    item_change_batch=item_change_batch, query=query
                 )
 
                 new_target_vector_clock = item_change_batch.get_vector_clock_after_done(
