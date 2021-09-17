@@ -109,26 +109,30 @@ export function setupCommitQueue(
                 try {
                     await db.runTransaction(
                         async (transaction: FirebaseFirestore.Transaction) => {
-                            const refreshedDoc = await db
-                                .collection(queueCollectionName)
-                                .doc(queuedOperation.id)
-                                .get();
-                            const refreshedQueuedOperation =
-                                queuedOperationFromDoc(refreshedDoc);
-                            if (
-                                refreshedQueuedOperation.status !==
-                                QueuedOperationStatus.PENDING
-                            ) {
-                                console.log(
-                                    `Skipping change with id ${queuedOperation.id}. Status = ${refreshedQueuedOperation.status}`
-                                );
-                                return;
+                            try {
+                                dataStore.transaction = transaction;
+                                const docRef = db
+                                    .collection(queueCollectionName)
+                                    .doc(queuedOperation.id);
+                                const refreshedDoc = await transaction.get(docRef);
+                                const refreshedQueuedOperation =
+                                    queuedOperationFromDoc(refreshedDoc);
+                                if (
+                                    refreshedQueuedOperation.status !==
+                                    QueuedOperationStatus.PENDING
+                                ) {
+                                    console.log(
+                                        `Skipping change with id ${queuedOperation.id}. Status = ${refreshedQueuedOperation.status}`
+                                    );
+                                    return;
+                                }
+                                await processCommit(dataStore, db, queuedOperation);
+                                await transaction.update(docRef, {
+                                    status: QueuedOperationStatus.DONE,
+                                });
+                            } finally {
+                                dataStore.transaction = undefined;
                             }
-                            await processCommit(dataStore, db, queuedOperation);
-                            await db
-                                .collection(queueCollectionName)
-                                .doc(queuedOperation.id)
-                                .update({ status: QueuedOperationStatus.DONE });
                         }
                     );
 

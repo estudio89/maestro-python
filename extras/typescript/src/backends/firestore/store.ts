@@ -18,6 +18,8 @@ import {
 import { typeToCollection } from "./utils";
 
 export class FirestoreDataStore extends BaseDataStore<AppItem> {
+    transaction: FirebaseFirestore.Transaction | undefined;
+
     constructor(
         protected localProviderId: string,
         protected itemVersionMetadataConverter: ItemVersionMetadataConverter,
@@ -60,9 +62,13 @@ export class FirestoreDataStore extends BaseDataStore<AppItem> {
         collection: string
     ): Promise<void> {
         const documentId = instance.id;
-        const ref = this.db.collection(collection).doc(documentId);
+        let ref = this.db.collection(collection).doc(documentId);
         delete (instance as any)["id"];
-        await ref.set(instance);
+        if (!!this.transaction) {
+            this.transaction.set(ref, instance);
+        } else {
+            await ref.set(instance);
+        }
     }
 
     private async saveProviderId(vectorClockItem: VectorClockItemRecord) {
