@@ -40,10 +40,12 @@ class ConflictResolver:
     ) -> "ConflictResolution":
         """Selects the winning change between two conflicting changes. It applies the following resolution rules for each type of conflict:
 
-            ConflictType.LOCAL_UPDATE_REMOTE_UPDATE - Most recent change wins
+            ConflictType.LOCAL_UPDATE_REMOTE_UPDATE, ConflictType.LOCAL_DELETE_REMOTE_DELETE, ConflictType.LOCAL_INSERT_REMOTE_UPDATE,
+            ConflictType.LOCAL_UPDATE_REMOTE_INSERT - Most recent change wins
+
             ConflictType.LOCAL_UPDATE_REMOTE_DELETE - Deletion wins
+            
             ConflictType.LOCAL_DELETE_REMOTE_UPDATE - Deletion wins
-            ConflictType.LOCAL_DELETE_REMOTE_DELETE - Local change wins
 
         Args:
             conflict_type (ConflictType): Type of conflict
