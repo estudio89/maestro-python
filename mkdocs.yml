@@ -12,6 +12,13 @@ theme:
     - navigation.tracking
     - navigation.tabs
 
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  
 nav:
   - Home: 'index.md'
   - 'Getting started':

@@ -34,11 +34,16 @@ Then, define some basic settings to instruct maestro about what needs to be sync
 
 ```python
 MAESTRO = {
-    "MODELS": [ # This indicates which models will be sinchronized
+    # This indicates which models will be sinchronized
+    "MODELS": [
         "myapp.mymodel",
         "myapp.myothermodel",
     ],
-    "CHANGES_COMMITED_CALLBACK": "path.to.callback.function" # This is the path to a function that will be called whenever changes are made to any of the models above at the end of a request
+
+    # This is the path to a function that will be called
+    # at the end of a request whenever
+    # changes are made to any of the models listed
+    "CHANGES_COMMITED_CALLBACK": "path.to.callback.function"
 }
 ```
 
@@ -70,6 +75,7 @@ def start_sync(initial_source_provider_id: "str"):
     # Firestore
     firestore_provider = create_firestore_provider()
 
+    # Sync lock
     sync_lock = maestro.backends.django.DjangoSyncLock()
 
     # Orchestrator
