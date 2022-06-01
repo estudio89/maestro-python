@@ -6,6 +6,7 @@ repo_url: https://github.com/estudio89/maestro-python
 theme:
   name: material
   logo: img/maestro-transparent.png
+  favicon: img/favicon.ico
   features:
     - navigation.instant
     - navigation.tracking
@@ -13,7 +14,11 @@ theme:
 
 nav:
   - Home: 'index.md'
-  - 'Getting started': 'getting-started/index.md'
+  - 'Getting started':
+    - 'Installation and set up': 'getting-started/index.md'
+    - 'Django backend': 'getting-started/django.md'
+    - 'Firestore backend': 'getting-started/firestore.md'
+    - 'MongoDB backend': 'getting-started/mongo.md'
   - 'API reference':
     - core:
       - events: 'api-reference/core/events.md'
