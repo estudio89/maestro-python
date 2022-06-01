@@ -7,7 +7,11 @@ from typing import List, Optional, Dict, cast
 
 
 class VectorClockItem:
-    """Stores the timestamp from a specific provider"""
+    """Stores the timestamp from a specific provider.
+
+    Attributes:
+        provider_id (str): The identifier of the node that owns this clock.
+        timestamp (datetime): The timestamp."""
 
     provider_id: "str"
     timestamp: "dt.datetime"
@@ -162,7 +166,7 @@ class VectorClock:
 
 class Operation(Enum):
 
-    """Represents an operation that can be performed to an item."""
+    """Represents an operation that can be performed on an item."""
 
     INSERT = "INSERT"
     UPDATE = "UPDATE"

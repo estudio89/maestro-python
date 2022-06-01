@@ -1,4 +1,5 @@
 class SyncTimeoutException(Exception):
+    '''Raised when the synchronization session exceeds its timeout.'''
     def __init__(self, elapsed_time, max_duration_seconds: "int"):
         super().__init__(
             "Sync session timed out. Max duration: %d. Elapsed time: %d"

@@ -215,7 +215,8 @@ class ItemVersionMetadataConverter(DataStoreAccessConverter):
         self.vector_clock_converter = vector_clock_converter
         super().__init__()
 
-    def to_metadata(self, record: "ItemVersionRecord") -> "ItemVersion":
+    def to_metadata(self,
+        record: "ItemVersionRecord") -> "ItemVersion":
         item_changes = self.data_store.find_item_changes(
             ids=[record["current_item_change_id"]]
         )
@@ -232,7 +233,8 @@ class ItemVersionMetadataConverter(DataStoreAccessConverter):
             vector_clock=vector_clock,
         )
 
-    def to_record(self, metadata_object: "ItemVersion") -> "ItemVersionRecord":
+    def to_record(self,
+        metadata_object: "ItemVersion") -> "ItemVersionRecord":
 
         vector_clock = self.vector_clock_converter.to_record(
             metadata_object=metadata_object.vector_clock

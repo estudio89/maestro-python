@@ -38,6 +38,8 @@ def _check_filter(
 def query_filter_to_lambda(
     filter: "Filter", item_field_getter: "Callable[[Any, str], Any]"
 ) -> "Callable[[Any], bool]":
+    """Converts a filter to a lambda function."""
+
     return lambda item: _check_filter(
         child=filter, item=item, item_field_getter=item_field_getter
     )

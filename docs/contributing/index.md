@@ -92,6 +92,12 @@ By default, the documentation will be available at http://localhost:8000. If you
 
     mkdocs server -a 0.0.0.0:3030
 
+### API reference
 
+The API reference docs are built using the library [mkgendocs](https://github.com/davidenunes/mkgendocs). In order to rebuild the documents, run the command:
+
+    gendocs --config mkgendocs.yml
+
+The settings for how the reference docs are generated are all in the file `mkgendocs.yml`. Remember that when a new page is generated, it's necessary to add a reference to it in the `mkdocs.yml` file as well.
 
 

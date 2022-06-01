@@ -17,7 +17,13 @@ class Comparator(Enum):
 
 
 class Comparison:
-    """Stores a comparison that can be done to a field, such as field1 > 2, field1 == 3, etc."""
+    """Stores a comparison that can be done to a field, such as field1 > 2, field1 == 3, etc.
+
+    Attributes:
+        field_name (str): The name of the field to compare.
+        comparator (Comparator): The comparison operation to perform.
+        value (Any): The value to compare against.
+    """
 
     field_name: "str"
     comparator: "Comparator"
@@ -153,7 +159,11 @@ class Filter:
 
 
 class SortOrder:
-    """Stores an ordering instruction for a particular field"""
+    """Stores an ordering instruction for a particular field.
+
+    Attributes:
+        field_name (str): The name of the field to order by.
+        descending (bool): Whether or not to order in descending order."""
 
     field_name: "str"
     descending: "bool"
@@ -229,6 +239,12 @@ class Query:
 
 
 class TrackedQuery:
+    ''' Represents a query being tracked by a provider node.
+
+    Attributes:
+        query (Query): The query being tracked
+        vector_clock (VectorClock): The vector clock for this query
+    '''
     query: "Query"
     vector_clock: "VectorClock"
 

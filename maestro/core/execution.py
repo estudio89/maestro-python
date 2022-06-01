@@ -13,7 +13,15 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 class ConflictCheckResult(NamedTuple):
-    """Stores the result of a conflict check."""
+    """Stores the result of a conflict check.
+
+    Attributes:
+        has_conflict (bool): True if there is a conflict, False otherwise.
+        conflict_type (ConflictType): The type of conflict that was detected.
+        local_item_change (Optional[ItemChange]): The change that was made locally.
+        remote_item_change (Optional[ItemChange]): The change that was made remotely.
+        local_version (ItemVersion): The version of the local item.
+    """
 
     has_conflict: "bool"
     conflict_type: "Optional[ConflictType]"
@@ -23,7 +31,12 @@ class ConflictCheckResult(NamedTuple):
 
 
 class ConflictResolution(NamedTuple):
-    """Stores information about which change won and which lost a conflict. """
+    """Stores information about which change won and which lost a conflict.
+
+    Attributes:
+        item_change_loser (ItemChange): The change that lost the conflict.
+        item_change_winner (ItemChange): The change that won the conflict.
+    """
 
     item_change_loser: "ItemChange"
     item_change_winner: "ItemChange"
@@ -44,7 +57,7 @@ class ConflictResolver:
             ConflictType.LOCAL_UPDATE_REMOTE_INSERT - Most recent change wins
 
             ConflictType.LOCAL_UPDATE_REMOTE_DELETE - Deletion wins
-            
+
             ConflictType.LOCAL_DELETE_REMOTE_UPDATE - Deletion wins
 
         Args:

@@ -1,0 +1,224 @@
+sources_dir: docs/api-reference
+templates_dir: docs/templates
+repo: https://github.com/estudio89/estudio89/maestro-python
+version: master
+
+pages:
+    # core
+    - page: "core/events.md"
+      source: "maestro/core/events.py"
+      classes:
+          - EventsManager
+
+    - page: "core/exceptions.md"
+      source: "maestro/core/exceptions.py"
+      classes:
+          - SyncTimeoutException
+          - ItemNotFoundException
+
+    - page: "core/execution.md"
+      source: "maestro/core/execution.py"
+      classes:
+          - ConflictCheckResult
+          - ConflictResolution
+          - ConflictResolver
+          - ChangesExecutor
+
+    - page: "core/metadata.md"
+      source: "maestro/core/metadata.py"
+      classes:
+          - VectorClockItem
+          - VectorClock
+          - Operation
+          - SerializationResult
+          - ItemChange
+          - ItemChangeBatch
+          - ItemVersion
+          - ConflictStatus
+          - ConflictType
+          - ConflictLog
+          - SyncSessionStatus
+          - SyncSession
+
+    - page: "core/orchestrator.md"
+      source: "maestro/core/orchestrator.py"
+      classes:
+          - SyncOrchestrator
+
+    - page: "core/provider.md"
+      source: "maestro/core/provider.py"
+      classes:
+          - BaseSyncProvider
+
+    - page: "core/serializer.md"
+      source: "maestro/core/serializer.py"
+      classes:
+          - BaseItemSerializer
+          - BaseMetadataSerializer
+          - MetadataSerializer
+          - RawDataStoreJSONSerializer
+
+    - page: "core/store.md"
+      source: "maestro/core/store.py"
+      classes:
+          - BaseDataStore
+
+    - page: "core/utils.md"
+      source: "maestro/core/utils.py"
+      classes:
+          - BaseSyncLock
+          - BaseMetadataConverter
+          - SyncTimer
+      functions:
+          - get_now_utc
+          - parse_datetime
+          - is_iterable
+          - make_hashable
+
+    # core/query/
+    - page: "core/query/metadata.md"
+      source: "maestro/core/query/metadata.py"
+      classes:
+          - Comparator
+          - Comparison
+          - Connector
+          - Filter
+          - SortOrder
+          - Query
+          - TrackedQuery
+
+    - page: "core/query/store.md"
+      source: "maestro/core/query/store.py"
+      classes:
+        - TrackQueriesStoreMixin
+
+    - page: "core/query/utils.md"
+      source: "maestro/core/query/utils.py"
+      functions:
+        - query_filter_to_lambda
+
+    # backends/base_nosql
+    - page: "backends/base_nosql/collections.md"
+      source: "maestro/backends/base_nosql/collections.py"
+      classes:
+        - CollectionType
+        - VectorClockItemRecord
+        - ItemChangeRecord
+        - ItemVersionRecord
+        - ConflictLogRecord
+        - SyncSessionRecord
+        - ComparisonRecord
+        - FilterRecord
+        - SortOrderRecord
+        - QueryRecord
+        - TrackedQueryRecord
+
+    - page: "backends/base_nosql/converters.md"
+      source: "maestro/backends/base_nosql/converters.py"
+      classes:
+        - DateConverter
+        - NoSQLConverter
+        - DataStoreAccessConverter
+        - SyncSessionMetadataConverter
+        - ConflictLogMetadataConverter
+        - VectorClockItemMetadataConverter
+        - VectorClockMetadataConverter
+        - ItemVersionMetadataConverter
+        - ItemChangeMetadataConverter
+        - SortOrderConverter
+        - ComparisonMetadataConverter
+        - FilterMetadataConverter
+        - QueryMetadataConverter
+        - TrackedQueryMetadataConverter
+
+    - page: "backends/base_nosql/provider.md"
+      source: "maestro/backends/base_nosql/provider.py"
+      classes:
+        - NoSQLSyncProvider
+
+    - page: "backends/base_nosql/serializer.md"
+      source: "maestro/backends/base_nosql/serializer.py"
+      classes:
+        - NoSQLItemSerializer
+
+    - page: "backends/base_nosql/store.md"
+      source: "maestro/backends/base_nosql/store.py"
+      classes:
+        - NoSQLDataStore
+
+    - page: "backends/base_nosql/utils.md"
+      source: "maestro/backends/base_nosql/utils.py"
+      functions:
+        - entity_name_to_collection
+        - collection_to_entity_name
+        - type_to_collection
+
+    # backends/django
+    - page: "backends/django/converters.md"
+      source: "maestro/backends/django/converters.py"
+      classes:
+        - SyncSessionMetadataConverter
+        - ItemVersionMetadataConverter
+        - ItemChangeMetadataConverter
+        - ConflictLogMetadataConverter
+        - VectorClockMetadataConverter
+
+    - page: "backends/django/models.md"
+      source: "maestro/backends/django/models.py"
+      classes:
+        - ItemChangeRecord
+        - SyncLockRecord
+        - ItemVersionRecord
+        - ConflictLogRecord
+        - SyncSessionRecord
+
+    - page: "backends/django/provider.md"
+      source: "maestro/backends/django/provider.py"
+      classes:
+        - DjangoSyncProvider
+
+    - page: "backends/django/serializer.md"
+      source: "maestro/backends/django/serializer.py"
+      classes:
+        - DjangoItemSerializer
+
+    - page: "backends/django/store.md"
+      source: "maestro/backends/django/store.py"
+      classes:
+        - DjangoDataStore
+
+    - page: "backends/django/utils.md"
+      source: "maestro/backends/django/utils.py"
+      functions:
+        - app_model_to_entity_name
+        - entity_name_to_app_model
+        - entity_name_to_content_type
+        - content_type_to_entity_name
+        - model_to_entity_name
+      classes:
+        - DjangoSyncLockContext
+        - DjangoSyncLock
+
+    - page: "backends/django/contrib/factory.md"
+      source: "maestro/backends/django/contrib/factory.py"
+      functions:
+        - create_django_data_store
+        - create_django_provider
+
+    - page: "backends/django/contrib/middleware.md"
+      source: "maestro/backends/django/contrib/middleware.py"
+      classes:
+        - SyncQueueMiddleware
+
+    - page: "backends/django/contrib/migrate.md"
+      source: "maestro/backends/django/contrib/migrate.py"
+      functions:
+        - commit_model_changes
+
+    - page: "backends/django/contrib/model_dependencies.md"
+      source: "maestro/backends/django/contrib/model_dependencies.py"
+      functions:
+        - get_model_dependencies
+        - print_model_dependencies
+
+    

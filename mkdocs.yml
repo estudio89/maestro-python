@@ -14,6 +14,40 @@ theme:
 nav:
   - Home: 'index.md'
   - 'Getting started': 'getting-started/index.md'
-  - 'API reference': 'api-reference/index.md'
-  - Contributing: 'contributing/index.md'
+  - 'API reference':
+    - core:
+      - events: 'api-reference/core/events.md'
+      - exceptions: 'api-reference/core/exceptions.md'
+      - execution: 'api-reference/core/execution.md'
+      - metadata: 'api-reference/core/metadata.md'
+      - orchestrator: 'api-reference/core/orchestrator.md'
+      - provider: 'api-reference/core/provider.md'
+      - serializer: 'api-reference/core/serializer.md'
+      - store: 'api-reference/core/store.md'
+      - utils: 'api-reference/core/utils.md'
+      - query:
+        - metadata: 'api-reference/core/query/metadata.md'
+        - store: 'api-reference/core/query/store.md'
+        - utils: 'api-reference/core/query/utils.md'
+    - backends:
+      - base_nosql:
+        - collections: "api-reference/backends/base_nosql/collections.md"
+        - converters: "api-reference/backends/base_nosql/converters.md"
+        - provider: "api-reference/backends/base_nosql/provider.md"
+        - serializer: "api-reference/backends/base_nosql/serializer.md"
+        - store: "api-reference/backends/base_nosql/store.md"
+        - utils: "api-reference/backends/base_nosql/utils.md"
+      - django:
+        - converters: "api-reference/backends/django/converters.md"
+        - models: "api-reference/backends/django/models.md"
+        - provider: "api-reference/backends/django/provider.md"
+        - serializer: "api-reference/backends/django/serializer.md"
+        - store: "api-reference/backends/django/store.md"
+        - utils: "api-reference/backends/django/utils.md"
+        - contrib:
+          - factory: "api-reference/backends/django/contrib/factory.md"
+          - middleware: "api-reference/backends/django/contrib/middleware.md"
+          - migrate: "api-reference/backends/django/contrib/migrate.md"
+          - model_dependencies: "api-reference/backends/django/contrib/model_dependencies.md"
 
+  - Contributing: 'contributing/index.md'
