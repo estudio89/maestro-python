@@ -19,4 +19,4 @@ This library was created for a particular purpose: being able to synchronize dat
 It currently is able to synchronize data between Django (and all databases it supports), Firestore and MongoDB.
 
 
-[logo-img]: https://raw.githubusercontent.com/estudio89/maestro-python/dev/docs/img/maestro.png
+[logo-img]: https://github.com/estudio89/maestro-python/raw/develop/docs/img/maestro.png
