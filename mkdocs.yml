@@ -1,0 +1,19 @@
+site_name: Maestro
+site_description: Maestro - Keeping your data in sync
+
+repo_url: https://github.com/estudio89/maestro-python
+
+theme:
+  name: material
+  logo: img/maestro-transparent.png
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+
+nav:
+  - Home: 'index.md'
+  - 'Getting started': 'getting-started/index.md'
+  - 'API reference': 'api-reference/index.md'
+  - Contributing: 'contributing/index.md'
+

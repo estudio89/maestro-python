@@ -19,3 +19,4 @@ dev.test.ts
 extras/typescript/lib/
 extras/typescript/*.tgz
 .vscode/
+/site/
