@@ -1,0 +1,11 @@
+<h1>Firebase Todo List</h1>
+<div class="list-wrapper">
+    <p *ngIf="items.length === 0" class="empty">This list looks pretty empty, how about adding an item?</p>
+    <app-todo-item
+        *ngFor="let item of items; trackBy: trackById"
+        [item]="item"
+        (change)="onChange(item)"
+        (delete)="onDelete(item)">
+    </app-todo-item>
+</div>
+<button class="btn-add" (click)="onAdd()">+</button>

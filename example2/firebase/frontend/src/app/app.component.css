@@ -1,0 +1,47 @@
+h1 {
+  text-align: center;
+}
+
+.list-wrapper {
+  max-width: 500px;
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.btn-add {
+  position: fixed;
+  right: calc(50% - 40px);
+  bottom: 10%;
+  background: #4254b3;
+  border-radius: 50%;
+  width: 80px;
+  height: 80px;
+  color: #ffffff;
+  font-size: 20px;
+  border: none;
+  box-shadow: 0px 5px 8px rgb(0 0 0 / 57%);
+  cursor: pointer;
+}
+
+.btn-delete {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.todo-wrapper:hover .btn-delete {
+  opacity: 1;
+}
+
+.btn-delete svg {
+  width: 18px;
+  fill: #c04d4d;
+}
+
+.empty {
+  text-align: center;
+}
