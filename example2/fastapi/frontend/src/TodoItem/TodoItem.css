@@ -1,0 +1,30 @@
+input[type=text] {
+	font-family: inherit;
+	margin: 0.8rem 0;
+	font-size: 1.1rem;
+	border-radius: 8px;
+	padding: 10px 8px;
+	border-style: solid;
+	border-width: 2px;
+    border-color: transparent;
+    transition: border-color 0.2s;
+}
+
+input:focus,
+input:hover {
+	border-color: #4254b3b0;
+}
+
+.todo-wrapper {
+	display: flex;
+	align-items: center;
+	box-shadow: 1px 1px 9px rgb(0 0 0 / 28%);
+	border-radius: 10px;
+	gap: 10px;
+	padding: 0 24px;
+	color: rgba(0, 0, 0, 0.7);
+}
+
+.todo-wrapper input[type=text] {
+    flex-grow: 1;
+}
