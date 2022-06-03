@@ -27,7 +27,6 @@ function App() {
     }
 
     function handleDelete(item) {
-        console.log('delete', item);
         todoAPI.delete(item);
         setItems(items.filter((i) => i.id !== item.id));
     }
