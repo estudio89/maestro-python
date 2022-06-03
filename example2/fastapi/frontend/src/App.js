@@ -8,7 +8,7 @@ const uuidv4 = () => {
         /[xy]/g,
         function (c) {
             var r = (Math.random() * 16) | 0,
-                v = c == "x" ? r : (r & 0x3) | 0x8;
+                v = c === "x" ? r : (r & 0x3) | 0x8;
             return v.toString(16);
         }
     );
@@ -36,6 +36,7 @@ function App() {
             id: uuidv4(),
             text: '',
             done: false,
+            date: new Date().toISOString()
         };
         todoAPI.create(newItem);
         setItems([...items, newItem]);
@@ -47,7 +48,7 @@ function App() {
 
     return (
         <div className="App">
-            <h1>FastAPI Todo List</h1>
+            <h1>FastAPI + React + MongoDB</h1>
             <div className="list-wrapper">
                 {items.length === 0 && <p className="empty">This list looks pretty empty, how about adding an item?</p>}
                 {items.map(item => (

@@ -7,3 +7,5 @@ To start the project:
 - Run frontend app:
 
     npm start
+
+- Run mongo

@@ -7,11 +7,14 @@ input[type=text] {
 	border-style: solid;
 	border-width: 2px;
     border-color: transparent;
-    transition: border-color 0.2s;
+    transition: all 0.2s;
 }
 
-input:focus,
 input:hover {
+    background-color: #F5F5F5;
+}
+
+input:focus {
 	border-color: #4254b3b0;
 }
 

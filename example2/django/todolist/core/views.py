@@ -6,11 +6,11 @@ from core.serializers import TodoSerializer
 
 
 class TodoListCreate(generics.ListCreateAPIView):
-    queryset = Todo.objects.all()
+    queryset = Todo.objects.order_by("date")
     serializer_class = TodoSerializer
 
 class TodoRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Todo.objects.all()
+    queryset = Todo.objects.order_by("date")
     serializer_class = TodoSerializer
 
 def home(request):

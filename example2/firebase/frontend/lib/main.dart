@@ -1,11 +1,19 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:frontend/repository.dart';
 import 'package:frontend/todo_item.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:uuid/uuid.dart';
 
+import 'firebase_options.dart';
 import 'models.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  FirebaseFirestore.instance.useFirestoreEmulator("10.222.0.5", 7070);
   runApp(const MyApp());
 }
 
@@ -16,37 +24,17 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
         primarySwatch: Colors.blue,
+        fontFamily: "Ubuntu",
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MyHomePage(),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({Key? key, required this.title}) : super(key: key);
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+  const MyHomePage({Key? key}) : super(key: key);
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
@@ -66,13 +54,31 @@ class _MyHomePageState extends State<MyHomePage> {
     return Scaffold(
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 400),
+          constraints: const BoxConstraints(maxWidth: 500),
           child: ListView(
             children: [
+              const SizedBox(height: 16),
+              Text(
+                "Flutter Web + Cloud Firestore",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black.withAlpha(200)),
+              ),
+              const SizedBox(height: 21),
               if (_items.isEmpty)
-                const Text(
-                  "This list looks pretty empty, how about adding an item?",
-                  textAlign: TextAlign.center,
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text(
+                    "This list looks pretty empty, how about adding an item?",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w400,
+                      color: Colors.black.withAlpha(200),
+                    ),
+                  ),
                 ),
               ..._items
                   .map((item) => TodoItem(
@@ -86,10 +92,16 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: FloatingActionButton.large(
+        backgroundColor: const Color(0xFF4254B3),
         onPressed: _onAdd,
         tooltip: 'Add todo',
-        child: const Icon(Icons.add),
+        child: const Icon(
+          Icons.add,
+          color: Colors.white,
+          size: 14,
+        ),
       ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
@@ -100,7 +112,6 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   _onChange(Todo item) {
-    print("Change $item");
     setState(() {
       final idx = _items.indexOf(item);
       _items[idx] = item;
@@ -109,18 +120,15 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   _onDelete(Todo item) {
-    print("Delete $item");
     setState(() {
-      print("Before $_items");
       _items = _items.where((i) => i.id != item.id).toList();
-      print("After $_items");
     });
     todoRepository.delete(item);
   }
 
   _onAdd() {
-    final newItem = Todo(id: const Uuid().v4(), text: "", done: false);
-    print("Add $newItem");
+    final newItem = Todo(
+        id: const Uuid().v4(), text: "", done: false, date: Timestamp.now());
     setState(() {
       _items.add(newItem);
     });

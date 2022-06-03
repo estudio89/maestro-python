@@ -26,10 +26,30 @@
   <meta name="apple-mobile-web-app-title" content="frontend">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
-  <title>frontend</title>
+  <title>Maestro</title>
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script>
+    // Your web app's Firebase configuration
+    const firebaseConfig = {
+      apiKey: "...",
+      authDomain: "...",
+      databaseURL: "...",
+      projectId: "...",
+      storageBucket: "...",
+      messagingSenderId: "...",
+      appId: "..."
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+
+    var db = firebase.firestore();
+    db.useEmulator("10.222.0.5", 7070);
+  </script>
   <!-- This script installs service_worker.js to provide PWA functionality to
        application. For more information, see:
        https://developers.google.com/web/fundamentals/primers/service-workers -->
