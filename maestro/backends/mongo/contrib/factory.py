@@ -1,3 +1,4 @@
+from maestro.backends.base_nosql.converters import QueryMetadataConverter
 from maestro.core.events import EventsManager
 from maestro.core.execution import ChangesExecutor, ConflictResolver
 from maestro.backends.mongo import (
@@ -9,10 +10,58 @@ from maestro.backends.mongo import (
     MongoDataStore,
     MongoItemSerializer,
     MongoSyncProvider,
-    TrackedQueryMetadataConverter
+    TrackedQueryMetadataConverter,
 )
 from pymongo import MongoClient
 import datetime as dt
+
+
+def create_mongo_store(
+    client: MongoClient,
+    database_name: "str",
+    provider_id="mongo",
+    sync_session_metadata_converter=SyncSessionMetadataConverter(),
+    item_version_metadata_converter=None,
+    item_change_metadata_converter=None,
+    conflict_log_metadata_converter=ConflictLogMetadataConverter(),
+    vector_clock_metadata_converter=VectorClockMetadataConverter(),
+    item_serializer=MongoItemSerializer(),
+    tracked_query_metadata_converter=None,
+) -> MongoDataStore:
+    if item_version_metadata_converter is None:
+        item_version_metadata_converter = ItemVersionMetadataConverter(
+            vector_clock_converter=vector_clock_metadata_converter
+        )
+
+    if item_change_metadata_converter is None:
+        item_change_metadata_converter = ItemChangeMetadataConverter(
+            item_serializer=item_serializer,
+            vector_clock_converter=vector_clock_metadata_converter,
+        )
+
+    if tracked_query_metadata_converter is None:
+        tracked_query_metadata_converter = TrackedQueryMetadataConverter(
+            vector_clock_converter=vector_clock_metadata_converter,
+            query_converter=QueryMetadataConverter(),
+        )
+    data_store = MongoDataStore(
+        local_provider_id=provider_id,
+        sync_session_metadata_converter=sync_session_metadata_converter,
+        item_version_metadata_converter=item_version_metadata_converter,
+        item_change_metadata_converter=item_change_metadata_converter,
+        conflict_log_metadata_converter=conflict_log_metadata_converter,
+        vector_clock_metadata_converter=vector_clock_metadata_converter,
+        tracked_query_metadata_converter=tracked_query_metadata_converter,
+        item_serializer=item_serializer,
+        db=client[database_name],
+        client=client,
+    )
+
+    sync_session_metadata_converter.data_store = data_store
+    item_version_metadata_converter.data_store = data_store
+    conflict_log_metadata_converter.data_store = data_store
+
+    return data_store
 
 
 def create_mongo_provider(
@@ -27,6 +76,7 @@ def create_mongo_provider(
     vector_clock_metadata_converter=VectorClockMetadataConverter(),
     item_serializer=MongoItemSerializer(),
     events_manager_class=EventsManager,
+    tracked_query_metadata_converter=None,
 ):  # pragma: no cover
 
     if item_version_metadata_converter is None:
@@ -41,18 +91,18 @@ def create_mongo_provider(
         )
 
     client = MongoClient(connect_uri, tz_aware=True, tzinfo=dt.timezone.utc)
-    db = client[database_name]
 
-    data_store = MongoDataStore(
-        local_provider_id=provider_id,
+    data_store = create_mongo_store(
+        client=client,
+        database_name=database_name,
+        provider_id=provider_id,
         sync_session_metadata_converter=sync_session_metadata_converter,
         item_version_metadata_converter=item_version_metadata_converter,
         item_change_metadata_converter=item_change_metadata_converter,
         conflict_log_metadata_converter=conflict_log_metadata_converter,
         vector_clock_metadata_converter=vector_clock_metadata_converter,
         item_serializer=item_serializer,
-        db=db,
-        client=client,
+        tracked_query_metadata_converter=tracked_query_metadata_converter
     )
 
     sync_session_metadata_converter.data_store = data_store
