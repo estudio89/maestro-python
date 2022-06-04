@@ -5,8 +5,10 @@
 Install using `pip`:
 
 ```
-pip install maestro-python
+pip install maestro-python[django,mongo,firestore]
 ```
+
+The command above will install all dependencies for all the supported backends.
 
 ## Setting up Django backend
 
@@ -95,3 +97,72 @@ To finish things off, run Django's `migrate` command so that Maestro creates the
 ## Setting up Firestore backend
 
 ## Setting up MongoDB backend
+
+After installation, all you need to do is notify maestro whenever one of the collections that you'd like to keep in sync is modified. For that, you'll need to call the `commit_item_change` method of the `MongoDataStore` class.
+
+First, create an instance of the store:
+
+```python
+from maestro.backends.mongo.contrib.factory import create_mongo_store
+from pymongo import MongoClient
+
+client = MongoClient("mongodb://host:port/")
+maestro_store = create_mongo_store(
+    client=client, database_name="example-db"
+)
+```
+
+Then, call the `commit_item_change` method whenever changes are made:
+
+- When a new document is **created**:
+
+```python
+from maestro.core.metadata import Operation
+
+maestro_store.commit_item_change(
+    operation=Operation.INSERT,
+    entity_name="collection_name",
+    item_id="item_id",
+    item={
+        "id":"item_id",
+        "collection_name": "collection_name",
+        "some_property": "some_property"
+    }
+)
+```
+
+An important thing to notice here is that when the method is called, a dictionary is expected for the `item` parameter and it should at least have the properties `id` (the item's primary key) and `collection_name` (the collection where the document is stored).
+
+- When a document is **updated** (pretty much the same, but with a different `Operation`):
+
+```python
+from maestro.core.metadata import Operation
+
+maestro_store.commit_item_change(
+    operation=Operation.UPDATE,
+    entity_name="collection_name",
+    item_id="item_id",
+    item={
+        "id":"item_id",
+        "collection_name": "collection_name",
+        "some_property": "some_property"
+    }
+)
+```
+
+- When a document is **deleted** (pretty much the same, but with a different `Operation`):
+
+```python
+from maestro.core.metadata import Operation
+
+maestro_store.commit_item_change(
+    operation=Operation.DELETE,
+    entity_name="collection_name",
+    item_id="item_id",
+    item={
+        "id":"item_id",
+        "collection_name": "collection_name",
+        "some_property": "some_property"
+    }
+)
+```
