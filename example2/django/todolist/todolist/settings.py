@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'maestro.backends.django',
     'core',
 ]
 
@@ -48,6 +49,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'maestro.backends.django.contrib.middleware.SyncQueueMiddleware',
 ]
 
 ROOT_URLCONF = 'todolist.urls'
@@ -119,3 +121,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/3.1/howto/static-files/
 
 STATIC_URL = '/static/'
+
+MAESTRO = {
+    'MODELS': ['core.todo'],
+    'CHANGES_COMMITTED_CALLBACK': 'core.sync.on_changes_committed'
+}

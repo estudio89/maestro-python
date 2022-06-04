@@ -1,5 +1,7 @@
 from django.db import models
 from django.utils import timezone
+
+
 class Todo(models.Model):
     id = models.UUIDField(primary_key=True)
     text = models.TextField(null=False)

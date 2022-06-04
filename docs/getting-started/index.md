@@ -43,7 +43,7 @@ MAESTRO = {
     # This is the path to a function that will be called
     # at the end of a request whenever
     # changes are made to any of the models listed
-    "CHANGES_COMMITED_CALLBACK": "path.to.callback.function"
+    "CHANGES_COMMITTED_CALLBACK": "path.to.callback.function"
 }
 ```
 
