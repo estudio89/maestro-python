@@ -360,7 +360,7 @@ class MongoDataStore(TrackQueriesStoreMixin, NoSQLDataStore):
                 try:
                     self.db[collection_name].find_one_and_update(
                         filter={"_id": str(item_change.serialization_result.item_id)},
-                        update={"$set": {"_lock": uuid.uuid4()}},
+                        update={"$set": {"_lock": str(uuid.uuid4())}},
                         session=self.session,
                     )
                     callback()
