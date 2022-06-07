@@ -2,144 +2,162 @@ import { BaseDataStore } from "../../core/store";
 import { ItemVersion, ItemChange } from "../../core/metadata";
 import { FirestoreAppItemSerializer } from "./serializer";
 import {
-    ItemVersionMetadataConverter,
-    ItemChangeMetadataConverter,
+	ItemVersionMetadataConverter,
+	ItemChangeMetadataConverter,
 } from "./converters";
 import { BaseMetadataConverter } from "../../core/converter";
 import * as admin from "firebase-admin";
 import {
-    CollectionType,
-    AppItem,
-    FirestoreItem,
-    ItemVersionRecord,
-    ItemChangeRecord,
-    VectorClockItemRecord,
+	CollectionType,
+	AppItem,
+	FirestoreItem,
+	ItemVersionRecord,
+	ItemChangeRecord,
+	VectorClockItemRecord,
 } from "./collections";
 import { typeToCollection } from "./utils";
 
 export class FirestoreDataStore extends BaseDataStore<AppItem> {
-    transaction: FirebaseFirestore.Transaction | undefined;
+	transaction: FirebaseFirestore.Transaction | undefined;
 
-    constructor(
-        protected localProviderId: string,
-        protected itemVersionMetadataConverter: ItemVersionMetadataConverter,
-        protected itemChangeMetadataConverter: ItemChangeMetadataConverter,
-        protected itemSerializer: FirestoreAppItemSerializer,
-        private db: admin.firestore.Firestore
-    ) {
-        super(
-            localProviderId,
-            itemVersionMetadataConverter as BaseMetadataConverter<
-                ItemVersion,
-                any
-            >,
-            itemChangeMetadataConverter as BaseMetadataConverter<
-                ItemChange,
-                any
-            >,
-            itemSerializer
-        );
-    }
+	constructor(
+		protected localProviderId: string,
+		protected itemVersionMetadataConverter: ItemVersionMetadataConverter,
+		protected itemChangeMetadataConverter: ItemChangeMetadataConverter,
+		protected itemSerializer: FirestoreAppItemSerializer,
+		private db: admin.firestore.Firestore
+	) {
+		super(
+			localProviderId,
+			itemVersionMetadataConverter as BaseMetadataConverter<
+				ItemVersion,
+				any
+			>,
+			itemChangeMetadataConverter as BaseMetadataConverter<
+				ItemChange,
+				any
+			>,
+			itemSerializer
+		);
+	}
 
-    public documentToRawInstance(
-        document: admin.firestore.DocumentSnapshot
-    ): FirestoreItem {
-        return {
-            id: document.id,
-            ...document.data(),
-        };
-    }
+	private convertTimestampsToDate(data: any): any {
+		for (let key in data) {
+			if (Array.isArray(data[key]) && data[key].length > 0) {
+				data[key] = data[key].map((item: any) =>
+					this.convertTimestampsToDate(item)
+				);
+			} else if (typeof data[key]["toDate"] === "function") {
+				data[key] = data[key].toDate();
+			} else if (typeof data[key] === "object") {
+				data[key] = this.convertTimestampsToDate(data[key]);
+			}
+		}
 
-    private getCollectionQuery(
-        collectionType: CollectionType
-    ): admin.firestore.CollectionReference {
-        const collectionName = typeToCollection(collectionType);
-        return this.db.collection(collectionName);
-    }
+		return data;
+	}
 
-    private async save<T extends FirestoreItem>(
-        instance: T,
-        collection: string
-    ): Promise<void> {
-        const documentId = instance.id;
-        let ref = this.db.collection(collection).doc(documentId);
-        delete (instance as any)["id"];
-        if (!!this.transaction) {
-            this.transaction.set(ref, instance);
-        } else {
-            await ref.set(instance);
-        }
-    }
+	public documentToRawInstance(
+		document: admin.firestore.DocumentSnapshot
+	): FirestoreItem {
+		let data = document.data();
+		data = this.convertTimestampsToDate(data);
+		return {
+			id: document.id,
+			...data,
+		};
+	}
 
-    private async saveProviderId(vectorClockItem: VectorClockItemRecord) {
-        const collectionName = typeToCollection(CollectionType.PROVIDER_IDS);
-        await this.save(
-            {
-                id: vectorClockItem.provider_id,
-                timestamp: vectorClockItem.timestamp,
-            },
-            collectionName
-        );
-    }
+	private getCollectionQuery(
+		collectionType: CollectionType
+	): admin.firestore.CollectionReference {
+		const collectionName = typeToCollection(collectionType);
+		return this.db.collection(collectionName);
+	}
 
-    async findItemChanges(ids: string[]): Promise<ItemChange[]> {
-        if (ids.length === 0) {
-            return [];
-        }
-        const refs = ids.map((id) =>
-            this.getCollectionQuery(CollectionType.ITEM_CHANGES).doc(id)
-        );
-        const docs = await this.db.getAll(...refs);
-        const instances: ItemChangeRecord[] = [];
-        for (let doc of docs) {
-            if (doc.exists) {
-                let instance = this.documentToRawInstance(doc);
-                instances.push(instance as ItemChangeRecord);
-            }
-        }
+	private async save<T extends FirestoreItem>(
+		instance: T,
+		collection: string
+	): Promise<void> {
+		const documentId = instance.id;
+		let ref = this.db.collection(collection).doc(documentId);
+		delete (instance as any)["id"];
+		if (!!this.transaction) {
+			this.transaction.set(ref, instance);
+		} else {
+			await ref.set(instance);
+		}
+	}
 
-        const metadataObjects: ItemChange[] = [];
-        for (let instance of instances) {
-            const metadataObject =
-                await this.itemChangeMetadataConverter.toMetadata(instance);
-            metadataObjects.push(metadataObject);
-        }
-        return metadataObjects;
-    }
+	private async saveProviderId(vectorClockItem: VectorClockItemRecord) {
+		const collectionName = typeToCollection(CollectionType.PROVIDER_IDS);
+		await this.save(
+			{
+				id: vectorClockItem.provider_id,
+				timestamp: vectorClockItem.timestamp,
+			},
+			collectionName
+		);
+	}
 
-    async getItemVersion(itemId: string): Promise<ItemVersion | undefined> {
-        const doc = await this.getCollectionQuery(CollectionType.ITEM_VERSIONS)
-            .doc(itemId)
-            .get();
+	async findItemChanges(ids: string[]): Promise<ItemChange[]> {
+		if (ids.length === 0) {
+			return [];
+		}
+		const refs = ids.map((id) =>
+			this.getCollectionQuery(CollectionType.ITEM_CHANGES).doc(id)
+		);
+		const docs = await this.db.getAll(...refs);
+		const instances: ItemChangeRecord[] = [];
+		for (let doc of docs) {
+			if (doc.exists) {
+				let instance = this.documentToRawInstance(doc);
+				instances.push(instance as ItemChangeRecord);
+			}
+		}
 
-        if (doc.exists) {
-            const instance = this.documentToRawInstance(
-                doc
-            ) as ItemVersionRecord;
-            const itemVersion =
-                await this.itemVersionMetadataConverter.toMetadata(instance);
-            return itemVersion;
-        } else {
-            return undefined;
-        }
-    }
-    async saveItemChange(
-        itemChange: ItemChange,
-        isCreating: boolean
-    ): Promise<void> {
-        const collectionName = typeToCollection(CollectionType.ITEM_CHANGES);
-        const itemChangeRecord =
-            await this.itemChangeMetadataConverter.toRecord(itemChange);
-        await this.save(itemChangeRecord, collectionName);
+		const metadataObjects: ItemChange[] = [];
+		for (let instance of instances) {
+			const metadataObject =
+				await this.itemChangeMetadataConverter.toMetadata(instance);
+			metadataObjects.push(metadataObject);
+		}
+		return metadataObjects;
+	}
 
-        if (isCreating) {
-            this.saveProviderId(itemChangeRecord.change_vector_clock_item);
-        }
-    }
-    async saveItemVersion(itemVersion: ItemVersion): Promise<void> {
-        const collectionName = typeToCollection(CollectionType.ITEM_VERSIONS);
-        const itemVersionRecord =
-            await this.itemVersionMetadataConverter.toRecord(itemVersion);
-        await this.save(itemVersionRecord, collectionName);
-    }
+	async getItemVersion(itemId: string): Promise<ItemVersion | undefined> {
+		const doc = await this.getCollectionQuery(CollectionType.ITEM_VERSIONS)
+			.doc(itemId)
+			.get();
+
+		if (doc.exists) {
+			const instance = this.documentToRawInstance(
+				doc
+			) as ItemVersionRecord;
+			const itemVersion =
+				await this.itemVersionMetadataConverter.toMetadata(instance);
+			return itemVersion;
+		} else {
+			return undefined;
+		}
+	}
+	async saveItemChange(
+		itemChange: ItemChange,
+		isCreating: boolean
+	): Promise<void> {
+		const collectionName = typeToCollection(CollectionType.ITEM_CHANGES);
+		const itemChangeRecord =
+			await this.itemChangeMetadataConverter.toRecord(itemChange);
+		await this.save(itemChangeRecord, collectionName);
+
+		if (isCreating) {
+			this.saveProviderId(itemChangeRecord.change_vector_clock_item);
+		}
+	}
+	async saveItemVersion(itemVersion: ItemVersion): Promise<void> {
+		const collectionName = typeToCollection(CollectionType.ITEM_VERSIONS);
+		const itemVersionRecord =
+			await this.itemVersionMetadataConverter.toRecord(itemVersion);
+		await this.save(itemVersionRecord, collectionName);
+	}
 }

@@ -1,4 +1,3 @@
-import * as admin from "firebase-admin";
 
 export enum CollectionType {
     ITEM_CHANGES = "item_changes",
@@ -17,14 +16,14 @@ export interface AppItem extends FirestoreItem {
 
 export interface VectorClockItemRecord {
     provider_id: string;
-    timestamp: admin.firestore.Timestamp;
+    timestamp: Date;
 }
 
 export interface ItemChangeRecord extends FirestoreItem {
     operation: string;
     collection_name: string;
     item_id: string;
-    date_created: admin.firestore.Timestamp;
+    date_created: Date;
     change_vector_clock_item: VectorClockItemRecord;
     insert_vector_clock_item: VectorClockItemRecord;
     serialized_item: AppItem;
@@ -34,7 +33,7 @@ export interface ItemChangeRecord extends FirestoreItem {
 }
 
 export interface ItemVersionRecord extends FirestoreItem {
-    date_created: admin.firestore.Timestamp;
+    date_created: Date;
     current_item_change_id: string;
     collection_name: string;
     vector_clock: VectorClockItemRecord[];
@@ -52,6 +51,6 @@ export interface QueuedOperation {
     collection_name: string;
     operation: string;
     data: any;
-    timestamp: admin.firestore.Timestamp | undefined;
+    timestamp: Date | undefined;
     status: QueuedOperationStatus
 }

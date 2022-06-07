@@ -14,8 +14,8 @@ export class FirestoreAppItemSerializer implements BaseItemSerializer<AppItem> {
         item: { [key: string]: any },
         key: string
     ): any {
-        let value = item[key];
-        const isTimestamp = value instanceof admin.firestore.Timestamp;
+        let value = item[key] as any;
+        const isTimestamp = typeof value["toDate"] === "function";
         if (isTimestamp) {
             value = (value as admin.firestore.Timestamp).toDate();
         }
@@ -59,7 +59,7 @@ export class FirestoreAppItemSerializer implements BaseItemSerializer<AppItem> {
 
         try {
             const date = parseDate(value);
-            return admin.firestore.Timestamp.fromDate(date);
+            return date;
         } catch (e) {}
 
         return value;

@@ -26,7 +26,7 @@ function queuedOperationFromDoc(
         item_id: data.item_id,
         operation: data.operation,
         data: data.data,
-        timestamp: data.timestamp,
+        timestamp: data.timestamp.toDate(),
         status: data.status,
     };
     return queuedOperation;
@@ -41,7 +41,7 @@ async function processCommit(
         queuedOperation.id,
         queuedOperation.operation,
         queuedOperation.item_id,
-        queuedOperation.timestamp?.toDate()
+        queuedOperation.timestamp,
     );
     let item = queuedOperation.data;
     item.id = queuedOperation.item_id;
@@ -68,7 +68,7 @@ async function processCommit(
         entityName,
         queuedOperation.item_id,
         item,
-        queuedOperation.timestamp?.toDate(),
+        queuedOperation.timestamp,
         queuedOperation.id
     );
 }
