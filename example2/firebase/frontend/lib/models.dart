@@ -4,7 +4,7 @@ class Todo {
   final String id;
   final String text;
   final bool done;
-  final Timestamp date;
+  final DateTime date;
 
   Todo({
     required this.id,
@@ -17,7 +17,7 @@ class Todo {
     String? id,
     String? text,
     bool? done,
-    Timestamp? date,
+    DateTime? date,
   }) {
     return Todo(
       id: id ?? this.id,

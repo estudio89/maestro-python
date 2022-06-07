@@ -30,26 +30,6 @@
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-    <script>
-    // Your web app's Firebase configuration
-    const firebaseConfig = {
-      apiKey: "AIzaSyAiWsiJX-Ct7HXqQm4O_e7VLgk-sSVfJgM",
-      authDomain: "cloudstore-test-8915e.firebaseapp.com",
-      databaseURL: "https://cloudstore-test-8915e.firebaseio.com",
-      projectId: "cloudstore-test-8915e",
-      storageBucket: "cloudstore-test-8915e.appspot.com",
-      messagingSenderId: "939715095595",
-      appId: "1:939715095595:web:43539d40dfb4a1bd08ce6e"
-    };
-
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-
-    var db = firebase.firestore();
-    db.useEmulator("10.222.0.5", 7070);
-  </script>
   <!-- This script installs service_worker.js to provide PWA functionality to
        application. For more information, see:
        https://developers.google.com/web/fundamentals/primers/service-workers -->

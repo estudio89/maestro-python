@@ -128,7 +128,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   _onAdd() {
     final newItem = Todo(
-        id: const Uuid().v4(), text: "", done: false, date: Timestamp.now());
+        id: const Uuid().v4(), text: "", done: false, date: DateTime.now());
     setState(() {
       _items.add(newItem);
     });
