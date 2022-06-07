@@ -7,6 +7,7 @@ from maestro.backends.mongo import (
     ItemChangeMetadataConverter,
     ConflictLogMetadataConverter,
     VectorClockMetadataConverter,
+    VectorClockItemMetadataConverter,
     MongoDataStore,
     MongoItemSerializer,
     MongoSyncProvider,
@@ -24,10 +25,14 @@ def create_mongo_store(
     item_version_metadata_converter=None,
     item_change_metadata_converter=None,
     conflict_log_metadata_converter=ConflictLogMetadataConverter(),
-    vector_clock_metadata_converter=VectorClockMetadataConverter(),
+    vector_clock_metadata_converter=None,
     item_serializer=MongoItemSerializer(),
     tracked_query_metadata_converter=None,
 ) -> MongoDataStore:
+
+    if vector_clock_metadata_converter is None:
+        vector_clock_metadata_converter = VectorClockMetadataConverter(VectorClockItemMetadataConverter())
+
     if item_version_metadata_converter is None:
         item_version_metadata_converter = ItemVersionMetadataConverter(
             vector_clock_converter=vector_clock_metadata_converter
@@ -44,6 +49,7 @@ def create_mongo_store(
             vector_clock_converter=vector_clock_metadata_converter,
             query_converter=QueryMetadataConverter(),
         )
+
     data_store = MongoDataStore(
         local_provider_id=provider_id,
         sync_session_metadata_converter=sync_session_metadata_converter,
@@ -70,14 +76,16 @@ def create_mongo_provider(
     provider_id="mongo",
     max_changes_per_session=20,
     sync_session_metadata_converter=SyncSessionMetadataConverter(),
-    item_version_metadata_converter=ItemVersionMetadataConverter(),
+    item_version_metadata_converter=None,
     item_change_metadata_converter=None,
     conflict_log_metadata_converter=ConflictLogMetadataConverter(),
-    vector_clock_metadata_converter=VectorClockMetadataConverter(),
+    vector_clock_metadata_converter=None,
     item_serializer=MongoItemSerializer(),
     events_manager_class=EventsManager,
     tracked_query_metadata_converter=None,
 ):  # pragma: no cover
+    if vector_clock_metadata_converter is None:
+        vector_clock_metadata_converter = VectorClockMetadataConverter(VectorClockItemMetadataConverter())
 
     if item_version_metadata_converter is None:
         item_version_metadata_converter = ItemVersionMetadataConverter(
@@ -104,10 +112,6 @@ def create_mongo_provider(
         item_serializer=item_serializer,
         tracked_query_metadata_converter=tracked_query_metadata_converter
     )
-
-    sync_session_metadata_converter.data_store = data_store
-    item_version_metadata_converter.data_store = data_store
-    conflict_log_metadata_converter.data_store = data_store
 
     events_manager = events_manager_class(data_store=data_store)
     changes_executor = ChangesExecutor(
