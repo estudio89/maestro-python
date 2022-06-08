@@ -64,7 +64,7 @@ def start_sync(initial_source_provider_id: "str"):
     # # Orchestrator
     orchestrator = SyncOrchestrator(
         sync_lock=sync_lock,
-        providers=[django_provider, firestore_provider],#mongo_provider],
+        providers=[django_provider, firestore_provider, mongo_provider],
         maximum_duration_seconds=10 * 60,
     )
     orchestrator.run(initial_source_provider_id=initial_source_provider_id)
