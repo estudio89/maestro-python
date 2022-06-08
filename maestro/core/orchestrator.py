@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING, List, Dict, Optional
 from .utils import SyncTimer, BaseSyncLock
 from .metadata import VectorClock
+from itertools import permutations
 
 if TYPE_CHECKING:  # pragma: no cover
     from maestro.core.provider import BaseSyncProvider
@@ -31,8 +32,6 @@ class SyncOrchestrator:
             providers (List[BaseSyncProvider]): Lista of providers that will be synchronized.
             maximum_duration_seconds (int): The maximum duration in seconds that the sync session can last. If the session doesn't end by that time, an exception of type SyncTimeoutException is raised.
         """
-        assert len(providers) == 2, "Synchronization is limited to 2 providers"
-
         self.sync_lock = sync_lock
         self._providers_by_id = {
             provider.provider_id: provider for provider in providers
@@ -92,8 +91,10 @@ class SyncOrchestrator:
                     item_change_batch=item_change_batch, query=query
                 )
 
-                new_deferred_vector_clock = item_change_batch.get_vector_clock_after_done(
-                    initial_vector_clock=deferred_vector_clock
+                new_deferred_vector_clock = (
+                    item_change_batch.get_vector_clock_after_done(
+                        initial_vector_clock=deferred_vector_clock
+                    )
                 )
 
                 if new_deferred_vector_clock == deferred_vector_clock:
@@ -141,7 +142,7 @@ class SyncOrchestrator:
             source_provider.events_manager.on_failed_sync_session(exception=e)
 
     def run(self, initial_source_provider_id: "str"):
-        """Runs two synchronization sessions:
+        """Runs two synchronization sessions for each pair of providers:
             1) initial_source_provider_id => other_provider
             2) other_provider => initial_source_provider_id
 
@@ -152,19 +153,17 @@ class SyncOrchestrator:
             return
 
         with self.sync_lock.lock():
-            other_provider_id = [
-                val
-                for val in self._providers_by_id.keys()
-                if val != initial_source_provider_id
-            ][0]
+            pairs = list(permutations(self._providers_by_id.keys(), 2))
+            pairs.sort(
+                key=lambda pair: 0
+                if pair[0] == initial_source_provider_id
+                else 1
+                if pair[1] == initial_source_provider_id
+                else 2
+            )
 
-            self.synchronize_providers(
-                source_provider_id=initial_source_provider_id,
-                target_provider_id=other_provider_id,
-                query=None,
-            )
-            self.synchronize_providers(
-                source_provider_id=other_provider_id,
-                target_provider_id=initial_source_provider_id,
-                query=None,
-            )
+            for source_provider_id, target_provider_id in pairs:
+                self.synchronize_providers(
+                    source_provider_id=source_provider_id,
+                    target_provider_id=target_provider_id,
+                )
