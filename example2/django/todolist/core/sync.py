@@ -2,10 +2,10 @@ from maestro.backends.django.contrib.factory import create_django_provider
 from maestro.backends.mongo.contrib.factory import create_mongo_provider
 
 from maestro.backends.firestore.contrib.factory import create_firestore_provider
-# import maestro.backends.firestore
 import maestro.backends.django
 from maestro.core.events import EventsManager
 from maestro.core.orchestrator import SyncOrchestrator
+from maestro.core.utils import PIDSyncLock
 
 import threading, sys, traceback
 from typing import TYPE_CHECKING
@@ -73,7 +73,7 @@ def start_sync(initial_source_provider_id: "str"):
     )
 
     # Sync lock
-    sync_lock = maestro.backends.django.DjangoSyncLock()
+    sync_lock = PIDSyncLock()
 
     # # Orchestrator
     orchestrator = SyncOrchestrator(

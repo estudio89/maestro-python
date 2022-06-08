@@ -27,7 +27,7 @@ setup(
 	author_email='luccascorrea@estudio89.com.br',
 	packages=find_packages(exclude=['tests*', 'example/']),
 	include_package_data=True,
-	install_requires=["python-dateutil>=2.8.1"],
+	install_requires=["python-dateutil>=2.8.1","filelock>3.7.1"],
     extras_require={
         "django": "django >= 3.1",
         "firestore": "firebase-admin >= 5.0.1",

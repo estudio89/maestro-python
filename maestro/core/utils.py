@@ -22,7 +22,7 @@ class BaseSyncLock(ABC):
         """Returns a ContextManager that locks the execution.
         """
 
-class PIDFileLockContextManager:
+class _PIDFileLockContextManager:
     """Context manager that writes a PID file in a concurrent safe way.
     """
 
@@ -90,7 +90,7 @@ class PIDSyncLock(BaseSyncLock):
     def lock(self) -> "ContextManager":
         """Returns a ContextManager that locks the execution.
         """
-        return PIDFileLockContextManager(self.pid_file)
+        return _PIDFileLockContextManager(self.pid_file)
 
 class BaseMetadataConverter(ABC):
     """Abstract class to be used for converting metadata objects used by the sync framework to records that can be saved to the data store and back."""
