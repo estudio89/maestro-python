@@ -5,7 +5,8 @@ from maestro.core.exceptions import SyncTimeoutException
 import time
 import datetime as dt
 import re
-
+import os
+from filelock import FileLock
 
 class BaseSyncLock(ABC):
     """Prevents two synchronization sessions from running at the same time."""
@@ -21,6 +22,75 @@ class BaseSyncLock(ABC):
         """Returns a ContextManager that locks the execution.
         """
 
+class PIDFileLockContextManager:
+    """Context manager that writes a PID file in a concurrent safe way.
+    """
+
+    def __init__(self, pidfile: "str"):
+        self.pidfile = pidfile
+        self.lock = FileLock(self.pidfile + ".lock")
+
+    def __enter__(self):
+        self.lock.acquire()
+        with open(self.pidfile, "w") as f:
+            f.write(str(os.getpid()))
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        try:
+            os.remove(self.pidfile)
+        except FileNotFoundError:
+            pass
+        finally:
+            self.lock.release()
+
+class PIDSyncLock(BaseSyncLock):
+    """
+    Prevents two synchronization sessions from running at the same time by using a PID file.
+    """
+
+    def __init__(self, pid_file: "str" = "/tmp/maestro.pid") -> None:
+        """
+        Args:
+            pid_file (str): The path to the PID file.
+        """
+        self.pid_file = pid_file
+
+    def _pid_exists(self, pid):
+        """Check whether pid exists in the current process table."""
+        if pid == 0:
+            # According to "man 2 kill" PID 0 has a special meaning:
+            # it refers to <<every process in the process group of the
+            # calling process>> so we don't want to go any further.
+            # If we get here it means this UNIX platform *does* have
+            # a process with id 0.
+            return True
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return False
+        except PermissionError:
+            # EPERM clearly means there's a process to deny access to
+            return True
+        # According to "man 2 kill" possible error values are
+        # (EINVAL, EPERM, ESRCH)
+        else:
+            return True
+
+    def is_running(self) -> "bool":
+        """
+        Indicates whether a synchronization is running.
+        """
+        try:
+            with open(self.pid_file, "r") as f:
+                pid = f.read()
+                return self._pid_exists(int(pid))
+        except FileNotFoundError:
+            return False
+
+    def lock(self) -> "ContextManager":
+        """Returns a ContextManager that locks the execution.
+        """
+        return PIDFileLockContextManager(self.pid_file)
 
 class BaseMetadataConverter(ABC):
     """Abstract class to be used for converting metadata objects used by the sync framework to records that can be saved to the data store and back."""
