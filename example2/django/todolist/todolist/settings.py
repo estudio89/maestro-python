@@ -72,6 +72,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'todolist.wsgi.application'
 
+X_FRAME_OPTIONS = ''
 
 # Database
 # https://docs.djangoproject.com/en/3.1/ref/settings/#databases

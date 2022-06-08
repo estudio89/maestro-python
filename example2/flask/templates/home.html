@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maestro - Demo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Ubuntu&display=swap"
+        rel="stylesheet"
+    />
+
+    <style>
+        body {
+            font-family: "Ubuntu", sans-serif;
+            color: rgba(0, 0, 0, 0.8);
+            margin: 0;
+        }
+
+        html, body {
+            min-height: 100vh;
+            height: 100%;
+        }
+
+        .nodes-container {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            height: 100%;
+            gap: 30px;
+            flex-grow: 1;
+        }
+
+        iframe {
+            flex-grow: 1;
+            height: 100%;
+            box-shadow: 1px 1px 4px rgb(0 0 0 / 40%);
+            border-radius: 10px;
+        }
+
+        .wrapper {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .orchestrator {
+            width: 120px;
+            margin: 30px auto;
+            padding: 20px;
+            text-align: center;
+            border-radius: 10px;
+            box-shadow: 1px 1px 4px rgb(0 0 0 / 40%);
+        }
+
+        button {
+            background: #4254B3;
+            color: #ffffff;
+            border-radius: 5px;
+            padding: 5px 10px;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="orchestrator">
+            <h1>Flask</h1>
+            <button id="btn-sync">Sync data</button>
+        </div>
+        <div class="nodes-container">
+            <iframe src="http://10.222.0.5:1212" frameborder="0"></iframe>
+            <iframe src="http://10.222.0.5:1214" frameborder="0"></iframe>
+            <iframe src="http://10.222.0.5:3000" frameborder="0"></iframe>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            let button = document.getElementById("btn-sync");
+            let syncing = false;
+            button.onclick = function() {
+                if (syncing) {
+                    return;
+                }
+
+                fetch("/api/sync/").then(function() {
+                    button.innerHTML = "Sync data";
+                    let iframes = document.querySelectorAll("iframe");
+
+                    for (let i=0; i<iframes.length; i++) {
+                        const iframe = iframes[i];
+                        iframe.src = iframe.src;
+                    }
+                    syncing = false;
+                })
+            };
+        });
+    </script>
+</body>
+</html>
