@@ -1,7 +1,9 @@
-from typing import TYPE_CHECKING, List, Dict, Optional
-from .utils import SyncTimer, BaseSyncLock
-from .metadata import VectorClock
+import time
 from itertools import permutations
+from typing import TYPE_CHECKING, Dict, List, Optional
+
+from .metadata import VectorClock
+from .utils import BaseSyncLock, SyncTimer
 
 if TYPE_CHECKING:  # pragma: no cover
     from maestro.core.provider import BaseSyncProvider
@@ -14,29 +16,34 @@ class SyncOrchestrator:
     Attributes:
         sync_lock (BaseSyncLock): Lock used to make sure multiple synchronizations don't happen in parallel.
         maximum_duration_seconds (int): The maximum duration in seconds that the sync session can last. If the session doesn't end by that time, an exception of type SyncTimeoutException is raised.
+        queue_timeout_seconds (int): The maximum duration in seconds that a sync session will wait to start if another session is already running otherwise it will be aborted. It defaults to zero.
     """
 
     sync_lock: "BaseSyncLock"
     _providers_by_id: "Dict[str, BaseSyncProvider]"
     maximum_duration_seconds: "int"
+    queue_timeout_seconds: "int"
 
     def __init__(
         self,
         sync_lock: "BaseSyncLock",
         providers: "List[BaseSyncProvider]",
         maximum_duration_seconds: "int",
+        queue_timeout_seconds: "int" = 0
     ):
         """
         Args:
             sync_lock (BaseSyncLock): Lock used to make sure multiple synchronizations don't happen in parallel.
             providers (List[BaseSyncProvider]): Lista of providers that will be synchronized.
             maximum_duration_seconds (int): The maximum duration in seconds that the sync session can last. If the session doesn't end by that time, an exception of type SyncTimeoutException is raised.
+            queue_timeout_seconds (int): The maximum duration in seconds that a sync session will wait to start if another session is already running otherwise it will be aborted. It defaults to zero.
         """
         self.sync_lock = sync_lock
         self._providers_by_id = {
             provider.provider_id: provider for provider in providers
         }
         self.maximum_duration_seconds = maximum_duration_seconds
+        self.queue_timeout_seconds = queue_timeout_seconds
 
     def synchronize_providers(
         self,
@@ -149,8 +156,17 @@ class SyncOrchestrator:
         Args:
             initial_source_provider_id (str): The identifier of the provider that will first send data.
         """
-        if self.sync_lock.is_running():
-            return
+
+        if self.queue_timeout_seconds > 0:
+            start_time = time.time()
+            while self.sync_lock.is_running():
+                current_time = time.time()
+                if current_time - start_time > self.queue_timeout_seconds:
+                    return
+                time.sleep(0.1)
+        else:
+            if self.sync_lock.is_running():
+                return
 
         with self.sync_lock.lock():
             pairs = list(permutations(self._providers_by_id.keys(), 2))
