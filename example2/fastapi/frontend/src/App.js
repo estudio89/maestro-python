@@ -18,8 +18,19 @@ function App() {
 
     const [items, setItems] = useState([]);
 
+    function startPolling() {
+        fetch("http://10.222.0.5:1215/api/poll/").then(function() {
+            setTimeout(() => {
+                refreshItems();
+            }, 300);
+            startPolling();
+        });
+    }
+
     function refreshItems() {
-        todoAPI.list().then(setItems);
+        todoAPI.list().then((data) => {
+            setItems(data);
+        });
     }
 
     function handleChange(item) {
@@ -44,6 +55,7 @@ function App() {
 
     useEffect(() => {
         refreshItems();
+        startPolling();
     }, []);
 
     return (

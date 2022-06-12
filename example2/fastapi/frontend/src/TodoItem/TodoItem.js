@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import './TodoItem.css';
 
@@ -18,11 +18,11 @@ const TodoItem = (props) => {
     // Callbacks
     const notifyChange = useCallback(debounce((item) => {
         props.onChange(item);
-    }, 300), []);
+    }, 200), []);
 
-    const notifyDelete = useCallback(debounce(() => {
+    const notifyDelete = useCallback(() => {
         props.onDelete(item);
-    }, 300), []);
+    }, []);
 
     // State changes
     function handleTextChange(e) {
@@ -35,6 +35,10 @@ const TodoItem = (props) => {
         setItem(updatedItem);
         notifyChange(updatedItem);
     }
+
+    useEffect(() => {
+        setItem(props.item);
+    }, [props.item]);
 
     // Render
     return (

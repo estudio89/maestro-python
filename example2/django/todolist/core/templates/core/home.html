@@ -96,9 +96,9 @@
 					onInput: debounce(function () {
 						this.$emit("textChange");
 					}, 300),
-					onDoneChange: debounce(function () {
+					onDoneChange: function () {
 						this.$emit("doneChange");
-					}, 300),
+					},
 					onDelete: function () {
 						this.$emit("delete");
 					},
@@ -131,8 +131,18 @@
 				},
                 mounted: function() {
                     this.refresh();
+                    this.startPolling();
                 },
 				methods: {
+                    startPolling: function() {
+                        var self = this;
+                        fetch("http://10.222.0.5:1215/api/poll/").then(function() {
+                            setTimeout(() => {
+                                self.refresh();
+                            }, 300);
+                            self.startPolling();
+                        });
+                    },
 					refresh: async function () {
                         const data = await api.list();
                         this.items = data;

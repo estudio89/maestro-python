@@ -39,6 +39,15 @@ class _TodoItemState extends State<TodoItem> {
   }
 
   @override
+  void didUpdateWidget(covariant TodoItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    setState(() {
+      _item = widget.item;
+      _controller.text = _item.text;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return MouseRegion(
       onHover: (event) {
@@ -71,9 +80,7 @@ class _TodoItemState extends State<TodoItem> {
                 onChanged: (bool? checked) {
                   setState(() {
                     _item = _item.copyWith(done: checked);
-                    _debouncer.run(() {
-                      widget.onChange(_item);
-                    });
+                    widget.onChange(_item);
                   });
                 }),
             Expanded(

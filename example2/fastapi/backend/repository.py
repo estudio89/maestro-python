@@ -5,7 +5,10 @@ import uuid
 import pymongo
 from pymongo import MongoClient
 from maestro.backends.mongo.contrib.factory import create_mongo_store
+import requests
 
+def _notify_sync():
+    requests.get("http://0.0.0.0:1215/api/sync/")
 
 class TodoItemRepository:
     def __init__(self):
@@ -49,6 +52,8 @@ class TodoItemRepository:
             item_id=str(item.id),
             item=self.to_dict(item),
         )
+
+        _notify_sync()
         return item
 
     def update(self, item: TodoItem) -> TodoItem:
@@ -66,6 +71,7 @@ class TodoItemRepository:
             item_id=str(item.id),
             item=self.to_dict(item),
         )
+        _notify_sync()
         return item
 
     def delete(self, item_id: uuid.UUID) -> None:
@@ -76,6 +82,7 @@ class TodoItemRepository:
             item_id=str(item_id),
             item={"id": str(item_id), "collection_name": "core_todo"},
         )
+        _notify_sync()
 
 
 todo_item_repository = TodoItemRepository()

@@ -89,16 +89,12 @@
                     return;
                 }
 
+                button.innerHTML = "Running..."
+
                 fetch("/api/sync/").then(function() {
                     button.innerHTML = "Sync data";
-                    let iframes = document.querySelectorAll("iframe");
-
-                    for (let i=0; i<iframes.length; i++) {
-                        const iframe = iframes[i];
-                        iframe.src = iframe.src;
-                    }
                     syncing = false;
-                })
+                });
             };
         });
     </script>

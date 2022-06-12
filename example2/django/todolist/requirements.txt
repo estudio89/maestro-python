@@ -1,4 +1,5 @@
 Django==3.2.13
 djangorestframework==3.13.1
 firebase-admin==5.2.0
+requests==2.27.1
 -e ../../../[django,mongo,firestore]

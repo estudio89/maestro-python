@@ -1,14 +1,16 @@
+import os
+import sys
+import time
+import traceback
+import uuid
+from pathlib import Path
+
+import firebase_admin
+from firebase_admin import credentials
 from maestro.core.events import EventsManager
 from maestro.core.orchestrator import SyncOrchestrator
 from maestro.core.utils import PIDSyncLock
 
-import threading, sys, traceback
-from typing import TYPE_CHECKING
-
-import firebase_admin
-from firebase_admin import credentials
-from pathlib import Path
-import os, sys
 
 def initialize_firebase():
     # Initialize firebase SDK
@@ -116,9 +118,9 @@ initialize_firebase()
 def start_sync():
 
     from maestro.backends.django.contrib.factory import create_django_provider
+    from maestro.backends.firestore.contrib.factory import \
+        create_firestore_provider
     from maestro.backends.mongo.contrib.factory import create_mongo_provider
-    from maestro.backends.firestore.contrib.factory import create_firestore_provider
-
 
     # Django
     django_provider = create_django_provider()
@@ -129,18 +131,32 @@ def start_sync():
         database_name="example-db",
     )
 
-    # # Firestore
+    # Firestore
     firestore_provider = create_firestore_provider(
         events_manager_class=DebugEventsManager,
     )
 
     # Sync lock
     sync_lock = PIDSyncLock()
+    timeout = 5
 
-    # # Orchestrator
+    start_time = time.time()
+    while sync_lock.is_running():
+        current_time = time.time()
+        if current_time - start_time > timeout:
+            return
+
+
+    # Orchestrator
     orchestrator = SyncOrchestrator(
         sync_lock=sync_lock,
         providers=[django_provider, firestore_provider, mongo_provider],
         maximum_duration_seconds=10 * 60,
+        queue_timeout_seconds=5
     )
     orchestrator.run(initial_source_provider_id="")
+
+    # Changing sync identifier used for long polling
+    identifier = uuid.uuid4()
+    with open("sync.txt", "w") as fobj:
+        fobj.writelines([str(identifier)])

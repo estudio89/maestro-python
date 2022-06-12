@@ -4,6 +4,7 @@ import 'package:frontend/repository.dart';
 import 'package:frontend/todo_item.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:uuid/uuid.dart';
+import 'package:http/http.dart' as http;
 
 import 'firebase_options.dart';
 import 'models.dart';
@@ -41,12 +42,12 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  List<Todo> _items = [];
+  late Stream<List<Todo>> _todoStream;
 
   @override
   void initState() {
     super.initState();
-    _refresh();
+    _todoStream = todoRepository.list();
   }
 
   @override
@@ -55,41 +56,63 @@ class _MyHomePageState extends State<MyHomePage> {
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 500),
-          child: ListView(
-            children: [
-              const SizedBox(height: 16),
-              Text(
-                "Flutter Web + Cloud Firestore",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black.withAlpha(200)),
-              ),
-              const SizedBox(height: 21),
-              if (_items.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Text(
-                    "This list looks pretty empty, how about adding an item?",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w400,
-                      color: Colors.black.withAlpha(200),
+          child: StreamBuilder<List<Todo>>(
+              stream: _todoStream,
+              builder:
+                  (BuildContext context, AsyncSnapshot<List<Todo>> snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(
+                      "Loading...",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.black.withAlpha(200),
+                      ),
                     ),
-                  ),
-                ),
-              ..._items
-                  .map((item) => TodoItem(
-                        item: item,
-                        onChange: _onChange,
-                        onDelete: _onDelete,
-                        key: ValueKey(item.id),
-                      ))
-                  .toList()
-            ],
-          ),
+                  );
+                }
+
+                List<Todo> _items = snapshot.data!;
+                print("UPDATED ITEMS: $_items");
+                return ListView(
+                  children: [
+                    const SizedBox(height: 16),
+                    Text(
+                      "Flutter Web + Cloud Firestore",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black.withAlpha(200)),
+                    ),
+                    const SizedBox(height: 21),
+                    if (_items.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Text(
+                          "This list looks pretty empty, how about adding an item?",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w400,
+                            color: Colors.black.withAlpha(200),
+                          ),
+                        ),
+                      ),
+                    ..._items
+                        .map((item) => TodoItem(
+                              item: item,
+                              onChange: _onChange,
+                              onDelete: _onDelete,
+                              key: ValueKey(item.id),
+                            ))
+                        .toList()
+                  ],
+                );
+              }),
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
@@ -106,32 +129,27 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  _refresh() async {
-    _items = await todoRepository.list();
-    setState(() {});
-  }
-
   _onChange(Todo item) {
-    setState(() {
-      final idx = _items.indexOf(item);
-      _items[idx] = item;
-    });
+    // setState(() {
+    //   final idx = _items.indexOf(item);
+    //   _items[idx] = item;
+    // });
     todoRepository.update(item);
   }
 
   _onDelete(Todo item) {
-    setState(() {
-      _items = _items.where((i) => i.id != item.id).toList();
-    });
+    // setState(() {
+    //   _items = _items.where((i) => i.id != item.id).toList();
+    // });
     todoRepository.delete(item);
   }
 
   _onAdd() {
     final newItem = Todo(
         id: const Uuid().v4(), text: "", done: false, date: DateTime.now());
-    setState(() {
-      _items.add(newItem);
-    });
+    // setState(() {
+    //   _items.add(newItem);
+    // });
     todoRepository.create(newItem);
   }
 }

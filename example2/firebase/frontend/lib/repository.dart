@@ -28,17 +28,24 @@ class TodoRepository {
     });
   }
 
-  Future<List<Todo>> list() async {
-    final QuerySnapshot<Map<String, dynamic>> snapshot =
-        await _firestore.collection('core_todo').orderBy("date").get();
-    return snapshot.docs.map((DocumentSnapshot<Map<String, dynamic>> doc) {
-      final Map<String, dynamic> data = doc.data()!;
-      return Todo(
-          id: doc.id,
-          text: data["text"],
-          done: data["done"],
-          date: (data["date"] as Timestamp).toDate());
-    }).toList();
+  Stream<List<Todo>> list() {
+    final Stream<List<Todo>> snapshot = _firestore
+        .collection('core_todo')
+        .orderBy("date")
+        .snapshots()
+        .map((QuerySnapshot<Map<String, dynamic>> event) {
+      final List<Todo> todos = [];
+      for (final QueryDocumentSnapshot<Map<String, dynamic>> doc
+          in event.docs) {
+        todos.add(Todo(
+            id: doc.id,
+            text: doc["text"],
+            done: doc["done"],
+            date: (doc["date"] as Timestamp).toDate()));
+      }
+      return todos;
+    });
+    return snapshot;
   }
 
   Future<Todo> create(Todo item) async {
